@@ -13,7 +13,6 @@ import ExplanationCard  from './components/ExplanationCard.jsx';
 import ZoneComplete     from './components/ZoneComplete.jsx';
 import ResultsScreen    from './components/ResultsScreen.jsx';
 import Leaderboard      from './components/Leaderboard.jsx';
-import ReasoningModal   from './components/ReasoningModal.jsx';
 
 const BG = 'linear-gradient(180deg, #f5f7fb 0%, #edf3fb 42%, #f7f4ef 100%)';
 
@@ -36,16 +35,6 @@ export default function App() {
     gs.submitRound(record);
   }, [gs, sc]);
 
-  // ── Reasoning complete ────────────────────────────────────────────────────
-  const handleReasoningComplete = useCallback(({ skipped, selectedIndex, correct }) => {
-    const emailId = gs.currentEmail?.id;
-    const reasoningPoints = (!skipped && correct) ? 1 : 0;
-    if (!skipped && emailId !== undefined) {
-      sc.scoreReasoning({ emailId, correct });
-    }
-    gs.onReasoningComplete(reasoningPoints);
-  }, [gs, sc]);
-
   // ── Move to next email ───────────────────────────────────────────────────
   const handleNext = useCallback(() => {
     gs.nextEmail();
@@ -57,12 +46,14 @@ export default function App() {
       lb.submitScore({
         name: gs.player.name,
         email: gs.player.email,
-        score: sc.displayScore,
+        score: sc.totalScore,
+        displayScore: sc.displayScore,
         title: sc.displayScore >= 80 ? 'Advanced' : sc.displayScore >= 50 ? 'Proficient' : 'Foundation',
         badges: 0,
         zone1Score: sc.zoneScores[1],
         zone2Score: sc.zoneScores[2],
         zone3Score: sc.zoneScores[3],
+        perEmail: sc.perEmail,
       });
       gs.goToResults();
     } else {
@@ -116,14 +107,6 @@ export default function App() {
         />
       )}
 
-      {gs.screen === SCREENS.REASONING && gs.currentEmail && (
-        <ReasoningModal
-          email={gs.currentEmail}
-          l1WasCorrect={gs.round.lastRecord?.l1Correct ?? false}
-          onComplete={handleReasoningComplete}
-        />
-      )}
-
       {gs.screen === SCREENS.EXPLANATION && gs.currentEmail && gs.round.lastRecord && (
         <ExplanationCard
           email={gs.currentEmail}
@@ -137,7 +120,7 @@ export default function App() {
         <ZoneComplete
           zone={gs.zone}
           zoneScore={sc.zoneScores[gs.zone]}
-          maxZoneScore={gs.emailsInZone * 5}
+          maxZoneScore={gs.emailsInZone * 4}
           zoneEmails={sc.perEmail.filter(r => r.zone === gs.zone)}
           earlyUnlocked={gs.earlyUnlocked}
           consecutivePerfect={gs.consecutivePerfect}
