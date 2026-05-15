@@ -3,8 +3,6 @@ import './styles/animations.css';
 
 import { useGameState, SCREENS } from './hooks/useGameState.js';
 import { useScoring } from './hooks/useScoring.js';
-import { useLeaderboard } from './hooks/useLeaderboard.js';
-
 import LandingScreen    from './components/LandingScreen.jsx';
 import TutorialScreen   from './components/TutorialScreen.jsx';
 import ZoneIntroCard    from './components/ZoneIntroCard.jsx';
@@ -12,14 +10,12 @@ import GameRound        from './components/GameRound.jsx';
 import ExplanationCard  from './components/ExplanationCard.jsx';
 import ZoneComplete     from './components/ZoneComplete.jsx';
 import ResultsScreen    from './components/ResultsScreen.jsx';
-import Leaderboard      from './components/Leaderboard.jsx';
 
 const BG = 'linear-gradient(180deg, #f5f7fb 0%, #edf3fb 42%, #f7f4ef 100%)';
 
 export default function App() {
   const gs = useGameState();
   const sc = useScoring();
-  const lb = useLeaderboard();
 
   // ── Submit a round ───────────────────────────────────────────────────────
   // timedOut=true is passed by GameRound when the timer fires (auto-submit)
@@ -43,7 +39,7 @@ export default function App() {
   // ── Advance zone / end game ──────────────────────────────────────────────
   const handleAdvanceZone = useCallback(() => {
     if (gs.zone === 3) {
-      lb.submitScore({
+      gs.submitToSheet({
         name: gs.player.name,
         email: gs.player.email,
         score: sc.totalScore,
@@ -59,12 +55,6 @@ export default function App() {
     } else {
       gs.advanceZone();
     }
-  }, [gs, sc, lb]);
-
-  // ── Play again ───────────────────────────────────────────────────────────
-  const handlePlayAgain = useCallback(() => {
-    sc.resetScoring();
-    gs.resetGame();
   }, [gs, sc]);
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -136,20 +126,6 @@ export default function App() {
           zoneScores={sc.zoneScores}
           categoryCorrect={sc.categoryCorrect}
           perEmail={sc.perEmail}
-          onLeaderboard={gs.goToLeaderboard}
-          onPlayAgain={handlePlayAgain}
-        />
-      )}
-
-      {gs.screen === SCREENS.LEADERBOARD && (
-        <Leaderboard
-          playerName={gs.player.name}
-          playerScore={sc.totalScore}
-          entries={lb.entries}
-          loading={lb.loading}
-          error={lb.error}
-          onFetch={lb.fetchLeaderboard}
-          onBack={gs.goBackToResults}
         />
       )}
     </div>

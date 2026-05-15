@@ -505,7 +505,7 @@ export default function LandingScreen({ onStart }) {
               {[
                 'Enter your details and start the assessment.',
                 'Classify each email in a timed round.',
-                'Receive your competency result and ranking.',
+                'Receive your competency result.',
               ].map((line, index) => (
                 <div
                   key={line}

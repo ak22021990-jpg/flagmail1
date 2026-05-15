@@ -4,7 +4,6 @@
  * Deploy as Web App (Execute as: Me, Access: Anyone).
  * Handles:
  *   POST  →  writes one row to "Summary" + one row per email to "RawData"
- *   GET   →  returns Summary sheet as JSON array (leaderboard)
  *
  * Required sheets (create them in the same spreadsheet):
  *   1. "Summary"  — columns: Timestamp, Name, Email, Score, DisplayScore, Tier, Zone1, Zone2, Zone3
@@ -81,35 +80,3 @@ function doPost(e) {
   }
 }
 
-function doGet() {
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var summary = ss.getSheetByName('Summary');
-
-    if (!summary || summary.getLastRow() < 2) {
-      return ContentService
-        .createTextOutput(JSON.stringify([]))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-
-    var rows = summary.getDataRange().getValues();
-    var headers = rows[0];
-    var result = [];
-
-    for (var i = 1; i < rows.length; i++) {
-      var obj = {};
-      for (var j = 0; j < headers.length; j++) {
-        obj[headers[j]] = rows[i][j];
-      }
-      result.push(obj);
-    }
-
-    return ContentService
-      .createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}

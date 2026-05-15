@@ -33,8 +33,6 @@ export default function ResultsScreen({
   zoneScores = {},
   categoryCorrect = {},
   perEmail = [],
-  onLeaderboard,
-  onPlayAgain,
 }) {
   const safePlayer = player ?? { name: 'Analyst' };
   const safePerEmail = Array.isArray(perEmail) ? perEmail : [];
@@ -224,42 +222,6 @@ export default function ResultsScreen({
           </motion.div>
         </div>
 
-        <div className="results-actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <motion.button
-            onClick={onLeaderboard}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            style={{
-              padding: '16px 18px',
-              borderRadius: 18,
-              border: '1px solid rgba(10,132,255,0.24)',
-              background: 'linear-gradient(135deg, #0A84FF 0%, #0066CC 100%)',
-              color: '#fff',
-              fontSize: 15,
-              fontWeight: 700,
-              boxShadow: '0 18px 30px rgba(10,132,255,0.24)',
-            }}
-          >
-            View leaderboard
-          </motion.button>
-
-          <motion.button
-            onClick={onPlayAgain}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            style={{
-              padding: '16px 18px',
-              borderRadius: 18,
-              border: '1px solid rgba(13,26,51,0.08)',
-              background: 'rgba(255,255,255,0.82)',
-              color: '#111827',
-              fontSize: 15,
-              fontWeight: 600,
-            }}
-          >
-            Retake assessment
-          </motion.button>
-        </div>
       </div>
     </div>
   );
