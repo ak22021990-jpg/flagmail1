@@ -10,11 +10,11 @@ export const glass = {
 };
 
 /** Points per email × 5 emails per zone × 3 zones */
-export const POINTS_PER_EMAIL = 5;
+export const POINTS_PER_EMAIL = 4;
 export const EMAILS_PER_ZONE = 5;
 export const ZONE_COUNT = 3;
-export const ZONE_MAX_SCORE = POINTS_PER_EMAIL * EMAILS_PER_ZONE;  // 25
-export const MAX_SCORE = ZONE_MAX_SCORE * ZONE_COUNT;               // 75
+export const ZONE_MAX_SCORE = POINTS_PER_EMAIL * EMAILS_PER_ZONE;  // 20
+export const MAX_SCORE = ZONE_MAX_SCORE * ZONE_COUNT;               // 60
 
 export const ZONE_META_LIST = [
   { zone: 1, title: 'The Inbox',      difficulty: 'Foundation',   accent: '#0A84FF', endColor: '#0055CC' },

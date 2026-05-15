@@ -173,7 +173,6 @@ export default function ExplanationCard({ email, record, totalScore, onNext }) {
   if (l1Points > 0) scoreLines.push(`+${l1Points} for L1`);
   if (l2Points > 0) scoreLines.push(`+${l2Points} for L2`);
   if (clueDeduction > 0) scoreLines.push(`-${clueDeduction} from hints`);
-  if (record.reasoningCorrect) scoreLines.push('+1 reasoning');
   if (scoreLines.length === 0) scoreLines.push('0 points this round');
 
   return (

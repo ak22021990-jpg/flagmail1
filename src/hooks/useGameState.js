@@ -1,16 +1,15 @@
 import { useState, useCallback } from 'react';
 import { shuffleEmails } from '../utils/shuffle.js';
+import { LEADERBOARD_URL } from '../config.js';
 
 export const SCREENS = {
   LANDING:       'landing',
   TUTORIAL:      'tutorial',
   ZONE_INTRO:    'zone_intro',
   ROUND:         'round',
-  REASONING:     'reasoning',
   EXPLANATION:   'explanation',
   ZONE_COMPLETE: 'zone_complete',
   RESULTS:       'results',
-  LEADERBOARD:   'leaderboard',
 };
 
 const ZONE_EMAIL_COUNTS = { 1: 5, 2: 5, 3: 5 };
@@ -94,19 +93,12 @@ export function useGameState() {
 
   const submitRound = useCallback((record) => {
     setRound(prev => ({ ...prev, submitted: true, lastRecord: record }));
-    setScreen(SCREENS.REASONING);
-  }, []);
-
-  const onReasoningComplete = useCallback((reasoningPoints) => {
-    // Check perfect round after reasoning is scored
-    setRound(prev => {
-      const perfect = (prev.lastRecord?.points ?? 0) + reasoningPoints === 5;
-      setConsecutivePerfect(cp => {
-        const next = perfect ? cp + 1 : 0;
-        if (next >= 3) setEarlyUnlocked(true);
-        return next;
-      });
-      return prev;
+    // Check perfect round (4 pts = perfect)
+    const perfect = record.points === 4;
+    setConsecutivePerfect(cp => {
+      const next = perfect ? cp + 1 : 0;
+      if (next >= 3) setEarlyUnlocked(true);
+      return next;
     });
     setScreen(SCREENS.EXPLANATION);
   }, []);
@@ -143,23 +135,16 @@ export function useGameState() {
     setScreen(SCREENS.RESULTS);
   }, []);
 
-  const goToLeaderboard = useCallback(() => {
-    setScreen(SCREENS.LEADERBOARD);
-  }, []);
-
-  const goBackToResults = useCallback(() => {
-    setScreen(SCREENS.RESULTS);
-  }, []);
-
-  const resetGame = useCallback(() => {
-    setScreen(SCREENS.LANDING);
-    setPlayer({ name: '', email: '' });
-    setEmailPool([]);
-    setCurrentIndex(0);
-    setZone(1);
-    setConsecutivePerfect(0);
-    setEarlyUnlocked(false);
-    setRound(initialRoundState());
+  const submitToSheet = useCallback(async (playerData) => {
+    if (!LEADERBOARD_URL || LEADERBOARD_URL === 'YOUR_APPS_SCRIPT_URL') return;
+    try {
+      await fetch(LEADERBOARD_URL, {
+        method: 'POST',
+        body: JSON.stringify(playerData),
+      });
+    } catch (err) {
+      console.warn('Score submit failed:', err);
+    }
   }, []);
 
   return {
@@ -185,12 +170,9 @@ export function useGameState() {
     selectL2,
     handleTimeout,
     submitRound,
-    onReasoningComplete,
     nextEmail,
     advanceZone,
     goToResults,
-    goToLeaderboard,
-    goBackToResults,
-    resetGame,
+    submitToSheet,
   };
 }
