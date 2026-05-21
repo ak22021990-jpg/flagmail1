@@ -53,13 +53,13 @@ export function useBadges() {
     // Sniper: first email, correct, no clues, solved in <= 15 seconds.
     if (firstEmailRef.current) {
       firstEmailRef.current = false;
-      if (l1Correct && l2Correct && cluesUsed === 0 && timeLeft >= roundDuration - SNIPER_SECONDS) {
+      if (l1Correct && l2Correct && cluesUsed === 0 && timeLeft > roundDuration - SNIPER_SECONDS) {
         unlockedAny = earnBadge('SNIPER') || unlockedAny;
       }
     }
 
     // Lightning Read: correct in <= 10 seconds.
-    if (l1Correct && timeLeft >= roundDuration - LIGHTNING_READ_SECONDS) {
+    if (l1Correct && timeLeft > roundDuration - LIGHTNING_READ_SECONDS) {
       unlockedAny = earnBadge('LIGHTNING_READ') || unlockedAny;
     }
 
