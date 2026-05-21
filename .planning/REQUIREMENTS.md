@@ -55,6 +55,12 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [ ] **REVW-03**: The reviewer view lists SOC submissions with candidate name, timestamp, scores, and grade band, read from the Google Sheet
 - [ ] **REVW-04**: The reviewer view shows each submission's raw SPL query and explanation text
 
+### Code Health
+
+- [ ] **HARD-01**: The SOC validation and scoring utilities are covered by automated unit tests run via a test framework (Vitest)
+- [ ] **HARD-02**: The existing leaderboard score submission surfaces a visible error on failure instead of failing silently
+- [ ] **HARD-03**: The repository documents `flagmail1/` as the canonical project and `flagmail/` as deprecated
+
 ## v2 Requirements
 
 Deferred to a future release. Tracked but not in the current roadmap.
@@ -96,13 +102,39 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmapper) | — | Pending |
+| QSTN-01 | Phase 1 | Pending |
+| QSTN-02 | Phase 1 | Pending |
+| HARD-03 | Phase 1 | Pending |
+| VALID-01 | Phase 2 | Pending |
+| VALID-02 | Phase 2 | Pending |
+| VALID-03 | Phase 2 | Pending |
+| SCORE-01 | Phase 2 | Pending |
+| SCORE-02 | Phase 2 | Pending |
+| HARD-01 | Phase 2 | Pending |
+| LEVEL-01 | Phase 3 | Pending |
+| LEVEL-02 | Phase 3 | Pending |
+| LEVEL-03 | Phase 3 | Pending |
+| INPUT-01 | Phase 4 | Pending |
+| INPUT-02 | Phase 4 | Pending |
+| INPUT-03 | Phase 4 | Pending |
+| INPUT-04 | Phase 4 | Pending |
+| INPUT-05 | Phase 4 | Pending |
+| FDBK-01 | Phase 4 | Pending |
+| FDBK-02 | Phase 4 | Pending |
+| BACK-01 | Phase 5 | Pending |
+| BACK-02 | Phase 5 | Pending |
+| BACK-03 | Phase 5 | Pending |
+| REVW-01 | Phase 5 | Pending |
+| REVW-02 | Phase 5 | Pending |
+| REVW-03 | Phase 5 | Pending |
+| REVW-04 | Phase 5 | Pending |
+| HARD-02 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 23 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 23 ⚠️
+- v1 requirements: 26 total
+- Mapped to phases: 26
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after initial definition*
+*Last updated: 2026-05-22 after HARD-01..03 folded into existing phases*
