@@ -621,7 +621,7 @@ export default function ZoneIntroCard({ zone, onStart, earlyUnlocked }) {
                 </div>
               </div>
 
-              {ZONES.map((item) => (
+              {ZONES.map((item, index) => (
                 <div
                   key={item.zone}
                   style={{
@@ -630,7 +630,7 @@ export default function ZoneIntroCard({ zone, onStart, earlyUnlocked }) {
                     gap: 10,
                     alignItems: 'center',
                     padding: '8px 0',
-                    borderTop: item.zone === 1 ? 'none' : '1px solid rgba(13,26,51,0.06)',
+                    borderTop: index === 0 ? 'none' : '1px solid rgba(13,26,51,0.06)',
                   }}
                 >
                   <div
