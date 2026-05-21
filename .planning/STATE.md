@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-05-21)
 Phase: 1 of 5 (Question Dataset)
 Plan: 0 of TBD in current phase
 Status: Ready to plan
-Last activity: 2026-05-22 — Roadmap revised; 26 v1 requirements mapped across 5 phases (HARD-01..03 folded in)
+Last activity: 2026-05-21 - Completed quick task 260522-5to: Add detect-and-flag proctoring (tab/window switch detection) to timed game rounds
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -61,6 +61,12 @@ None yet.
 - Phase 1: Q8 multi-stage flattening requires a content design decision on how to split into sequential sub-questions
 - Phase 5: GAS CORS for reviewer GET must be manually browser-tested in Chrome and Firefox (fix is known; verification is required)
 - Phase 5: Reviewer passcode must be set via GAS Script Properties after deploy — not in source; this ops step must be documented in Phase 5 plan
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260522-5to | Add detect-and-flag proctoring (tab/window switch detection) to timed game rounds | 2026-05-21 | 86c5535 | [260522-5to-add-detect-and-flag-proctoring-tab-windo](./quick/260522-5to-add-detect-and-flag-proctoring-tab-windo/) |
 
 ## Deferred Items
 
