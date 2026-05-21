@@ -2,54 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmailCard from './EmailCard.jsx';
 import { glass } from '../styles/tokens.js';
-
-function runConfetti(canvas) {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  const colors = ['#0A84FF', '#34C759', '#FF9500', '#FF3B30', '#30B0C7'];
-
-  const pieces = Array.from({ length: 120 }, () => ({
-    x: width * 0.18 + Math.random() * width * 0.64,
-    y: -20 - Math.random() * 120,
-    vx: (Math.random() - 0.5) * 7,
-    vy: 2 + Math.random() * 4,
-    color: colors[Math.floor(Math.random() * colors.length)],
-    w: 8 + Math.random() * 8,
-    h: 4 + Math.random() * 4,
-    rotation: Math.random() * 360,
-    rotVel: (Math.random() - 0.5) * 9,
-  }));
-
-  let raf = 0;
-
-  function draw() {
-    ctx.clearRect(0, 0, width, height);
-    let active = false;
-    for (const piece of pieces) {
-      piece.x += piece.vx;
-      piece.y += piece.vy;
-      piece.vy += 0.12;
-      piece.vx *= 0.994;
-      piece.rotation += piece.rotVel;
-      if (piece.y < height + 40) active = true;
-
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, Math.min(1, 1 - piece.y / (height * 1.08)));
-      ctx.translate(piece.x, piece.y);
-      ctx.rotate((piece.rotation * Math.PI) / 180);
-      ctx.fillStyle = piece.color;
-      ctx.fillRect(-piece.w / 2, -piece.h / 2, piece.w, piece.h);
-      ctx.restore();
-    }
-    if (active) raf = requestAnimationFrame(draw);
-  }
-
-  draw();
-  return () => cancelAnimationFrame(raf);
-}
+import { runConfetti } from '../utils/confetti.js';
 
 function CorrectAnswerOverlay({ points, onDone }) {
   const canvasRef = useRef(null);
@@ -61,7 +14,18 @@ function CorrectAnswerOverlay({ points, onDone }) {
 
   useEffect(() => {
     if (!canvasRef.current) return undefined;
-    return runConfetti(canvasRef.current);
+    return runConfetti(canvasRef.current, {
+      colors: ['#0A84FF', '#34C759', '#FF9500', '#FF3B30', '#30B0C7'],
+      pieceCount: 120,
+      xRange: [0.18, 0.82],
+      speedVx: 3.5,
+      speedVy: [2, 6],
+      gravity: 0.12,
+      rotVel: 4.5,
+      yStart: [-20, -140],
+      pieceW: [8, 16],
+      pieceH: [4, 8],
+    });
   }, []);
 
   return (
