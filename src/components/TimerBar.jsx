@@ -16,7 +16,6 @@ export default function TimerBar({ timeLeft, phase, progress }) {
         background: color,
         borderRadius: 3,
         transition: 'width 1s linear, background 0.5s ease',
-        ...(phase === 'red' ? {} : {}),
       }}
         className={phase === 'red' ? 'anim-timerPulse' : ''}
       />
