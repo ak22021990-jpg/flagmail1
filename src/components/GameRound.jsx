@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
 import { useTimer } from '../hooks/useTimer.js';
+import { useProctoring } from '../hooks/useProctoring.js';
 import TimerBar from './TimerBar.jsx';
 import EmailCard from './EmailCard.jsx';
 import ClueSystem from './ClueSystem.jsx';
@@ -54,15 +55,29 @@ export default function GameRound({
   onSelectL1,
   onSelectL2,
   onSubmit,
+  onViolationChange,
 }) {
   const roundRef = useRef(round);
   const scoreDisplayRef = useRef(null);
   const prevScoreRef = useRef(totalScore);
   const meta = ZONE_META[zone] || ZONE_META[1];
 
+  const { violations, switchedAway, reset } = useProctoring({ active: !round.submitted });
+
   useEffect(() => {
     roundRef.current = round;
   }, [round]);
+
+  // Reset proctoring count each time a new email loads.
+  useEffect(() => {
+    reset();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email?.id]);
+
+  // Notify parent of updated violation count.
+  useEffect(() => {
+    onViolationChange(violations);
+  }, [violations, onViolationChange]);
 
   useEffect(() => {
     if (!scoreDisplayRef.current) return;
@@ -210,6 +225,24 @@ export default function GameRound({
             gap: 14,
           }}
         >
+          {(switchedAway || violations > 0) && (
+            <div style={{
+              display: 'inline-flex',
+              alignSelf: 'start',
+              padding: '5px 12px',
+              borderRadius: 999,
+              background: 'rgba(255,184,0,0.15)',
+              border: '1px solid rgba(255,184,0,0.40)',
+              color: '#92400E',
+              fontSize: 12,
+              fontWeight: 600,
+            }}>
+              {switchedAway
+                ? `Tab switch detected${violations > 1 ? ` (${violations})` : ''} — stay on this page`
+                : `Returned — ${violations} tab switch${violations === 1 ? '' : 'es'} recorded`}
+            </div>
+          )}
+
           <RoundHeader
             zone={zone}
             meta={meta}
@@ -411,4 +444,9 @@ GameRound.propTypes = {
   onSelectL1: PropTypes.func.isRequired,
   onSelectL2: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
+  onViolationChange: PropTypes.func,
+};
+
+GameRound.defaultProps = {
+  onViolationChange: () => {},
 };

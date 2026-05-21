@@ -1,5 +1,7 @@
 import PropTypes from "prop-types";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
+import { useProctoring } from "../hooks/useProctoring.js";
 
 const surface = {
   background: "rgba(255,255,255,0.74)",
@@ -19,7 +21,15 @@ export default function SocRound({
   onSetPrimary, onSetSecondary,
   onSetSplText, onSetExplanation,
   onSubmit,
+  onViolationChange,
 }) {
+  const { violations, switchedAway } = useProctoring({ active: !answer.submitted });
+
+  // Notify parent of updated violation count (accumulates across all SOC questions).
+  useEffect(() => {
+    onViolationChange(violations);
+  }, [violations, onViolationChange]);
+
   const canSubmit = !!answer.splText?.trim() && !!answer.explanation?.trim() && !answer.submitted;
   const hasClassification = !!question.classification;
 
@@ -43,6 +53,24 @@ export default function SocRound({
       }} />
 
       <div style={{ maxWidth: 1400, margin: "0 auto", position: "relative", display: "grid", gap: 14 }}>
+        {(switchedAway || violations > 0) && (
+          <div style={{
+            display: "inline-flex",
+            alignSelf: "start",
+            padding: "5px 12px",
+            borderRadius: 999,
+            background: "rgba(255,184,0,0.15)",
+            border: "1px solid rgba(255,184,0,0.40)",
+            color: "#92400E",
+            fontSize: 12,
+            fontWeight: 600,
+          }}>
+            {switchedAway
+              ? `Tab switch detected${violations > 1 ? ` (${violations})` : ""} — stay on this page`
+              : `Returned — ${violations} tab switch${violations === 1 ? "" : "es"} recorded`}
+          </div>
+        )}
+
         <div style={{
           ...surface, borderRadius: 30, padding: "14px 18px",
         }}>
@@ -347,4 +375,9 @@ SocRound.propTypes = {
   onSetSplText: PropTypes.func.isRequired,
   onSetExplanation: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
+  onViolationChange: PropTypes.func,
+};
+
+SocRound.defaultProps = {
+  onViolationChange: () => {},
 };
