@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { getProgressTitle } from '../utils/competency.js';
 
@@ -16,8 +16,12 @@ function formatDate(value) {
 }
 
 export default function Leaderboard({ playerName, playerScore, entries, loading, error, onFetch, onBack }) {
+  const fetchedRef = useRef(false);
   useEffect(() => {
-    onFetch();
+    if (!fetchedRef.current) {
+      fetchedRef.current = true;
+      onFetch();
+    }
   }, [onFetch]);
 
   return (
