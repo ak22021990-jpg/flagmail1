@@ -78,6 +78,7 @@ function RareBadgeScreen({ badge, onDismiss }) {
   return (
     <motion.div
       key="rare-screen"
+      role="alert"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -241,6 +242,7 @@ function CommonBadgeScreen({ badge, onDismiss }) {
   return (
     <motion.div
       key="common-screen"
+      role="alert"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

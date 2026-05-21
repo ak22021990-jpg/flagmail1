@@ -9,7 +9,7 @@ export default function TimerBar({ timeLeft, phase, progress }) {
       borderRadius: 3,
       overflow: 'hidden',
       position: 'relative',
-    }}>
+    }} role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
       <div style={{
         height: '100%',
         width: `${progress * 100}%`,
