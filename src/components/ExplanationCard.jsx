@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmailCard from './EmailCard.jsx';
+import { glass } from '../styles/tokens.js';
 
 function runConfetti(canvas) {
   const width = window.innerWidth;
@@ -144,13 +145,8 @@ function CorrectAnswerOverlay({ points, onDone }) {
   );
 }
 
-const glass = {
-  background: 'rgba(255,255,255,0.74)',
-  backdropFilter: 'blur(24px) saturate(155%)',
-  WebkitBackdropFilter: 'blur(24px) saturate(155%)',
-  border: '1px solid rgba(255,255,255,0.82)',
-  boxShadow: '0 24px 80px rgba(32, 52, 89, 0.10), 0 8px 24px rgba(32, 52, 89, 0.05)',
-};
+// ExplanationCard uses softer blur and border
+const localGlass = { ...glass, backdropFilter: 'blur(24px) saturate(155%)', WebkitBackdropFilter: 'blur(24px) saturate(155%)', border: '1px solid rgba(255,255,255,0.82)', boxShadow: '0 24px 80px rgba(32, 52, 89, 0.10), 0 8px 24px rgba(32, 52, 89, 0.05)' };
 
 export default function ExplanationCard({ email, record, totalScore, onNext }) {
   const [showOverlay, setShowOverlay] = useState(record.l1Correct);
@@ -218,7 +214,7 @@ export default function ExplanationCard({ email, record, totalScore, onNext }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.28, ease: 'easeOut' }}
             style={{
-              ...glass,
+              ...localGlass,
               borderRadius: 30,
               padding: '20px 22px',
               overflow: 'hidden',
@@ -369,7 +365,7 @@ export default function ExplanationCard({ email, record, totalScore, onNext }) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1, duration: 0.28, ease: 'easeOut' }}
               style={{
-                ...glass,
+                ...localGlass,
                 borderRadius: 28,
                 padding: 18,
                 display: 'grid',

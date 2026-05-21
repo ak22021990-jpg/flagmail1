@@ -7,14 +7,10 @@ import EmailCard from './EmailCard.jsx';
 import ClueSystem from './ClueSystem.jsx';
 import Classifier from './Classifier.jsx';
 import { ROUND_DURATION_SECONDS } from '../config/game.js';
+import { glass } from '../styles/tokens.js';
 
-const surface = {
-  background: 'rgba(255,255,255,0.74)',
-  backdropFilter: 'blur(30px) saturate(165%)',
-  WebkitBackdropFilter: 'blur(30px) saturate(165%)',
-  border: '1px solid rgba(255,255,255,0.84)',
-  boxShadow: '0 24px 80px rgba(32, 52, 89, 0.11), 0 8px 24px rgba(32, 52, 89, 0.06)',
-};
+// GameRound uses stronger blur
+const surface = { ...glass, backdropFilter: 'blur(30px) saturate(165%)', WebkitBackdropFilter: 'blur(30px) saturate(165%)', border: '1px solid rgba(255,255,255,0.84)' };
 
 const sectionLabelStyle = {
   fontSize: 11,
@@ -72,7 +68,7 @@ export default function GameRound({
 
     const scoreProxy = { val: from };
 
-    gsap.fromTo(
+    const tween1 = gsap.fromTo(
       scoreProxy,
       { val: from },
       {
@@ -87,13 +83,18 @@ export default function GameRound({
       }
     );
 
-    gsap.fromTo(
+    const tween2 = gsap.fromTo(
       scoreDisplayRef.current,
       { scale: 1.15, color: meta.accent },
       { scale: 1, color: '#111827', duration: 0.35, ease: 'back.out(2)' }
     );
 
     prevScoreRef.current = to;
+
+    return () => {
+      tween1.kill();
+      tween2.kill();
+    };
   }, [meta.accent, totalScore]);
 
   function handleTimeout() {

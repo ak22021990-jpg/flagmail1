@@ -1,14 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { LEADERBOARD_URL } from '../config.js';
+import { glass } from '../styles/tokens.js';
 
-const glass = {
-  background: 'rgba(255,255,255,0.72)',
-  backdropFilter: 'blur(28px) saturate(165%)',
-  WebkitBackdropFilter: 'blur(28px) saturate(165%)',
-  border: '1px solid rgba(255,255,255,0.86)',
-  boxShadow: '0 24px 80px rgba(32, 52, 89, 0.11), 0 8px 24px rgba(32, 52, 89, 0.06)',
-};
+// LandingScreen uses slightly more transparent glass
+const localGlass = { ...glass, background: 'rgba(255,255,255,0.72)' };
 
 const ZONE_CARDS = [
   { zone: 1, title: 'Inbox',      detail: 'Spot the loud red flags fast and build your rhythm.',               accent: '#0A84FF' },
@@ -166,7 +162,7 @@ export default function LandingScreen({ onStart }) {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.06, duration: 0.4 }}
             style={{
-              ...glass,
+              ...localGlass,
               borderRadius: 34,
               padding: 'clamp(24px, 2.8vw, 34px)',
               display: 'grid',
@@ -382,7 +378,7 @@ export default function LandingScreen({ onStart }) {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.12, duration: 0.4 }}
             style={{
-              ...glass,
+              ...localGlass,
               borderRadius: 32,
               padding: 'clamp(24px, 2.6vw, 30px)',
               display: 'grid',

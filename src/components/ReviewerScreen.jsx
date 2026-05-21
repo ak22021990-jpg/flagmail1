@@ -1,14 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { LEADERBOARD_URL } from "../config.js";
+import { glass } from "../styles/tokens.js";
 
-const glass = {
-  background: "rgba(255,255,255,0.74)",
-  backdropFilter: "blur(30px) saturate(165%)",
-  WebkitBackdropFilter: "blur(30px) saturate(165%)",
-  border: "1px solid rgba(255,255,255,0.84)",
-  boxShadow: "0 24px 80px rgba(32, 52, 89, 0.11), 0 8px 24px rgba(32, 52, 89, 0.06)",
-};
+// ReviewerScreen uses stronger blur
+const localGlass = { ...glass, backdropFilter: "blur(30px) saturate(165%)", WebkitBackdropFilter: "blur(30px) saturate(165%)", border: "1px solid rgba(255,255,255,0.84)" };
 
 export default function ReviewerScreen({ onBack }) {
   const [passcode, setPasscode] = useState("");
@@ -64,7 +60,7 @@ export default function ReviewerScreen({ onBack }) {
         </div>
 
         {!submissions && (
-          <div style={{ ...glass, borderRadius: 24, padding: 24, display: "grid", gap: 16, maxWidth: 400 }}>
+          <div style={{ ...localGlass, borderRadius: 24, padding: 24, display: "grid", gap: 16, maxWidth: 400 }}>
             <div style={{ fontSize: 13, color: "rgba(17,24,39,0.58)" }}>
               Enter the reviewer passcode to access SOC submissions.
             </div>
@@ -99,7 +95,7 @@ export default function ReviewerScreen({ onBack }) {
         )}
 
         {submissions && submissions.length === 0 && (
-          <div style={{ ...glass, borderRadius: 24, padding: 24, textAlign: "center", fontSize: 14, color: "rgba(17,24,39,0.54)" }}>
+          <div style={{ ...localGlass, borderRadius: 24, padding: 24, textAlign: "center", fontSize: 14, color: "rgba(17,24,39,0.54)" }}>
             No SOC submissions yet.
           </div>
         )}
@@ -112,7 +108,7 @@ export default function ReviewerScreen({ onBack }) {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.03 }}
-                style={{ ...glass, borderRadius: 22, padding: 16, display: "grid", gap: 10 }}
+                style={{ ...localGlass, borderRadius: 22, padding: 16, display: "grid", gap: 10 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
                   <div style={{ display: "grid", gap: 2 }}>

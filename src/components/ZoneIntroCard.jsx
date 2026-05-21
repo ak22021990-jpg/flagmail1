@@ -1,12 +1,8 @@
 import { motion } from 'framer-motion';
+import { glass } from '../styles/tokens.js';
 
-const glass = {
-  background: 'rgba(255,255,255,0.74)',
-  backdropFilter: 'blur(30px) saturate(165%)',
-  WebkitBackdropFilter: 'blur(30px) saturate(165%)',
-  border: '1px solid rgba(255,255,255,0.84)',
-  boxShadow: '0 24px 80px rgba(32, 52, 89, 0.11), 0 8px 24px rgba(32, 52, 89, 0.06)',
-};
+// ZoneIntroCard uses stronger blur
+const localGlass = { ...glass, backdropFilter: 'blur(30px) saturate(165%)', WebkitBackdropFilter: 'blur(30px) saturate(165%)', border: '1px solid rgba(255,255,255,0.84)' };
 
 const ZONES = [
   {
@@ -180,7 +176,7 @@ export default function ZoneIntroCard({ zone, onStart, earlyUnlocked }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08, duration: 0.4 }}
           style={{
-            ...glass,
+            ...localGlass,
             borderRadius: 34,
             padding: 'clamp(24px, 3vw, 34px)',
             display: 'grid',
@@ -476,7 +472,7 @@ export default function ZoneIntroCard({ zone, onStart, earlyUnlocked }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.12, type: 'spring', stiffness: 190, damping: 24 }}
           style={{
-            ...glass,
+            ...localGlass,
             borderRadius: 32,
             padding: 'clamp(24px, 3vw, 30px)',
             display: 'grid',

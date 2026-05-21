@@ -4,15 +4,10 @@ import RankCard from './RankCard.jsx';
 import CompetencySummary from './CompetencySummary.jsx';
 import { getProgressTitle } from '../utils/competency.js';
 import CELEBRATION from '../assets/animation/Celebration Update Color.json';
-import { MAX_SCORE, ZONE_MAX_SCORE } from '../styles/tokens.js';
+import { MAX_SCORE, ZONE_MAX_SCORE, glass } from '../styles/tokens.js';
 
-const surface = {
-  background: 'rgba(255,255,255,0.76)',
-  backdropFilter: 'blur(22px) saturate(150%)',
-  WebkitBackdropFilter: 'blur(22px) saturate(150%)',
-  border: '1px solid rgba(255,255,255,0.82)',
-  boxShadow: '0 24px 80px rgba(32, 52, 89, 0.10), 0 8px 24px rgba(32, 52, 89, 0.05)',
-};
+// ResultsScreen uses softer surface style
+const surface = { ...glass, background: 'rgba(255,255,255,0.76)', backdropFilter: 'blur(22px) saturate(150%)', WebkitBackdropFilter: 'blur(22px) saturate(150%)', border: '1px solid rgba(255,255,255,0.82)', boxShadow: '0 24px 80px rgba(32, 52, 89, 0.10), 0 8px 24px rgba(32, 52, 89, 0.05)' };
 
 const zoneMeta = {
   1: { label: 'Zone 1', name: 'Inbox', accent: '#0A84FF' },

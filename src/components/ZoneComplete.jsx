@@ -1,12 +1,8 @@
 import { motion } from 'framer-motion';
+import { glass } from '../styles/tokens.js';
 
-const surface = {
-  background: 'rgba(255,255,255,0.76)',
-  backdropFilter: 'blur(22px) saturate(150%)',
-  WebkitBackdropFilter: 'blur(22px) saturate(150%)',
-  border: '1px solid rgba(255,255,255,0.82)',
-  boxShadow: '0 24px 80px rgba(32, 52, 89, 0.10), 0 8px 24px rgba(32, 52, 89, 0.05)',
-};
+// ZoneComplete uses softer surface style
+const surface = { ...glass, background: 'rgba(255,255,255,0.76)', backdropFilter: 'blur(22px) saturate(150%)', WebkitBackdropFilter: 'blur(22px) saturate(150%)', border: '1px solid rgba(255,255,255,0.82)', boxShadow: '0 24px 80px rgba(32, 52, 89, 0.10), 0 8px 24px rgba(32, 52, 89, 0.05)' };
 
 const ZONE_META = {
   1: { label: 'Inbox', accent: '#0A84FF' },
