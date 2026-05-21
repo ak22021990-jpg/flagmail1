@@ -167,7 +167,7 @@ export function useSocState(gs) {
       .reduce((sum, a) => sum + (a.result.score.total || 0), 0);
   }, [answers]);
 
-  const submitSocToSheets = useCallback(async () => {
+  const submitSocToSheets = useCallback(async (proctoring_violations = 0) => {
     // One canonical per-question shape, used for sessionStorage + the Sheet payload.
     const submittedAnswers = answers
       .map((a, idx) => ({ a, q: SOC_QUESTIONS[idx] }))
@@ -185,6 +185,7 @@ export function useSocState(gs) {
         name: gs.player.name,
         email: gs.player.email,
         answers: submittedAnswers,
+        proctoring_violations: proctoring_violations,
       }));
     } catch (_) {}
 
@@ -198,6 +199,7 @@ export function useSocState(gs) {
           name: gs.player.name,
           email: gs.player.email,
           answers: submittedAnswers,
+          proctoring_violations: proctoring_violations,
         }),
         mode: "no-cors",
       });

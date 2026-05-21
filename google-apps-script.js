@@ -20,7 +20,7 @@ function ensureSheets(ss) {
     summary.appendRow([
       'Timestamp', 'Name', 'Email', 'Status',
       'Score', 'Display Score', 'Tier',
-      'Zone 1', 'Zone 2', 'Zone 3'
+      'Zone 1', 'Zone 2', 'Zone 3', 'Proctoring Violations'
     ]);
   }
 
@@ -71,10 +71,11 @@ function doPost(e) {
       var sheets = ensureSheets(ss);
       var row = findRowByEmail(sheets.summary, payload.email || '');
       if (row > 0) {
-        sheets.summary.getRange(row, 4, 1, 7).setValues([[
+        sheets.summary.getRange(row, 4, 1, 8).setValues([[
           'Completed', payload.score || 0, payload.displayScore || 0,
           payload.title || '', payload.zone1Score || 0,
           payload.zone2Score || 0, payload.zone3Score || 0,
+          payload.proctoring_violations || 0,
         ]]);
       } else {
         sheets.summary.appendRow([
@@ -82,6 +83,7 @@ function doPost(e) {
           'Completed', payload.score || 0, payload.displayScore || 0,
           payload.title || '', payload.zone1Score || 0,
           payload.zone2Score || 0, payload.zone3Score || 0,
+          payload.proctoring_violations || 0,
         ]);
       }
       var perEmail = payload.perEmail || [];
@@ -112,6 +114,7 @@ function doPost(e) {
           sanitiseCell(ans.grade || ''),
           sanitiseCell(ans.splText || ''),
           sanitiseCell(ans.explanation || ''),
+          i === 0 ? (payload.proctoring_violations || 0) : '',
         ]);
       }
       return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
@@ -211,7 +214,7 @@ function ensureSOCSheet(ss) {
     soc = ss.insertSheet('SOCData');
     soc.appendRow([
       'Timestamp', 'Name', 'Email', 'Question ID',
-      'Score', 'Grade', 'SPL Text', 'Explanation'
+      'Score', 'Grade', 'SPL Text', 'Explanation', 'Proctoring Violations'
     ]);
   }
   return soc;

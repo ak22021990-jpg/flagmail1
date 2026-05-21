@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import './styles/animations.css';
 
 import { useGameState, SCREENS } from './hooks/useGameState.js';
@@ -26,6 +26,9 @@ export default function App() {
   const soc = useSocState(gs);
   const badges = useBadges();
 
+  const [gameViolations, setGameViolations] = useState(0);
+  const [socViolations, setSocViolations] = useState(0);
+
   const handleSocSubmit = useCallback(() => {
     soc.submitSocRound();
     gs.setScreen(SCREENS.SOC_EXPLANATION);
@@ -36,10 +39,10 @@ export default function App() {
     if (hasMore) {
       gs.setScreen(SCREENS.SOC_ROUND);
     } else {
-      soc.submitSocToSheets();
+      soc.submitSocToSheets(socViolations);
       gs.setScreen(SCREENS.SOC_RESULTS);
     }
-  }, [soc, gs]);
+  }, [soc, gs, socViolations]);
 
   // ── Submit a round ───────────────────────────────────────────────────────
   // timedOut=true is passed by GameRound when the timer fires (auto-submit)
@@ -74,10 +77,11 @@ export default function App() {
         zone2Score: sc.zoneScores[2],
         zone3Score: sc.zoneScores[3],
         perEmail: sc.perEmail,
+        proctoring_violations: gameViolations,
       });
     }
     gs.advanceZone();
-  }, [gs, sc]);
+  }, [gs, sc, gameViolations]);
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
@@ -137,6 +141,7 @@ export default function App() {
           onSelectL1={gs.selectL1}
           onSelectL2={gs.selectL2}
           onSubmit={handleSubmit}
+          onViolationChange={setGameViolations}
         />
       )}
 
@@ -175,6 +180,7 @@ export default function App() {
           onSetSplText={soc.setSplText}
           onSetExplanation={soc.setExplanation}
           onSubmit={handleSocSubmit}
+          onViolationChange={setSocViolations}
         />
       )}
 
