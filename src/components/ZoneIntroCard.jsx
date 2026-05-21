@@ -1,5 +1,9 @@
+import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
-import { glass } from '../styles/tokens.js';
+import { glass, POINTS_PER_EMAIL } from '../styles/tokens.js';
+import DifficultyBadge from './DifficultyBadge.jsx';
+import ZoneStatCard from './ZoneStatCard.jsx';
+import ZoneFeatureCard from './ZoneFeatureCard.jsx';
 
 // ZoneIntroCard uses stronger blur
 const localGlass = { ...glass, backdropFilter: 'blur(30px) saturate(165%)', WebkitBackdropFilter: 'blur(30px) saturate(165%)', border: '1px solid rgba(255,255,255,0.84)' };
@@ -82,11 +86,17 @@ const ZONES = [
   },
 ];
 
+ZoneIntroCard.propTypes = {
+  zone: PropTypes.number.isRequired,
+  onStart: PropTypes.func.isRequired,
+  earlyUnlocked: PropTypes.bool.isRequired,
+};
+
 export default function ZoneIntroCard({ zone, onStart, earlyUnlocked }) {
   const meta = ZONES.find((item) => item.zone === zone);
   const statCards = [
     { label: 'Emails', value: meta.emails, helper: 'Short burst' },
-    { label: 'Max points', value: meta.emails * 5, helper: '5 each' },
+    { label: 'Max points', value: meta.emails * POINTS_PER_EMAIL, helper: `${POINTS_PER_EMAIL} each` },
     { label: 'Time each', value: '120s', helper: 'Timed read' },
   ];
 
@@ -322,60 +332,7 @@ export default function ZoneIntroCard({ zone, onStart, earlyUnlocked }) {
             }}
           >
             {statCards.map((stat) => (
-              <div
-                key={stat.label}
-                style={{
-                  borderRadius: 22,
-                  padding: '16px 16px 15px',
-                  background: 'rgba(255,255,255,0.82)',
-                  border: '1px solid rgba(13,26,51,0.06)',
-                  display: 'grid',
-                  gap: 6,
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'end',
-                    justifyContent: 'space-between',
-                    gap: 10,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 30,
-                      lineHeight: 1,
-                      fontWeight: 700,
-                      letterSpacing: '-0.05em',
-                      color: '#111827',
-                    }}
-                  >
-                    {stat.value}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: meta.accent,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {stat.helper}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.10em',
-                    fontWeight: 700,
-                    color: 'rgba(17,24,39,0.50)',
-                  }}
-                >
-                  {stat.label}
-                </div>
-              </div>
+              <ZoneStatCard key={stat.label} stat={stat} accent={meta.accent} />
             ))}
           </div>
 
@@ -413,53 +370,7 @@ export default function ZoneIntroCard({ zone, onStart, earlyUnlocked }) {
                 }}
               >
                 {meta.signals.map((signal) => (
-                  <div
-                    key={signal.title}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 12,
-                      borderRadius: 20,
-                      padding: '14px 16px',
-                      background: 'rgba(255,255,255,0.8)',
-                      border: '1px solid rgba(13,26,51,0.06)',
-                      width: '100%',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        background: meta.accent,
-                        opacity: 0.7,
-                        marginTop: 6,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <div style={{ display: 'grid', gap: 4 }}>
-                      <div
-                        style={{
-                          fontSize: 16,
-                          lineHeight: 1.35,
-                          fontWeight: 700,
-                          letterSpacing: '-0.02em',
-                          color: '#111827',
-                        }}
-                      >
-                        {signal.title}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          lineHeight: 1.55,
-                          color: 'rgba(17,24,39,0.62)',
-                        }}
-                      >
-                        {signal.detail}
-                      </div>
-                    </div>
-                  </div>
+                  <ZoneFeatureCard key={signal.title} signal={signal} accent={meta.accent} />
                 ))}
               </div>
             </div>
@@ -605,20 +516,7 @@ export default function ZoneIntroCard({ zone, onStart, earlyUnlocked }) {
                     Step {meta.zone} of 3
                   </div>
                 </div>
-                <div
-                  style={{
-                    padding: '8px 10px',
-                    borderRadius: 999,
-                    background: `${meta.accent}10`,
-                    color: meta.accent,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {meta.difficulty}
-                </div>
+                <DifficultyBadge difficulty={meta.difficulty} accent={meta.accent} />
               </div>
 
               {ZONES.map((item, index) => (

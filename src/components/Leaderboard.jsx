@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
 import { getProgressTitle } from '../utils/competency.js';
 import { glass } from '../styles/tokens.js';
@@ -241,3 +242,18 @@ export default function Leaderboard({ playerName, playerScore, entries, loading,
     </div>
   );
 }
+
+Leaderboard.propTypes = {
+  playerName: PropTypes.string.isRequired,
+  playerScore: PropTypes.number.isRequired,
+  entries: PropTypes.arrayOf(PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    score: PropTypes.number.isRequired,
+    title: PropTypes.string,
+    date: PropTypes.string,
+  })).isRequired,
+  loading: PropTypes.bool.isRequired,
+  error: PropTypes.string,
+  onFetch: PropTypes.func.isRequired,
+  onBack: PropTypes.func.isRequired,
+};

@@ -54,86 +54,73 @@ function findRowByEmail(sheet, email) {
 function doPost(e) {
   try {
     var payload = JSON.parse(e.postData.contents);
-    var action = payload.action || 'submit';
+    var action = payload.action || '';
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheets = ensureSheets(ss);
     var ts = new Date().toISOString();
 
     if (action === 'register') {
-      // Called at game start — lock the email in immediately
+      var sheets = ensureSheets(ss);
       sheets.summary.appendRow([
-        ts,
-        payload.name  || '',
-        payload.email || '',
-        'In Progress',
-        '', '', '', '', '', ''
+        ts, payload.name || '', payload.email || '',
+        'In Progress', '', '', '', '', '', ''
       ]);
-
-      return ContentService
-        .createTextOutput(JSON.stringify({ ok: true }))
-        .setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // action === 'submit' — update the existing row with scores
-    var row = findRowByEmail(sheets.summary, payload.email || '');
-
-    if (row > 0) {
-      // Update existing row (columns D–J: Status, Score, Display Score, Tier, Z1, Z2, Z3)
-      sheets.summary.getRange(row, 4, 1, 7).setValues([[
-        'Completed',
-        payload.score        || 0,
-        payload.displayScore || 0,
-        payload.title        || '',
-        payload.zone1Score   || 0,
-        payload.zone2Score   || 0,
-        payload.zone3Score   || 0,
-      ]]);
-    } else {
-      // Fallback: no register row found, append a full row
-      sheets.summary.appendRow([
-        ts,
-        payload.name         || '',
-        payload.email        || '',
-        'Completed',
-        payload.score        || 0,
-        payload.displayScore || 0,
-        payload.title        || '',
-        payload.zone1Score   || 0,
-        payload.zone2Score   || 0,
-        payload.zone3Score   || 0,
-      ]);
+    if (action === 'submit') {
+      var sheets = ensureSheets(ss);
+      var row = findRowByEmail(sheets.summary, payload.email || '');
+      if (row > 0) {
+        sheets.summary.getRange(row, 4, 1, 7).setValues([[
+          'Completed', payload.score || 0, payload.displayScore || 0,
+          payload.title || '', payload.zone1Score || 0,
+          payload.zone2Score || 0, payload.zone3Score || 0,
+        ]]);
+      } else {
+        sheets.summary.appendRow([
+          ts, payload.name || '', payload.email || '',
+          'Completed', payload.score || 0, payload.displayScore || 0,
+          payload.title || '', payload.zone1Score || 0,
+          payload.zone2Score || 0, payload.zone3Score || 0,
+        ]);
+      }
+      var perEmail = payload.perEmail || [];
+      for (var i = 0; i < perEmail.length; i++) {
+        var r = perEmail[i];
+        sheets.raw.appendRow([
+          ts, payload.name || '', payload.email || '', r.emailId || '',
+          r.zone || '', r.selectedL1 || '', r.selectedL2 || '',
+          r.correctL1 || '', r.correctL2 || '',
+          r.l1Correct === true, r.l2Correct === true,
+          r.cluesUsed || 0, r.timedOut === true, r.points || 0,
+        ]);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // Write per-email raw data
-    var perEmail = payload.perEmail || [];
-    for (var i = 0; i < perEmail.length; i++) {
-      var r = perEmail[i];
-      sheets.raw.appendRow([
-        ts,
-        payload.name  || '',
-        payload.email || '',
-        r.emailId     || '',
-        r.zone        || '',
-        r.selectedL1  || '',
-        r.selectedL2  || '',
-        r.correctL1   || '',
-        r.correctL2   || '',
-        r.l1Correct   === true,
-        r.l2Correct   === true,
-        r.cluesUsed   || 0,
-        r.timedOut    === true,
-        r.points      || 0,
-      ]);
+    if (action === 'submitSOC') {
+      var soc = ensureSOCSheet(ss);
+      var answers = payload.answers || [];
+      for (var i = 0; i < answers.length; i++) {
+        var ans = answers[i];
+        soc.appendRow([
+          ts,
+          payload.name || '',
+          payload.email || '',
+          sanitiseCell(ans.questionId || ''),
+          sanitiseCell(ans.score != null ? ans.score : ''),
+          sanitiseCell(ans.grade || ''),
+          sanitiseCell(ans.splText || ''),
+          sanitiseCell(ans.explanation || ''),
+        ]);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: true }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Unknown action' })).setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: false, error: err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: err.message })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
@@ -152,7 +139,87 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (e.parameter && e.parameter.action === 'getSOCSubmissions') {
+    var passcode = e.parameter.passcode || '';
+    var correct = PropertiesService.getScriptProperties().getProperty('REVIEWER_PASSCODE');
+    if (!correct || passcode !== correct) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ ok: false, error: 'Invalid passcode' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var soc = ss.getSheetByName('SOCData');
+    if (!soc || soc.getLastRow() < 2) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ ok: true, submissions: [] }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // SOCData stores one row per answered question:
+    // [Timestamp, Name, Email, Question ID, Score, Grade, SPL Text, Explanation]
+    var data = soc.getRange(2, 1, soc.getLastRow() - 1, 8).getValues();
+    var byKey = {};
+    var order = [];
+    for (var i = 0; i < data.length; i++) {
+      var row = data[i];
+      var key = String(row[2]) + '|' + String(row[0]);
+      if (!byKey[key]) {
+        byKey[key] = {
+          name: row[1],
+          email: row[2],
+          timestamp: row[0],
+          questions: [],
+        };
+        order.push(key);
+      }
+      byKey[key].questions.push({
+        questionId: row[3],
+        score: row[4],
+        grade: row[5],
+        splText: row[6],
+        explanation: row[7],
+      });
+    }
+    var submissions = [];
+    for (var k = 0; k < order.length; k++) {
+      var sub = byKey[order[k]];
+      var total = 0;
+      for (var qi = 0; qi < sub.questions.length; qi++) {
+        var s = Number(sub.questions[qi].score);
+        if (!isNaN(s)) total += s;
+      }
+      sub.total = Math.round(total * 100) / 100;
+      submissions.push(sub);
+    }
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: true, submissions: submissions }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   return ContentService
     .createTextOutput(JSON.stringify({ error: 'No action specified' }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function ensureSOCSheet(ss) {
+  var soc = ss.getSheetByName('SOCData');
+  if (!soc) {
+    soc = ss.insertSheet('SOCData');
+    soc.appendRow([
+      'Timestamp', 'Name', 'Email', 'Question ID',
+      'Score', 'Grade', 'SPL Text', 'Explanation'
+    ]);
+  }
+  return soc;
+}
+
+function sanitiseCell(val) {
+  if (typeof val === 'string' && /^[=+\-@]/.test(val)) {
+    return "'" + val;
+  }
+  return val;
 }

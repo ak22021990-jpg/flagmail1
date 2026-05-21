@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
 import { glass } from '../styles/tokens.js';
 
@@ -109,6 +110,19 @@ function CategoryBreakdown({ zoneEmails, accent }) {
     </div>
   );
 }
+
+ZoneComplete.propTypes = {
+  zone: PropTypes.number.isRequired,
+  zoneScore: PropTypes.number.isRequired,
+  maxZoneScore: PropTypes.number.isRequired,
+  zoneEmails: PropTypes.arrayOf(PropTypes.shape({
+    l1Correct: PropTypes.bool.isRequired,
+    correctL1: PropTypes.string,
+  })).isRequired,
+  earlyUnlocked: PropTypes.bool.isRequired,
+  consecutivePerfect: PropTypes.number.isRequired,
+  onContinue: PropTypes.func.isRequired,
+};
 
 export default function ZoneComplete({
   zone,

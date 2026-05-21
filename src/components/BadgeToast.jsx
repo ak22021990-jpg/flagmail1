@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lottie from 'lottie-react';
@@ -342,6 +343,17 @@ function CommonBadgeScreen({ badge, onDismiss }) {
 }
 
 // ── Main export ────────────────────────────────────────────────────────────
+BadgeToast.propTypes = {
+  badge: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    rare: PropTypes.bool,
+    icon: PropTypes.string,
+    name: PropTypes.string.isRequired,
+    desc: PropTypes.string,
+  }),
+  onDismiss: PropTypes.func.isRequired,
+};
+
 export default function BadgeToast({ badge, onDismiss }) {
   const [visible, setVisible] = useState(false);
 

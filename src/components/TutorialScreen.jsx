@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
 import { glass } from '../styles/tokens.js';
 
@@ -106,7 +107,7 @@ export default function TutorialScreen({ onSkip }) {
               letterSpacing: '0.02em',
             }}
           >
-            15 emails &middot; 3 zones &middot; 120s per round
+            15 emails &middot; 3 zones + SOC investigation &middot; 120s per round
           </div>
         </div>
 
@@ -210,3 +211,7 @@ export default function TutorialScreen({ onSkip }) {
     </div>
   );
 }
+
+TutorialScreen.propTypes = {
+  onSkip: PropTypes.func.isRequired,
+};

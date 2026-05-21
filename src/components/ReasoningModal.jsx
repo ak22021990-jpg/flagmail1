@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -223,3 +224,14 @@ export default function ReasoningModal({ email, l1WasCorrect, onComplete }) {
     </motion.div>
   );
 }
+
+ReasoningModal.propTypes = {
+  email: PropTypes.shape({
+    reasoningQuestion: PropTypes.string,
+    level1: PropTypes.string.isRequired,
+    reasoningOptions: PropTypes.arrayOf(PropTypes.string),
+    correctReason: PropTypes.number.isRequired,
+  }).isRequired,
+  l1WasCorrect: PropTypes.bool.isRequired,
+  onComplete: PropTypes.func.isRequired,
+};

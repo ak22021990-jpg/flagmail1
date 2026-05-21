@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { generateCompetency } from '../utils/competency.js';
 
 export default function CompetencySummary({ categoryCorrect }) {
@@ -70,3 +71,7 @@ export default function CompetencySummary({ categoryCorrect }) {
     </div>
   );
 }
+
+CompetencySummary.propTypes = {
+  categoryCorrect: PropTypes.object,
+};

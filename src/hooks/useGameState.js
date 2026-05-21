@@ -10,6 +10,11 @@ export const SCREENS = {
   EXPLANATION:   'explanation',
   ZONE_COMPLETE: 'zone_complete',
   RESULTS:       'results',
+  SOC_INTRO:     'soc_intro',
+  SOC_ROUND:     'soc_round',
+  SOC_EXPLANATION: 'soc_explanation',
+  SOC_RESULTS:   'soc_results',
+  REVIEWER:      'reviewer',
 };
 
 const ZONE_EMAIL_COUNTS = { 1: 5, 2: 5, 3: 5 };
@@ -32,12 +37,13 @@ export function useGameState() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [zone, setZone] = useState(1);
   const [consecutivePerfect, setConsecutivePerfect] = useState(0);
-  const [earlyUnlocked, setEarlyUnlocked] = useState(false);
+  // earlyUnlocked derived from consecutivePerfect — no extra state needed
   const [tutorialSeen, setTutorialSeen] = useState(false);
   const [round, setRound] = useState(initialRoundState());
 
   // Computed helpers
   const currentEmail = emailPool[currentIndex] || null;
+  const earlyUnlocked = consecutivePerfect >= 3;
 
   const zoneStart = zone === 1 ? 0 : zone === 2 ? 5 : 10;
   const zoneEnd   = zone === 1 ? 5 : zone === 2 ? 10 : 15;
@@ -53,7 +59,6 @@ export function useGameState() {
     setCurrentIndex(0);
     setZone(1);
     setConsecutivePerfect(0);
-    setEarlyUnlocked(false);
     setRound(initialRoundState());
     if (!tutorialSeen) {
       setScreen(SCREENS.TUTORIAL);
@@ -96,7 +101,6 @@ export function useGameState() {
     const perfect = record.points === 4;
     setConsecutivePerfect(cp => {
       const next = perfect ? cp + 1 : 0;
-      if (next >= 3) setEarlyUnlocked(true);
       return next;
     });
     setScreen(SCREENS.EXPLANATION);
@@ -119,13 +123,12 @@ export function useGameState() {
   const advanceZone = useCallback(() => {
     const nextZone = zone + 1;
     if (nextZone > 3) {
-      setScreen(SCREENS.RESULTS);
+      setScreen(SCREENS.SOC_INTRO);
       return;
     }
     setZone(nextZone);
     setCurrentIndex(zoneStart + ZONE_EMAIL_COUNTS[zone]);
     setConsecutivePerfect(0);
-    setEarlyUnlocked(false);
     setRound(initialRoundState());
     setScreen(SCREENS.ZONE_INTRO);
   }, [zone, zoneStart]);
@@ -149,6 +152,7 @@ export function useGameState() {
 
   return {
     screen,
+    setScreen,
     player,
     emailPool,
     currentIndex,

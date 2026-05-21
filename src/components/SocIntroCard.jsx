@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { motion } from "framer-motion";
 import { glass } from "../styles/tokens.js";
 
@@ -230,3 +231,7 @@ export default function SocIntroCard({ onStart }) {
     </div>
   );
 }
+
+SocIntroCard.propTypes = {
+  onStart: PropTypes.func.isRequired,
+};

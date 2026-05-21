@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { motion } from "framer-motion";
 import { glass } from "../styles/tokens.js";
 
@@ -45,6 +46,18 @@ export default function SocExplanationCard({ result, question, hasMore, onNext }
   const { score, splValidation, explanationValidation, primaryCorrect, secondaryRatio } = result;
   const { breakdown, total, grade } = score;
 
+  // Per-question max points vary (Q1-Q4 = 23, Q5a / Q5b = 10).
+  const SCORE_MAXES = {
+    Q1: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
+    Q2: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
+    Q3: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
+    Q4: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
+    Q5a: { primary: 5, secondary: 3, spl: 2, explanation: 0 },
+    Q5b: { primary: 0, secondary: 0, spl: 10, explanation: 0 },
+  };
+  const maxes = SCORE_MAXES[result.questionId] || SCORE_MAXES.Q1;
+  const questionMax = maxes.primary + maxes.secondary + maxes.spl + maxes.explanation;
+
   const gradeColor = grade === "Strong" ? "#34C759" : grade === "Good" ? "#0A84FF" : grade === "Needs improvement" ? "#FF9500" : "#FF3B30";
 
   const splPass = splValidation.required.misses.length === 0 && splValidation.blocked.hits.length === 0;
@@ -89,7 +102,7 @@ export default function SocExplanationCard({ result, question, hasMore, onNext }
                   {grade}
                 </span>
                 <span style={{ fontSize: 30, lineHeight: 1, fontWeight: 800, letterSpacing: "-0.05em", color: "#111827" }}>
-                  {total} / 23 pts
+                  {total} / {questionMax} pts
                 </span>
               </div>
             </div>
@@ -103,11 +116,11 @@ export default function SocExplanationCard({ result, question, hasMore, onNext }
                 Score Breakdown
               </div>
               {[
-                { label: "Primary", pts: breakdown.primary, max: 5 },
-                { label: "Secondary", pts: breakdown.secondary, max: 3 },
-                { label: "SPL query", pts: breakdown.spl, max: 10 },
-                { label: "Explanation", pts: breakdown.explanation, max: 5 },
-              ].map(row => (
+                { label: "Primary", pts: breakdown.primary, max: maxes.primary },
+                { label: "Secondary", pts: breakdown.secondary, max: maxes.secondary },
+                { label: "SPL query", pts: breakdown.spl, max: maxes.spl },
+                { label: "Explanation", pts: breakdown.explanation, max: maxes.explanation },
+              ].filter(row => row.max > 0).map(row => (
                 <div key={row.label} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 13 }}>
                   <span style={{ color: "rgba(17,24,39,0.58)" }}>{row.label}</span>
                   <span style={{ fontWeight: 700, color: row.pts >= row.max ? "#34C759" : "#111827" }}>
@@ -236,6 +249,47 @@ export default function SocExplanationCard({ result, question, hasMore, onNext }
     </div>
   );
 }
+
+SocExplanationCard.propTypes = {
+  result: PropTypes.shape({
+    score: PropTypes.shape({
+      breakdown: PropTypes.shape({
+        primary: PropTypes.number.isRequired,
+        secondary: PropTypes.number.isRequired,
+        spl: PropTypes.number.isRequired,
+        explanation: PropTypes.number.isRequired,
+      }).isRequired,
+      total: PropTypes.number.isRequired,
+      grade: PropTypes.string.isRequired,
+    }).isRequired,
+    splValidation: PropTypes.shape({
+      required: PropTypes.shape({
+        hits: PropTypes.arrayOf(PropTypes.string).isRequired,
+        misses: PropTypes.arrayOf(PropTypes.string).isRequired,
+      }).isRequired,
+      blocked: PropTypes.shape({
+        hits: PropTypes.arrayOf(PropTypes.string).isRequired,
+      }).isRequired,
+    }).isRequired,
+    explanationValidation: PropTypes.shape({
+      required: PropTypes.shape({
+        hits: PropTypes.arrayOf(PropTypes.string).isRequired,
+        misses: PropTypes.arrayOf(PropTypes.string).isRequired,
+      }).isRequired,
+    }).isRequired,
+    primaryCorrect: PropTypes.bool.isRequired,
+    secondaryRatio: PropTypes.number.isRequired,
+    questionId: PropTypes.string,
+  }).isRequired,
+  question: PropTypes.shape({
+    scenario: PropTypes.string.isRequired,
+    classification: PropTypes.shape({
+      options: PropTypes.object,
+    }),
+  }).isRequired,
+  hasMore: PropTypes.bool.isRequired,
+  onNext: PropTypes.func.isRequired,
+};
 
 const sectionLabel = {
   fontSize: 11, fontWeight: 700, color: "rgba(17,24,39,0.52)",

@@ -1,5 +1,7 @@
+import PropTypes from 'prop-types';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import CategoryBreakdown from './CategoryBreakdown.jsx';
 import EmailCard from './EmailCard.jsx';
 import { glass } from '../styles/tokens.js';
 import { runConfetti } from '../utils/confetti.js';
@@ -111,6 +113,34 @@ function CorrectAnswerOverlay({ points, onDone }) {
 
 // ExplanationCard uses softer blur and border
 const localGlass = { ...glass, backdropFilter: 'blur(24px) saturate(155%)', WebkitBackdropFilter: 'blur(24px) saturate(155%)', border: '1px solid rgba(255,255,255,0.82)', boxShadow: '0 24px 80px rgba(32, 52, 89, 0.10), 0 8px 24px rgba(32, 52, 89, 0.05)' };
+
+ExplanationCard.propTypes = {
+  email: PropTypes.shape({
+    body: PropTypes.string.isRequired,
+    giveawayPhrase: PropTypes.string,
+    explanation: PropTypes.string.isRequired,
+    fromName: PropTypes.string,
+    sender: PropTypes.string,
+    from: PropTypes.string,
+    subject: PropTypes.string.isRequired,
+    userContext: PropTypes.string,
+  }).isRequired,
+  record: PropTypes.shape({
+    l1Correct: PropTypes.bool.isRequired,
+    timedOut: PropTypes.bool,
+    points: PropTypes.number,
+    l1Points: PropTypes.number,
+    l2Points: PropTypes.number,
+    clueDeduction: PropTypes.number,
+    selectedL1: PropTypes.string,
+    selectedL2: PropTypes.string,
+    correctL1: PropTypes.string,
+    correctL2: PropTypes.string,
+    l2Correct: PropTypes.bool,
+  }).isRequired,
+  totalScore: PropTypes.number.isRequired,
+  onNext: PropTypes.func.isRequired,
+};
 
 export default function ExplanationCard({ email, record, totalScore, onNext }) {
   const [showOverlay, setShowOverlay] = useState(record.l1Correct);
@@ -254,64 +284,12 @@ export default function ExplanationCard({ email, record, totalScore, onNext }) {
                 </p>
               </div>
 
-              <div
-                style={{
-                  position: 'relative',
-                  borderRadius: 24,
-                  padding: '16px',
-                  background: 'rgba(249,250,252,0.84)',
-                  border: '1px solid rgba(13,26,51,0.06)',
-                  display: 'grid',
-                  gap: 10,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    color: 'rgba(17,24,39,0.48)',
-                  }}
-                >
-                  Score Breakdown
-                </div>
-                <div style={{ display: 'grid', gap: 6 }}>
-                  {scoreLines.map((line) => (
-                    <div
-                      key={line}
-                      style={{
-                        fontSize: 14,
-                        lineHeight: 1.5,
-                        color: 'rgba(17,24,39,0.68)',
-                      }}
-                    >
-                      {line}
-                    </div>
-                  ))}
-                </div>
-
-                <AnimatePresence>
-                  {showDelta && (
-                    <motion.div
-                      initial={{ opacity: 1, y: 0 }}
-                      animate={{ opacity: 0, y: -20 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.7, ease: 'easeOut' }}
-                      style={{
-                        position: 'absolute',
-                        top: 10,
-                        right: 14,
-                        fontSize: 14,
-                        fontWeight: 700,
-                        color: verdict.accent,
-                      }}
-                    >
-                      {points > 0 ? `+${points}` : '0'}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              <CategoryBreakdown
+                scoreLines={scoreLines}
+                showDelta={showDelta}
+                points={points}
+                accent={verdict.accent}
+              />
             </div>
           </motion.div>
 

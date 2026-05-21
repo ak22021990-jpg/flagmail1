@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
@@ -6,6 +7,9 @@ import TimerBar from './TimerBar.jsx';
 import EmailCard from './EmailCard.jsx';
 import ClueSystem from './ClueSystem.jsx';
 import Classifier from './Classifier.jsx';
+import RoundHeader from './RoundHeader.jsx';
+import ClassifyButton from './ClassifyButton.jsx';
+import ScoreDisplay from './ScoreDisplay.jsx';
 import { ROUND_DURATION_SECONDS } from '../config/game.js';
 import { glass } from '../styles/tokens.js';
 
@@ -206,162 +210,18 @@ export default function GameRound({
             gap: 14,
           }}
         >
-          <div
-            className="game-round-topbar-card"
-            style={{
-              ...surface,
-              borderRadius: 30,
-              padding: '16px 18px',
-            }}
-          >
-            <div
-              className="game-round-topbar"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'minmax(0, 1.2fr) minmax(260px, 1fr) minmax(180px, 0.6fr)',
-                gap: 14,
-                alignItems: 'center',
-              }}
-            >
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'auto minmax(0, 1fr)',
-                  gap: 14,
-                  alignItems: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 12,
-                    background: `${meta.accent}14`,
-                    border: `1px solid ${meta.accent}24`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: meta.accent,
-                    fontSize: 16,
-                    fontWeight: 700,
-                  }}
-                >
-                  {zone}
-                </div>
-
-                <div style={{ minWidth: 0 }}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      flexWrap: 'wrap',
-                      marginBottom: 4,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 28,
-                        fontWeight: 700,
-                        letterSpacing: '-0.04em',
-                        color: '#111827',
-                      }}
-                    >
-                      {meta.name}
-                    </span>
-                    <span
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: 999,
-                        background: `${meta.accent}12`,
-                        color: meta.accent,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        letterSpacing: '0.08em',
-                      }}
-                    >
-                      Email {emailInZone} of {emailsInZone}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: 'rgba(17,24,39,0.58)',
-                    }}
-                  >
-                    {meta.tone}
-                  </div>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: 22,
-                  background: 'linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(245,248,252,0.92) 100%)',
-                  border: '1px solid rgba(13,26,51,0.06)',
-                }}
-              >
-                <div style={{ display: 'grid', gap: 10 }}>
-                  <TimerBar timeLeft={timeLeft} phase={phase} progress={progress} />
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 12,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <div style={{ fontSize: 12, color: 'rgba(17,24,39,0.48)' }}>
-                      Time remaining
-                    </div>
-                    <span
-                      className={phase === 'red' ? 'anim-timerPulse' : ''}
-                      style={{
-                        minWidth: 62,
-                        textAlign: 'right',
-                        fontSize: 22,
-                        lineHeight: 1,
-                        fontWeight: 700,
-                        color: phaseColor,
-                      }}
-                    >
-                      {formatClock(timeLeft)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  justifySelf: 'stretch',
-                  padding: '14px 16px',
-                  borderRadius: 22,
-                  background: 'linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(246,249,253,0.96) 100%)',
-                  border: '1px solid rgba(13,26,51,0.06)',
-                  display: 'grid',
-                  gap: 6,
-                  alignContent: 'center',
-                }}
-              >
-                <div style={{ fontSize: 11, color: 'rgba(17,24,39,0.46)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  Score
-                </div>
-                <div
-                  ref={scoreDisplayRef}
-                  style={{
-                    fontSize: 34,
-                    lineHeight: 1,
-                    fontWeight: 700,
-                    letterSpacing: '-0.05em',
-                    color: '#111827',
-                  }}
-                >
-                  {totalScore}
-                </div>
-              </div>
-            </div>
-          </div>
+          <RoundHeader
+            zone={zone}
+            meta={meta}
+            emailInZone={emailInZone}
+            emailsInZone={emailsInZone}
+            phaseColor={phaseColor}
+            timeLeft={timeLeft}
+            phase={phase}
+            progress={progress}
+            scoreRef={scoreDisplayRef}
+            totalScore={totalScore}
+          />
 
           <div
             className="game-round-main"
@@ -515,29 +375,12 @@ export default function GameRound({
                   </div>
                 </div>
 
-                <motion.button
+                <ClassifyButton
                   onClick={handleSubmit}
                   disabled={!canSubmit}
-                  whileHover={canSubmit ? { scale: 1.015 } : {}}
-                  whileTap={canSubmit ? { scale: 0.985 } : {}}
-                  style={{
-                    width: '100%',
-                    padding: '16px 18px',
-                    borderRadius: 18,
-                    border: canSubmit ? '1px solid rgba(255,255,255,0.45)' : '1px solid rgba(17,24,39,0.10)',
-                    background: canSubmit
-                      ? `linear-gradient(135deg, ${meta.accent} 0%, ${ZONE_END_COLOR[zone]} 100%)`
-                      : 'rgba(17,24,39,0.06)',
-                    color: canSubmit ? '#fff' : 'rgba(17,24,39,0.50)',
-                    fontSize: 15,
-                    fontWeight: 700,
-                    letterSpacing: '0.01em',
-                    boxShadow: canSubmit ? `0 18px 30px ${meta.accent}2E` : 'none',
-                    cursor: canSubmit ? 'pointer' : 'default',
-                  }}
-                >
-                  Submit
-                </motion.button>
+                  accent={meta.accent}
+                  endColor={ZONE_END_COLOR[zone]}
+                />
               </div>
             </div>
           </div>
@@ -546,3 +389,26 @@ export default function GameRound({
     </div>
   );
 }
+
+GameRound.propTypes = {
+  email: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    clues: PropTypes.arrayOf(PropTypes.string),
+    body: PropTypes.string,
+    subject: PropTypes.string,
+  }),
+  zone: PropTypes.number.isRequired,
+  emailInZone: PropTypes.number.isRequired,
+  emailsInZone: PropTypes.number.isRequired,
+  totalScore: PropTypes.number.isRequired,
+  round: PropTypes.shape({
+    selectedL1: PropTypes.string,
+    selectedL2: PropTypes.string,
+    submitted: PropTypes.bool,
+    cluesRevealed: PropTypes.arrayOf(PropTypes.number),
+  }).isRequired,
+  onRevealClue: PropTypes.func.isRequired,
+  onSelectL1: PropTypes.func.isRequired,
+  onSelectL2: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+};

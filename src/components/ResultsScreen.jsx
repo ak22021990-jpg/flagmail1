@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import Lottie from 'lottie-react';
 import RankCard from './RankCard.jsx';
@@ -21,6 +23,8 @@ function titleTone(score) {
   return { accent: '#8E8E93', bg: 'rgba(142,142,147,0.10)' };
 }
 
+const SOC_MAX_SCORE = 112;
+
 export default function ResultsScreen({
   player,
   finalScore = 0,
@@ -28,6 +32,7 @@ export default function ResultsScreen({
   zoneScores = {},
   categoryCorrect = {},
   perEmail = [],
+  socScore = null,
 }) {
   const safePlayer = player ?? { name: 'Analyst' };
   const safePerEmail = Array.isArray(perEmail) ? perEmail : [];
@@ -198,6 +203,42 @@ export default function ResultsScreen({
           ))}
         </div>
 
+        {socScore != null && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12, duration: 0.26, ease: 'easeOut' }}
+            style={{
+              ...surface,
+              borderRadius: 26,
+              padding: 20,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 16,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ display: 'grid', gap: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7B2D8E' }}>
+                SOC Investigation
+              </div>
+              <div style={{ fontSize: 24, lineHeight: 1, fontWeight: 700, letterSpacing: '-0.04em', color: '#111827' }}>
+                SPL query & analysis
+              </div>
+              <div style={{ fontSize: 13, color: 'rgba(17,24,39,0.58)' }}>
+                Deterministic score across all SOC questions.
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span style={{ fontSize: 44, lineHeight: 1, fontWeight: 800, letterSpacing: '-0.05em', color: '#111827' }}>
+                {Math.round(socScore * 100) / 100}
+              </span>
+              <span style={{ fontSize: 18, color: 'rgba(17,24,39,0.34)' }}>/ {SOC_MAX_SCORE}</span>
+            </div>
+          </motion.div>
+        )}
+
         <div className="results-mid-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 0.95fr) minmax(0, 1.05fr)', gap: 16 }}>
           <motion.div
             initial={{ opacity: 0, y: 14 }}
@@ -221,3 +262,13 @@ export default function ResultsScreen({
     </div>
   );
 }
+
+ResultsScreen.propTypes = {
+  player: PropTypes.shape({ name: PropTypes.string }),
+  finalScore: PropTypes.number,
+  displayScore: PropTypes.number,
+  zoneScores: PropTypes.object,
+  categoryCorrect: PropTypes.object,
+  perEmail: PropTypes.array,
+  socScore: PropTypes.number,
+};

@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+
 export default function TimerBar({ timeLeft, phase, progress }) {
   const color = phase === 'green' ? '#34C759' : phase === 'amber' ? '#FF9500' : '#FF3B30';
 
@@ -22,3 +24,9 @@ export default function TimerBar({ timeLeft, phase, progress }) {
     </div>
   );
 }
+
+TimerBar.propTypes = {
+  timeLeft: PropTypes.number.isRequired,
+  phase: PropTypes.oneOf(['green', 'amber', 'red']).isRequired,
+  progress: PropTypes.number.isRequired,
+};

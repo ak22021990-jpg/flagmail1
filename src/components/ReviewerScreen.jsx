@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PropTypes from "prop-types";
 import { motion } from "framer-motion";
 import { LEADERBOARD_URL } from "../config.js";
 import { glass } from "../styles/tokens.js";
@@ -117,14 +118,22 @@ export default function ReviewerScreen({ onBack }) {
                       {sub.email} — {new Date(sub.timestamp).toLocaleString()}
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 6 }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                    {typeof sub.total === "number" && (
+                      <span style={{
+                        padding: "4px 10px", borderRadius: 8, fontSize: 12, fontWeight: 800,
+                        background: "rgba(17,24,39,0.06)", color: "#111827",
+                      }}>
+                        {sub.total} / 112
+                      </span>
+                    )}
                     {sub.questions.map((q, qi) => (
                       <span key={qi} style={{
                         padding: "4px 8px", borderRadius: 8, fontSize: 11, fontWeight: 700,
-                        background: q.score >= 20 ? "rgba(52,199,89,0.12)" : q.score >= 15 ? "rgba(10,132,255,0.12)" : "rgba(255,59,48,0.10)",
-                        color: q.score >= 20 ? "#34C759" : q.score >= 15 ? "#0A84FF" : "#FF3B30",
+                        background: q.grade === "Strong" ? "rgba(52,199,89,0.12)" : q.grade === "Good" ? "rgba(10,132,255,0.12)" : "rgba(255,59,48,0.10)",
+                        color: q.grade === "Strong" ? "#34C759" : q.grade === "Good" ? "#0A84FF" : "#FF3B30",
                       }}>
-                        {q.grade}
+                        {q.questionId}: {q.grade}
                       </span>
                     ))}
                   </div>
@@ -143,48 +152,43 @@ export default function ReviewerScreen({ onBack }) {
                 </motion.button>
 
                 {expandedRow === i && (
-                  <div style={{ display: "grid", gap: 10, paddingTop: 8, borderTop: "1px solid rgba(13,26,51,0.06)" }}>
-                    <div style={{ display: "grid", gap: 6 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(17,24,39,0.48)" }}>
-                        SPL Query
-                      </div>
-                      <pre style={{
-                        margin: 0, padding: 12, borderRadius: 12, fontSize: 12, lineHeight: 1.5,
-                        fontFamily: 'ui-monospace, "SF Mono", monospace',
-                        background: "rgba(17,24,39,0.04)", color: "#111827", whiteSpace: "pre-wrap", overflow: "auto",
+                  <div style={{ display: "grid", gap: 12, paddingTop: 8, borderTop: "1px solid rgba(13,26,51,0.06)" }}>
+                    {sub.questions.map((q, qi) => (
+                      <div key={qi} style={{
+                        display: "grid", gap: 8, padding: 12, borderRadius: 14,
+                        background: "rgba(249,250,252,0.88)", border: "1px solid rgba(13,26,51,0.06)",
                       }}>
-                        {sub.splText || "(empty)"}
-                      </pre>
-                    </div>
-                    <div style={{ display: "grid", gap: 6 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(17,24,39,0.48)" }}>
-                        Explanation
-                      </div>
-                      <div style={{
-                        padding: 12, borderRadius: 12, fontSize: 13, lineHeight: 1.5,
-                        background: "rgba(249,250,252,0.88)", color: "#111827",
-                      }}>
-                        {sub.explanation || "(empty)"}
-                      </div>
-                    </div>
-                    <div style={{ display: "grid", gap: 6 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(17,24,39,0.48)" }}>
-                        Per-question scores
-                      </div>
-                      <div style={{ display: "grid", gap: 4 }}>
-                        {sub.questions.map((q, qi) => (
-                          <div key={qi} style={{
-                            display: "flex", justifyContent: "space-between", gap: 10,
-                            padding: "6px 10px", borderRadius: 8,
-                            background: qi % 2 === 0 ? "rgba(249,250,252,0.88)" : "transparent",
-                            fontSize: 13,
-                          }}>
-                            <span style={{ fontWeight: 600, color: "#111827" }}>{q.questionId}</span>
-                            <span style={{ color: "rgba(17,24,39,0.58)" }}>{q.score}/23 — {q.grade}</span>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                          <span style={{ fontWeight: 700, color: "#111827", fontSize: 13 }}>{q.questionId}</span>
+                          <span style={{ color: "rgba(17,24,39,0.58)", fontSize: 13 }}>
+                            {q.score} pts — {q.grade}
+                          </span>
+                        </div>
+                        <div style={{ display: "grid", gap: 4 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(17,24,39,0.48)" }}>
+                            SPL Query
                           </div>
-                        ))}
+                          <pre style={{
+                            margin: 0, padding: 10, borderRadius: 10, fontSize: 12, lineHeight: 1.5,
+                            fontFamily: 'ui-monospace, "SF Mono", monospace',
+                            background: "rgba(17,24,39,0.04)", color: "#111827", whiteSpace: "pre-wrap", overflow: "auto",
+                          }}>
+                            {q.splText || "(empty)"}
+                          </pre>
+                        </div>
+                        <div style={{ display: "grid", gap: 4 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(17,24,39,0.48)" }}>
+                            Explanation
+                          </div>
+                          <div style={{
+                            padding: 10, borderRadius: 10, fontSize: 13, lineHeight: 1.5,
+                            background: "rgba(255,255,255,0.88)", color: "#111827",
+                          }}>
+                            {q.explanation || "(empty)"}
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 )}
               </motion.div>
@@ -195,3 +199,7 @@ export default function ReviewerScreen({ onBack }) {
     </div>
   );
 }
+
+ReviewerScreen.propTypes = {
+  onBack: PropTypes.func.isRequired,
+};
