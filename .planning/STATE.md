@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-05-21)
 Phase: 1 of 5 (Question Dataset)
 Plan: 0 of TBD in current phase
 Status: Ready to plan
-Last activity: 2026-05-21 - Completed quick task 260522-5to: Add detect-and-flag proctoring (tab/window switch detection) to timed game rounds
+Last activity: 2026-05-22 - Completed quick task 260522-uez: Finalize zone 4 SOC integration (/100 scoring, email results with CSV, fix Sheets)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -67,6 +67,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260522-5to | Add detect-and-flag proctoring (tab/window switch detection) to timed game rounds | 2026-05-21 | 86c5535 | [260522-5to-add-detect-and-flag-proctoring-tab-windo](./quick/260522-5to-add-detect-and-flag-proctoring-tab-windo/) |
+| 260522-uez | Finalize zone 4 SOC integration: /100 scoring, email results with CSV, fix Sheets | 2026-05-22 | 6b0012a | [260522-uez-finalize-zone-4-soc-integration-100-scor](./quick/260522-uez-finalize-zone-4-soc-integration-100-scor/) |
 
 ## Deferred Items
 
