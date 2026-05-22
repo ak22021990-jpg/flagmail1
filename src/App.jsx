@@ -1,4 +1,6 @@
 import { useCallback, useState } from 'react';
+import { scaleSocScore } from './utils/scoreSoc.js';
+import { SOC_QUESTIONS } from './data/socQuestions.js';
 import './styles/animations.css';
 
 import { useGameState, SCREENS } from './hooks/useGameState.js';
@@ -28,6 +30,7 @@ export default function App() {
 
   const [gameViolations, setGameViolations] = useState(0);
   const [socViolations, setSocViolations] = useState(0);
+  const [socScaledResult, setSocScaledResult] = useState(null);
 
   const handleSocSubmit = useCallback(() => {
     soc.submitSocRound();
@@ -39,10 +42,47 @@ export default function App() {
     if (hasMore) {
       gs.setScreen(SCREENS.SOC_ROUND);
     } else {
-      soc.submitSocToSheets(socViolations);
+      const { socScaled, finalScore } = scaleSocScore(soc.socTotal, sc.totalScore);
+      setSocScaledResult(socScaled);
+
+      const tier = finalScore >= 80 ? 'Advanced' : finalScore >= 50 ? 'Proficient' : 'Foundation';
+
+      const socAnswers = SOC_QUESTIONS
+        .map((q, idx) => ({ q, a: soc.answers[idx] }))
+        .filter(({ a }) => a && a.submitted === true)
+        .map(({ q, a }) => ({
+          questionId: q.id,
+          selectedPrimary: a.primary,
+          correctPrimary: q.classification ? q.classification.correct.primary : null,
+          selectedSecondary: Array.isArray(a.secondary) ? a.secondary.join(', ') : (a.secondary || ''),
+          correctSecondary: q.classification
+            ? (Array.isArray(q.classification.correct.secondary)
+                ? q.classification.correct.secondary.join(', ')
+                : q.classification.correct.secondary)
+            : null,
+          splText: a.splText,
+          explanation: a.explanation,
+          score: a.result ? a.result.score.total : 0,
+          grade: a.result ? a.result.score.grade : '',
+        }));
+
+      const consolidatedPayload = {
+        name: gs.player.name,
+        email: gs.player.email,
+        zone1Score: sc.zoneScores[1] || 0,
+        zone2Score: sc.zoneScores[2] || 0,
+        zone3Score: sc.zoneScores[3] || 0,
+        socScaled,
+        finalScore,
+        tier,
+        proctoring_violations: gameViolations + socViolations,
+        socAnswers,
+      };
+
+      soc.submitFinal(consolidatedPayload);
       gs.setScreen(SCREENS.SOC_RESULTS);
     }
-  }, [soc, gs, socViolations]);
+  }, [soc, gs, sc, socViolations, gameViolations]);
 
   // ── Submit a round ───────────────────────────────────────────────────────
   // timedOut=true is passed by GameRound when the timer fires (auto-submit)
@@ -202,6 +242,7 @@ export default function App() {
           categoryCorrect={sc.categoryCorrect}
           perEmail={sc.perEmail}
           socScore={soc.socTotal}
+          socScaled={socScaledResult}
         />
       )}
 

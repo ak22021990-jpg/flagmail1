@@ -167,44 +167,21 @@ export function useSocState(gs) {
       .reduce((sum, a) => sum + (a.result.score.total || 0), 0);
   }, [answers]);
 
-  const submitSocToSheets = useCallback(async (proctoring_violations = 0) => {
-    // One canonical per-question shape, used for sessionStorage + the Sheet payload.
-    const submittedAnswers = answers
-      .map((a, idx) => ({ a, q: SOC_QUESTIONS[idx] }))
-      .filter(({ a }) => a.submitted && a.result)
-      .map(({ a, q }) => ({
-        questionId: q.id,
-        splText: a.splText,
-        explanation: a.explanation,
-        score: a.result.score.total,
-        grade: a.result.score.grade,
-      }));
-
+  const submitFinal = useCallback(async (consolidatedPayload) => {
     try {
-      sessionStorage.setItem("socSubmission", JSON.stringify({
-        name: gs.player.name,
-        email: gs.player.email,
-        answers: submittedAnswers,
-        proctoring_violations: proctoring_violations,
-      }));
+      sessionStorage.setItem("socSubmission", JSON.stringify(consolidatedPayload));
     } catch (_) {}
 
     try {
       if (!LEADERBOARD_URL || LEADERBOARD_URL === "YOUR_APPS_SCRIPT_URL") return;
-      if (submittedAnswers.length === 0) return;
+      if (!consolidatedPayload) return;
       await fetch(LEADERBOARD_URL, {
         method: "POST",
-        body: JSON.stringify({
-          action: "submitSOC",
-          name: gs.player.name,
-          email: gs.player.email,
-          answers: submittedAnswers,
-          proctoring_violations: proctoring_violations,
-        }),
+        body: JSON.stringify({ action: "submitFinal", ...consolidatedPayload }),
         mode: "no-cors",
       });
     } catch (_) {}
-  }, [answers, gs.player]);
+  }, []);
 
   return {
     currentQuestion,
@@ -221,7 +198,7 @@ export function useSocState(gs) {
     setSplText,
     setExplanation,
     submitSocRound,
-    submitSocToSheets,
+    submitFinal,
     nextQuestion,
   };
 }
