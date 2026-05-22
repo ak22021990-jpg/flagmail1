@@ -19,11 +19,11 @@ export default function ReviewerScreen({ onBack }) {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(LEADERBOARD_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "getSOCSubmissions", passcode }),
-      });
+      // GAS handles getSOCSubmissions in doGet only — must be a GET request.
+      // A GET with no custom headers is a "simple" request (no CORS preflight),
+      // and GAS web-app responses include Access-Control-Allow-Origin: *.
+      const url = `${LEADERBOARD_URL}?action=getSOCSubmissions&passcode=${encodeURIComponent(passcode)}`;
+      const res = await fetch(url);
       const data = await res.json();
       if (!data.ok) {
         setError(data.error || "Invalid passcode");
@@ -124,7 +124,7 @@ export default function ReviewerScreen({ onBack }) {
                         padding: "4px 10px", borderRadius: 8, fontSize: 12, fontWeight: 800,
                         background: "rgba(17,24,39,0.06)", color: "#111827",
                       }}>
-                        {sub.total} / 112
+                        {Math.round((sub.total / 112) * 100)} / 100
                       </span>
                     )}
                     {sub.questions.map((q, qi) => (

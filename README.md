@@ -1,3 +1,5 @@
+> **Note:** `flagmail1/` is the canonical project directory. `flagmail/` is deprecated.
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
