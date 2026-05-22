@@ -15,7 +15,12 @@
       "Skill(gsd-quick)",
       "Bash(npx gitnexus *)",
       "mcp__gitnexus__impact",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(gh repo *)",
+      "Bash(gh pr *)",
+      "Bash(gh run *)",
+      "Bash(git commit --amend -m 'fix\\(soc\\): repair SOC Google Sheet integration' -m '- config.js: point LEADERBOARD_URL at the current Apps Script deployment *)",
+      "Bash(git push *)"
     ]
   }
 }

@@ -7,6 +7,7 @@ import CompetencySummary from './CompetencySummary.jsx';
 import { getProgressTitle } from '../utils/competency.js';
 import CELEBRATION from '../assets/animation/Celebration Update Color.json';
 import { MAX_SCORE, ZONE_MAX_SCORE, glass } from '../styles/tokens.js';
+import { SOC_RAW_MAX } from '../utils/scoreSoc.js';
 
 // ResultsScreen uses softer surface style
 const surface = { ...glass, background: 'rgba(255,255,255,0.76)', backdropFilter: 'blur(22px) saturate(150%)', WebkitBackdropFilter: 'blur(22px) saturate(150%)', border: '1px solid rgba(255,255,255,0.82)', boxShadow: '0 24px 80px rgba(32, 52, 89, 0.10), 0 8px 24px rgba(32, 52, 89, 0.05)' };
@@ -23,8 +24,6 @@ function titleTone(score) {
   return { accent: '#8E8E93', bg: 'rgba(142,142,147,0.10)' };
 }
 
-const SOC_MAX_SCORE = 112;
-
 export default function ResultsScreen({
   player,
   finalScore = 0,
@@ -33,6 +32,7 @@ export default function ResultsScreen({
   categoryCorrect = {},
   perEmail = [],
   socScore = null,
+  socScaled = null,
 }) {
   const safePlayer = player ?? { name: 'Analyst' };
   const safePerEmail = Array.isArray(perEmail) ? perEmail : [];
@@ -40,6 +40,7 @@ export default function ResultsScreen({
   const title = getProgressTitle(normalized);
   const perfect = normalized >= 100;
   const tone = titleTone(normalized);
+  const finalScore100 = socScaled != null ? finalScore + socScaled : null;
 
   const zoneAcc = (zone) => {
     const emails = safePerEmail.filter((record) => record.zone === zone);
@@ -134,7 +135,7 @@ export default function ResultsScreen({
                 {safePlayer.name}&apos;s final judgment score.
               </h1>
               <p style={{ margin: '14px 0 0', fontSize: 16, lineHeight: 1.6, color: 'rgba(17,24,39,0.64)', maxWidth: 560 }}>
-                Based on how accurately you classified each email across all three zones, under real time pressure.
+                Based on how accurately you classified each email across all four zones.
               </p>
             </div>
 
@@ -232,9 +233,42 @@ export default function ResultsScreen({
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
               <span style={{ fontSize: 44, lineHeight: 1, fontWeight: 800, letterSpacing: '-0.05em', color: '#111827' }}>
-                {Math.round((socScore / SOC_MAX_SCORE) * 100)}
+                {Math.round((socScore / SOC_RAW_MAX) * 100)}
               </span>
               <span style={{ fontSize: 18, color: 'rgba(17,24,39,0.34)' }}>/ 100</span>
+            </div>
+          </motion.div>
+        )}
+
+        {finalScore100 != null && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.26, ease: 'easeOut' }}
+            style={{
+              ...surface,
+              borderRadius: 26,
+              padding: 20,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 16,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ display: 'grid', gap: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(17,24,39,0.46)' }}>
+                Combined Assessment Score
+              </div>
+              <div style={{ fontSize: 13, color: 'rgba(17,24,39,0.58)' }}>
+                Zones 1-3 + SOC Investigation
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span style={{ fontSize: 52, lineHeight: 1, fontWeight: 800, letterSpacing: '-0.06em', color: '#111827' }}>
+                {finalScore100}
+              </span>
+              <span style={{ fontSize: 20, color: 'rgba(17,24,39,0.34)' }}>/ 100</span>
             </div>
           </motion.div>
         )}
@@ -271,4 +305,5 @@ ResultsScreen.propTypes = {
   categoryCorrect: PropTypes.object,
   perEmail: PropTypes.array,
   socScore: PropTypes.number,
+  socScaled: PropTypes.number,
 };
