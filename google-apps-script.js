@@ -7,11 +7,22 @@
  *   GET  ?checkEmail=...   — checks if an email has already been used
  *
  * Setup:
- *   1. Create a Google Sheet with two tabs: "Summary" and "RawData"
- *   2. Extensions > Apps Script > paste this file
- *   3. Deploy > New deployment > Web app > Execute as: Me, Access: Anyone
- *   4. Copy the URL into flagmail1/src/config.js
+ *   1. Create a Google Sheet (tabs are auto-created on first write).
+ *   2. Copy the Sheet ID from its URL:
+ *        https://docs.google.com/spreadsheets/d/<THIS_IS_THE_ID>/edit
+ *      and paste it into SPREADSHEET_ID below.
+ *   3. Apps Script > paste this file > Save.
+ *   4. Deploy > Manage deployments > edit existing > New version > Deploy.
+ *   5. Copy the /exec URL into flagmail1/src/config.js
  */
+
+// The Sheet this web app reads/writes. Required because a standalone Apps
+// Script project has no "active spreadsheet" — openById() works either way.
+var SPREADSHEET_ID = '1-ldYuBrFaj6I7EiXpIOxPXqgaDLM1lywlMjYVJW7FB8';
+
+function getSpreadsheet() {
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
+}
 
 function ensureSheets(ss) {
   var summary = ss.getSheetByName('Summary');
@@ -55,7 +66,7 @@ function doPost(e) {
   try {
     var payload = JSON.parse(e.postData.contents);
     var action = payload.action || '';
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = getSpreadsheet();
     var ts = new Date().toISOString();
 
     if (action === 'register') {
@@ -133,7 +144,7 @@ function doGet(e) {
   var checkEmail = (e.parameter && e.parameter.checkEmail) || '';
 
   if (checkEmail) {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = getSpreadsheet();
     var sheets = ensureSheets(ss);
     var exists = findRowByEmail(sheets.summary, checkEmail) > 0;
 
@@ -151,7 +162,7 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = getSpreadsheet();
     var soc = ss.getSheetByName('SOCData');
     if (!soc || soc.getLastRow() < 2) {
       return ContentService

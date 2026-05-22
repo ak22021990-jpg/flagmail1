@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gsd-sdk query *)",
+      "WebSearch",
+      "WebFetch(domain:www.splunk.com)",
+      "WebFetch(domain:undercodetesting.com)",
+      "WebFetch(domain:pmc.ncbi.nlm.nih.gov)",
+      "PowerShell(Move-Item *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Read(//c/Users/anoop/.claude/get-shit-done/templates//**)",
+      "Read(//c/Users/anoop/.claude/get-shit-done/templates/**)",
+      "Bash(git commit -m 'feat: add SOC investigation zone + fix scoring integration *)",
+      "Skill(gsd-quick)",
+      "Bash(npx gitnexus *)",
+      "mcp__gitnexus__impact",
+      "Bash(npx vite *)"
+    ]
+  }
+}

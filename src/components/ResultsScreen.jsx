@@ -232,9 +232,9 @@ export default function ResultsScreen({
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
               <span style={{ fontSize: 44, lineHeight: 1, fontWeight: 800, letterSpacing: '-0.05em', color: '#111827' }}>
-                {Math.round(socScore * 100) / 100}
+                {Math.round((socScore / SOC_MAX_SCORE) * 100)}
               </span>
-              <span style={{ fontSize: 18, color: 'rgba(17,24,39,0.34)' }}>/ {SOC_MAX_SCORE}</span>
+              <span style={{ fontSize: 18, color: 'rgba(17,24,39,0.34)' }}>/ 100</span>
             </div>
           </motion.div>
         )}

@@ -12,7 +12,7 @@ This milestone adds a fourth zone — SOC Investigation — to the existing thre
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Question Dataset** - Author the ~5 SOC investigation questions as a static data file, with scenario, log evidence, keyword rules, and feedback strings
+- [ ] **Phase 1: Question Dataset** - Author 6 SOC investigation question objects (Q1–Q4, Q5a, Q5b) as a static data file, with scenario, log evidence, keyword rules, and feedback strings
 - [ ] **Phase 2: Validation and Scoring Utilities** - Build pure-function SPL keyword validation and 23-point scoring engines that all downstream code depends on
 - [ ] **Phase 3: State Machine and Hook** - Extend the SCREENS enum, apply the one-line advanceZone patch, and build useSocState to own all SOC flow
 - [ ] **Phase 4: SOC Level UI** - Build all SOC screen components and wire them into App.jsx so the full play loop is playable end-to-end
@@ -25,7 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Nothing (first phase)
 **Requirements**: QSTN-01, QSTN-02, HARD-03
 **Success Criteria** (what must be TRUE):
-  1. `src/data/socQuestions.js` exports an array of ~5 question objects covering Q1–Q4 and multi-stage Q8 from `Splunk Questions.docx`, each with a scenario description and an evidence panel (email, proxy, EDR log lines)
+  1. `src/data/socQuestions.js` exports an array of 6 question objects (Q1–Q4, Q5a, Q5b) with scenario, evidence panel (email, proxy, EDR log lines), classification options, SPL keyword rules, and concept keywords
   2. Every question's SPL rules use `anyOf` arrays for at least the time-range and aggregation terms, so alternate valid SPL syntax variants are represented from the start
   3. Every question's explanation concept keywords are authored as shortest-unambiguous root forms (e.g., `"credential"` not `"credential harvesting"`)
   4. Each question's required SPL term list has been manually checked against at least three plausible term-stuffed queries and includes at least one blocked term per question to resist stuffing
@@ -90,8 +90,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Question Dataset | 0/TBD | Not started | - |
-| 2. Validation and Scoring Utilities | 0/TBD | Not started | - |
-| 3. State Machine and Hook | 0/TBD | Not started | - |
-| 4. SOC Level UI | 0/TBD | Not started | - |
-| 5. Backend and Reviewer View | 0/TBD | Not started | - |
+| 1. Question Dataset | 1/1 | Complete | 2026-05-22 |
+| 2. Validation and Scoring Utilities | 1/1 | Complete | 2026-05-22 |
+| 3. State Machine and Hook | 1/1 | Complete | 2026-05-22 |
+| 4. SOC Level UI | 1/1 | Complete | 2026-05-22 |
+| 5. Backend and Reviewer View | 1/1 | Complete | 2026-05-22 |
