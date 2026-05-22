@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { getProgressTitle } from '../utils/competency.js';
 
 export default function RankCard({ player, finalScore }) {
@@ -120,3 +121,8 @@ export default function RankCard({ player, finalScore }) {
     </div>
   );
 }
+
+RankCard.propTypes = {
+  player: PropTypes.shape({ name: PropTypes.string }),
+  finalScore: PropTypes.number,
+};

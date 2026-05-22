@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lottie from 'lottie-react';
@@ -19,51 +20,8 @@ const LOTTIE_MAP = {
   EAGLE_EYE, GHOST_DETECTIVE, ICE_COLD, PERFECT_EYE, NO_HINTS_NEEDED,
 };
 
-// ── Confetti canvas ────────────────────────────────────────────────────────
-function runConfetti(canvas) {
-  const W = window.innerWidth;
-  const H = window.innerHeight;
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  const COLORS = ['#FF3B30','#34C759','#0A84FF','#FF9500','#5856D6','#FFD60A','#FF2D55','#30D158'];
-  const pieces = Array.from({ length: 200 }, () => ({
-    x: Math.random() * W,
-    y: -20 - Math.random() * 180,
-    vx: (Math.random() - 0.5) * 10,
-    vy: 2.5 + Math.random() * 6,
-    color: COLORS[Math.floor(Math.random() * COLORS.length)],
-    w: 8 + Math.random() * 12,
-    h: 4 + Math.random() * 7,
-    rotation: Math.random() * 360,
-    rotVel: (Math.random() - 0.5) * 11,
-  }));
-
-  let raf;
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    let alive = false;
-    pieces.forEach(p => {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.14;
-      p.vx *= 0.994;
-      p.rotation += p.rotVel;
-      if (p.y < H + 50) alive = true;
-      const alpha = Math.max(0, Math.min(1, 1 - p.y / (H * 1.2)));
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.translate(p.x, p.y);
-      ctx.rotate((p.rotation * Math.PI) / 180);
-      ctx.fillStyle = p.color;
-      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-      ctx.restore();
-    });
-    if (alive) raf = requestAnimationFrame(draw);
-  }
-  draw();
-  return () => cancelAnimationFrame(raf);
-}
+// ── Confetti ───────────────────────────────────────────────────────────────
+import { runConfetti } from '../utils/confetti.js';
 
 // ── Rare badge — full-screen cinematic reveal ──────────────────────────────
 function RareBadgeScreen({ badge, onDismiss }) {
@@ -78,6 +36,7 @@ function RareBadgeScreen({ badge, onDismiss }) {
   return (
     <motion.div
       key="rare-screen"
+      role="alert"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -241,6 +200,7 @@ function CommonBadgeScreen({ badge, onDismiss }) {
   return (
     <motion.div
       key="common-screen"
+      role="alert"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -383,6 +343,17 @@ function CommonBadgeScreen({ badge, onDismiss }) {
 }
 
 // ── Main export ────────────────────────────────────────────────────────────
+BadgeToast.propTypes = {
+  badge: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    rare: PropTypes.bool,
+    icon: PropTypes.string,
+    name: PropTypes.string.isRequired,
+    desc: PropTypes.string,
+  }),
+  onDismiss: PropTypes.func.isRequired,
+};
+
 export default function BadgeToast({ badge, onDismiss }) {
   const [visible, setVisible] = useState(false);
 

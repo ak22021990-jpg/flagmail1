@@ -1,0 +1,227 @@
+import { useState, useCallback, useMemo } from "react";
+import { SOC_QUESTIONS } from "../data/socQuestions.js";
+import { validateSpl, validateExplanation } from "../utils/validateSpl.js";
+import { scoreSocRound } from "../utils/scoreSoc.js";
+import { LEADERBOARD_URL } from "../config.js";
+
+const QUESTION_SCORE_MAP = {
+  Q1: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
+  Q2: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
+  Q3: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
+  Q4: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
+  Q5a: { primary: 5, secondary: 3, spl: 2, explanation: 0 },
+  Q5b: { primary: 0, secondary: 0, spl: 10, explanation: 0 },
+};
+
+function initialAnswers() {
+  return SOC_QUESTIONS.map(() => ({
+    primary: null,
+    secondary: null,
+    splText: "",
+    explanation: "",
+    submitted: false,
+    result: null,
+  }));
+}
+
+export function useSocState(gs) {
+  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+  const [answers, setAnswers] = useState(initialAnswers);
+  const [showResults, setShowResults] = useState(false);
+
+  const totalQuestions = SOC_QUESTIONS.length;
+  const currentQuestion = SOC_QUESTIONS[currentQuestionIdx];
+  const currentAnswer = answers[currentQuestionIdx];
+
+  const progress = useMemo(() => ({
+    current: currentQuestionIdx + 1,
+    total: totalQuestions,
+  }), [currentQuestionIdx, totalQuestions]);
+
+  const setPrimary = useCallback((value) => {
+    setAnswers(prev => {
+      const next = [...prev];
+      next[currentQuestionIdx] = { ...next[currentQuestionIdx], primary: value, secondary: null };
+      return next;
+    });
+  }, [currentQuestionIdx]);
+
+  const setSecondary = useCallback((value) => {
+    setAnswers(prev => {
+      const q = SOC_QUESTIONS[currentQuestionIdx];
+      const isCompound = q.classification && Array.isArray(q.classification.correct.secondary);
+      if (isCompound) {
+        const current = Array.isArray(prev[currentQuestionIdx].secondary) ? prev[currentQuestionIdx].secondary : [];
+        const nextVal = current.includes(value) ? current.filter(v => v !== value) : [...current, value];
+        const next = [...prev];
+        next[currentQuestionIdx] = { ...next[currentQuestionIdx], secondary: nextVal };
+        return next;
+      }
+      const next = [...prev];
+      next[currentQuestionIdx] = { ...next[currentQuestionIdx], secondary: value };
+      return next;
+    });
+  }, [currentQuestionIdx]);
+
+  const setSplText = useCallback((text) => {
+    setAnswers(prev => {
+      const next = [...prev];
+      next[currentQuestionIdx] = { ...next[currentQuestionIdx], splText: text };
+      return next;
+    });
+  }, [currentQuestionIdx]);
+
+  const setExplanation = useCallback((text) => {
+    setAnswers(prev => {
+      const next = [...prev];
+      next[currentQuestionIdx] = { ...next[currentQuestionIdx], explanation: text };
+      return next;
+    });
+  }, [currentQuestionIdx]);
+
+  const submitSocRound = useCallback(() => {
+    const q = currentQuestion;
+    const a = answers[currentQuestionIdx];
+    if (!q || !a || a.submitted) return;
+
+    const classifyCorrect = q.classification;
+    let primaryCorrect = false;
+    let secondaryRatio = 0;
+
+    if (classifyCorrect) {
+      primaryCorrect = a.primary === classifyCorrect.correct.primary;
+      if (Array.isArray(classifyCorrect.correct.secondary)) {
+        const correctSet = new Set(classifyCorrect.correct.secondary);
+        const selected = Array.isArray(a.secondary) ? a.secondary : [a.secondary];
+        const hits = selected.filter(s => correctSet.has(s)).length;
+        secondaryRatio = hits / correctSet.size;
+      } else {
+        secondaryRatio = a.secondary === classifyCorrect.correct.secondary ? 1 : 0;
+      }
+    }
+
+    const splResult = { required: { hits: [], misses: [] }, optional: { hits: [], misses: [] }, blocked: { hits: [] } };
+    let explanationResult = { required: { hits: [], misses: [] }, optional: { hits: [], misses: [] } };
+
+    if (q.splRules && q.splRules.tasks && q.splRules.tasks.length > 0) {
+      for (const task of q.splRules.tasks) {
+        const r = validateSpl(a.splText, task);
+        splResult.required.hits.push(...r.required.hits);
+        splResult.required.misses.push(...r.required.misses);
+        splResult.optional.hits.push(...r.optional.hits);
+        splResult.optional.misses.push(...r.optional.misses);
+        splResult.blocked.hits.push(...r.blocked.hits);
+      }
+    }
+
+    if (q.conceptKeywords) {
+      explanationResult = validateExplanation(a.explanation, q.conceptKeywords);
+    }
+
+    const scoreConfig = QUESTION_SCORE_MAP[q.id];
+    const scoreResult = scoreSocRound({
+      primaryCorrect,
+      secondaryRatio,
+      splValidation: splResult,
+      explanationValidation: explanationResult,
+    }, scoreConfig);
+
+    const record = {
+      questionId: q.id,
+      primaryCorrect,
+      secondaryRatio,
+      splValidation: splResult,
+      explanationValidation: explanationResult,
+      score: scoreResult,
+    };
+
+    setAnswers(prev => {
+      const next = [...prev];
+      next[currentQuestionIdx] = { ...next[currentQuestionIdx], submitted: true, result: record };
+      return next;
+    });
+  }, [currentQuestion, currentQuestionIdx, answers]);
+
+  const nextQuestion = useCallback(() => {
+    const nextIdx = currentQuestionIdx + 1;
+    if (nextIdx >= totalQuestions) {
+      setShowResults(true);
+      return false;
+    } else {
+      setCurrentQuestionIdx(nextIdx);
+      return true;
+    }
+  }, [currentQuestionIdx, totalQuestions]);
+
+  const hasMoreQuestions = currentQuestionIdx < totalQuestions - 1;
+
+  const allResults = useMemo(() => {
+    return answers
+      .filter(a => a.submitted && a.result)
+      .map(a => a.result);
+  }, [answers]);
+
+  const socTotal = useMemo(() => {
+    return answers
+      .filter(a => a.submitted && a.result)
+      .reduce((sum, a) => sum + (a.result.score.total || 0), 0);
+  }, [answers]);
+
+  const submitSocToSheets = useCallback(async (proctoring_violations = 0) => {
+    // One canonical per-question shape, used for sessionStorage + the Sheet payload.
+    const submittedAnswers = answers
+      .map((a, idx) => ({ a, q: SOC_QUESTIONS[idx] }))
+      .filter(({ a }) => a.submitted && a.result)
+      .map(({ a, q }) => ({
+        questionId: q.id,
+        splText: a.splText,
+        explanation: a.explanation,
+        score: a.result.score.total,
+        grade: a.result.score.grade,
+      }));
+
+    try {
+      sessionStorage.setItem("socSubmission", JSON.stringify({
+        name: gs.player.name,
+        email: gs.player.email,
+        answers: submittedAnswers,
+        proctoring_violations: proctoring_violations,
+      }));
+    } catch (_) {}
+
+    try {
+      if (!LEADERBOARD_URL || LEADERBOARD_URL === "YOUR_APPS_SCRIPT_URL") return;
+      if (submittedAnswers.length === 0) return;
+      await fetch(LEADERBOARD_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "submitSOC",
+          name: gs.player.name,
+          email: gs.player.email,
+          answers: submittedAnswers,
+          proctoring_violations: proctoring_violations,
+        }),
+        mode: "no-cors",
+      });
+    } catch (_) {}
+  }, [answers, gs.player]);
+
+  return {
+    currentQuestion,
+    currentAnswer,
+    currentQuestionIdx,
+    progress,
+    answers,
+    showResults,
+    allResults,
+    socTotal,
+    hasMoreQuestions,
+    setPrimary,
+    setSecondary,
+    setSplText,
+    setExplanation,
+    submitSocRound,
+    submitSocToSheets,
+    nextQuestion,
+  };
+}

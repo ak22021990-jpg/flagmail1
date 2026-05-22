@@ -1,4 +1,6 @@
+import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
+import { glass } from '../styles/tokens.js';
 
 const TIPS = [
   {
@@ -23,13 +25,8 @@ const TIPS = [
   },
 ];
 
-const glass = {
-  background: 'rgba(255,255,255,0.72)',
-  backdropFilter: 'blur(28px) saturate(165%)',
-  WebkitBackdropFilter: 'blur(28px) saturate(165%)',
-  border: '1px solid rgba(255,255,255,0.86)',
-  boxShadow: '0 24px 80px rgba(32,52,89,0.11), 0 8px 24px rgba(32,52,89,0.06)',
-};
+// TutorialScreen uses slightly more transparent glass
+const localGlass = { ...glass, background: 'rgba(255,255,255,0.72)' };
 
 export default function TutorialScreen({ onSkip }) {
   return (
@@ -69,7 +66,7 @@ export default function TutorialScreen({ onSkip }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 200, damping: 26 }}
         style={{
-          ...glass,
+          ...localGlass,
           borderRadius: 34,
           padding: 'clamp(22px, 3vw, 34px)',
           maxWidth: 680,
@@ -110,7 +107,7 @@ export default function TutorialScreen({ onSkip }) {
               letterSpacing: '0.02em',
             }}
           >
-            15 emails &middot; 3 zones &middot; 120s per round
+            15 emails &middot; 3 zones + SOC investigation &middot; 120s per round
           </div>
         </div>
 
@@ -214,3 +211,7 @@ export default function TutorialScreen({ onSkip }) {
     </div>
   );
 }
+
+TutorialScreen.propTypes = {
+  onSkip: PropTypes.func.isRequired,
+};

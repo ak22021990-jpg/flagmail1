@@ -1,54 +1,10 @@
+import PropTypes from 'prop-types';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import CategoryBreakdown from './CategoryBreakdown.jsx';
 import EmailCard from './EmailCard.jsx';
-
-function runConfetti(canvas) {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  const colors = ['#0A84FF', '#34C759', '#FF9500', '#FF3B30', '#30B0C7'];
-
-  const pieces = Array.from({ length: 120 }, () => ({
-    x: width * 0.18 + Math.random() * width * 0.64,
-    y: -20 - Math.random() * 120,
-    vx: (Math.random() - 0.5) * 7,
-    vy: 2 + Math.random() * 4,
-    color: colors[Math.floor(Math.random() * colors.length)],
-    w: 8 + Math.random() * 8,
-    h: 4 + Math.random() * 4,
-    rotation: Math.random() * 360,
-    rotVel: (Math.random() - 0.5) * 9,
-  }));
-
-  let raf = 0;
-
-  function draw() {
-    ctx.clearRect(0, 0, width, height);
-    let active = false;
-    for (const piece of pieces) {
-      piece.x += piece.vx;
-      piece.y += piece.vy;
-      piece.vy += 0.12;
-      piece.vx *= 0.994;
-      piece.rotation += piece.rotVel;
-      if (piece.y < height + 40) active = true;
-
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, Math.min(1, 1 - piece.y / (height * 1.08)));
-      ctx.translate(piece.x, piece.y);
-      ctx.rotate((piece.rotation * Math.PI) / 180);
-      ctx.fillStyle = piece.color;
-      ctx.fillRect(-piece.w / 2, -piece.h / 2, piece.w, piece.h);
-      ctx.restore();
-    }
-    if (active) raf = requestAnimationFrame(draw);
-  }
-
-  draw();
-  return () => cancelAnimationFrame(raf);
-}
+import { glass } from '../styles/tokens.js';
+import { runConfetti } from '../utils/confetti.js';
 
 function CorrectAnswerOverlay({ points, onDone }) {
   const canvasRef = useRef(null);
@@ -60,7 +16,18 @@ function CorrectAnswerOverlay({ points, onDone }) {
 
   useEffect(() => {
     if (!canvasRef.current) return undefined;
-    return runConfetti(canvasRef.current);
+    return runConfetti(canvasRef.current, {
+      colors: ['#0A84FF', '#34C759', '#FF9500', '#FF3B30', '#30B0C7'],
+      pieceCount: 120,
+      xRange: [0.18, 0.82],
+      speedVx: 3.5,
+      speedVy: [2, 6],
+      gravity: 0.12,
+      rotVel: 4.5,
+      yStart: [-20, -140],
+      pieceW: [8, 16],
+      pieceH: [4, 8],
+    });
   }, []);
 
   return (
@@ -144,12 +111,35 @@ function CorrectAnswerOverlay({ points, onDone }) {
   );
 }
 
-const glass = {
-  background: 'rgba(255,255,255,0.74)',
-  backdropFilter: 'blur(24px) saturate(155%)',
-  WebkitBackdropFilter: 'blur(24px) saturate(155%)',
-  border: '1px solid rgba(255,255,255,0.82)',
-  boxShadow: '0 24px 80px rgba(32, 52, 89, 0.10), 0 8px 24px rgba(32, 52, 89, 0.05)',
+// ExplanationCard uses softer blur and border
+const localGlass = { ...glass, backdropFilter: 'blur(24px) saturate(155%)', WebkitBackdropFilter: 'blur(24px) saturate(155%)', border: '1px solid rgba(255,255,255,0.82)', boxShadow: '0 24px 80px rgba(32, 52, 89, 0.10), 0 8px 24px rgba(32, 52, 89, 0.05)' };
+
+ExplanationCard.propTypes = {
+  email: PropTypes.shape({
+    body: PropTypes.string.isRequired,
+    giveawayPhrase: PropTypes.string,
+    explanation: PropTypes.string.isRequired,
+    fromName: PropTypes.string,
+    sender: PropTypes.string,
+    from: PropTypes.string,
+    subject: PropTypes.string.isRequired,
+    userContext: PropTypes.string,
+  }).isRequired,
+  record: PropTypes.shape({
+    l1Correct: PropTypes.bool.isRequired,
+    timedOut: PropTypes.bool,
+    points: PropTypes.number,
+    l1Points: PropTypes.number,
+    l2Points: PropTypes.number,
+    clueDeduction: PropTypes.number,
+    selectedL1: PropTypes.string,
+    selectedL2: PropTypes.string,
+    correctL1: PropTypes.string,
+    correctL2: PropTypes.string,
+    l2Correct: PropTypes.bool,
+  }).isRequired,
+  totalScore: PropTypes.number.isRequired,
+  onNext: PropTypes.func.isRequired,
 };
 
 export default function ExplanationCard({ email, record, totalScore, onNext }) {
@@ -218,7 +208,7 @@ export default function ExplanationCard({ email, record, totalScore, onNext }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.28, ease: 'easeOut' }}
             style={{
-              ...glass,
+              ...localGlass,
               borderRadius: 30,
               padding: '20px 22px',
               overflow: 'hidden',
@@ -294,64 +284,12 @@ export default function ExplanationCard({ email, record, totalScore, onNext }) {
                 </p>
               </div>
 
-              <div
-                style={{
-                  position: 'relative',
-                  borderRadius: 24,
-                  padding: '16px',
-                  background: 'rgba(249,250,252,0.84)',
-                  border: '1px solid rgba(13,26,51,0.06)',
-                  display: 'grid',
-                  gap: 10,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    color: 'rgba(17,24,39,0.48)',
-                  }}
-                >
-                  Score Breakdown
-                </div>
-                <div style={{ display: 'grid', gap: 6 }}>
-                  {scoreLines.map((line) => (
-                    <div
-                      key={line}
-                      style={{
-                        fontSize: 14,
-                        lineHeight: 1.5,
-                        color: 'rgba(17,24,39,0.68)',
-                      }}
-                    >
-                      {line}
-                    </div>
-                  ))}
-                </div>
-
-                <AnimatePresence>
-                  {showDelta && (
-                    <motion.div
-                      initial={{ opacity: 1, y: 0 }}
-                      animate={{ opacity: 0, y: -20 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.7, ease: 'easeOut' }}
-                      style={{
-                        position: 'absolute',
-                        top: 10,
-                        right: 14,
-                        fontSize: 14,
-                        fontWeight: 700,
-                        color: verdict.accent,
-                      }}
-                    >
-                      {points > 0 ? `+${points}` : '0'}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              <CategoryBreakdown
+                scoreLines={scoreLines}
+                showDelta={showDelta}
+                points={points}
+                accent={verdict.accent}
+              />
             </div>
           </motion.div>
 
@@ -369,7 +307,7 @@ export default function ExplanationCard({ email, record, totalScore, onNext }) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1, duration: 0.28, ease: 'easeOut' }}
               style={{
-                ...glass,
+                ...localGlass,
                 borderRadius: 28,
                 padding: 18,
                 display: 'grid',

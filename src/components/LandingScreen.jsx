@@ -1,14 +1,13 @@
+import PropTypes from 'prop-types';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { LEADERBOARD_URL } from '../config.js';
+import { glass } from '../styles/tokens.js';
+import FeatureHighlight from './FeatureHighlight.jsx';
+import AuthForm from './AuthForm.jsx';
 
-const glass = {
-  background: 'rgba(255,255,255,0.72)',
-  backdropFilter: 'blur(28px) saturate(165%)',
-  WebkitBackdropFilter: 'blur(28px) saturate(165%)',
-  border: '1px solid rgba(255,255,255,0.86)',
-  boxShadow: '0 24px 80px rgba(32, 52, 89, 0.11), 0 8px 24px rgba(32, 52, 89, 0.06)',
-};
+// LandingScreen uses slightly more transparent glass
+const localGlass = { ...glass, background: 'rgba(255,255,255,0.72)' };
 
 const ZONE_CARDS = [
   { zone: 1, title: 'Inbox',      detail: 'Spot the loud red flags fast and build your rhythm.',               accent: '#0A84FF' },
@@ -166,7 +165,7 @@ export default function LandingScreen({ onStart }) {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.06, duration: 0.4 }}
             style={{
-              ...glass,
+              ...localGlass,
               borderRadius: 34,
               padding: 'clamp(24px, 2.8vw, 34px)',
               display: 'grid',
@@ -318,59 +317,7 @@ export default function LandingScreen({ onStart }) {
                 }}
               >
                 {ZONE_CARDS.map((card) => (
-                  <div
-                    key={card.zone}
-                    style={{
-                      position: 'relative',
-                      overflow: 'hidden',
-                      borderRadius: 24,
-                      padding: '16px',
-                      background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(244,247,252,0.94) 100%)',
-                      border: '1px solid rgba(13,26,51,0.06)',
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: '0 auto 0 0',
-                        width: 4,
-                        background: card.accent,
-                        opacity: 0.7,
-                        borderRadius: '4px 0 0 4px',
-                      }}
-                    />
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        letterSpacing: '0.08em',
-                        color: card.accent,
-                        marginBottom: 10,
-                      }}
-                    >
-                      {card.zone}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 18,
-                        fontWeight: 700,
-                        letterSpacing: '-0.03em',
-                        color: '#111827',
-                        marginBottom: 6,
-                      }}
-                    >
-                      {card.title}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        lineHeight: 1.45,
-                        color: 'rgba(17,24,39,0.62)',
-                      }}
-                    >
-                      {card.detail}
-                    </div>
-                  </div>
+                  <FeatureHighlight key={card.zone} card={card} />
                 ))}
               </div>
             </div>
@@ -382,7 +329,7 @@ export default function LandingScreen({ onStart }) {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.12, duration: 0.4 }}
             style={{
-              ...glass,
+              ...localGlass,
               borderRadius: 32,
               padding: 'clamp(24px, 2.6vw, 30px)',
               display: 'grid',
@@ -426,130 +373,20 @@ export default function LandingScreen({ onStart }) {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12 }}>
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: '#111827',
-                    marginBottom: 8,
-                    letterSpacing: '0.02em',
-                  }}
-                >
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  onFocus={() => setFocusedField('name')}
-                  onBlur={() => setFocusedField(null)}
-                  placeholder="Your full name"
-                  style={inputStyle('name')}
-                />
-              </div>
-
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: '#111827',
-                    marginBottom: 8,
-                    letterSpacing: '0.02em',
-                  }}
-                >
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onFocus={() => setFocusedField('email')}
-                  onBlur={() => setFocusedField(null)}
-                  placeholder="you@example.com"
-                  style={inputStyle('email')}
-                />
-              </div>
-
-              {blocked && !error && (
-                <p
-                  style={{
-                    fontSize: 12,
-                    color: '#FF9500',
-                    margin: 0,
-                  }}
-                >
-                  You have already completed this assessment on this device.
-                </p>
-              )}
-
-              {error && (
-                <p
-                  style={{
-                    fontSize: 12,
-                    color: '#FF3B30',
-                    margin: 0,
-                  }}
-                >
-                  {error}
-                </p>
-              )}
-
-              {checking && (
-                <div
-                  style={{
-                    width: '100%',
-                    height: 4,
-                    borderRadius: 999,
-                    overflow: 'hidden',
-                    background: 'rgba(10,132,255,0.12)',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '40%',
-                      height: '100%',
-                      borderRadius: 999,
-                      background: 'linear-gradient(90deg, #0A84FF 0%, #30B0C7 100%)',
-                      animation: 'loadingSlide 1s ease-in-out infinite',
-                    }}
-                  />
-                  <style>{`
-                    @keyframes loadingSlide {
-                      0% { transform: translateX(-100%); }
-                      100% { transform: translateX(350%); }
-                    }
-                  `}</style>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={checking || blocked}
-                style={{
-                  width: '100%',
-                  marginTop: 4,
-                  padding: '15px 18px',
-                  borderRadius: 18,
-                  border: '1px solid rgba(10,132,255,0.32)',
-                  background: (checking || blocked)
-                    ? 'rgba(10,132,255,0.5)'
-                    : 'linear-gradient(135deg, #0A84FF 0%, #0066CC 100%)',
-                  color: '#fff',
-                  fontSize: 15,
-                  fontWeight: 700,
-                  letterSpacing: '0.01em',
-                  boxShadow: '0 18px 32px rgba(10,132,255,0.22)',
-                  cursor: (checking || blocked) ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {blocked ? 'Assessment Already Taken' : checking ? 'Verifying eligibility…' : 'Start Assessment'}
-              </button>
-            </form>
+            <AuthForm
+              name={name}
+              email={email}
+              error={error}
+              checking={checking}
+              blocked={blocked}
+              focusedField={focusedField}
+              onNameChange={(e) => setName(e.target.value)}
+              onEmailChange={(e) => setEmail(e.target.value)}
+              onSubmit={handleSubmit}
+              onFocus={(field) => setFocusedField(field)}
+              onBlur={() => setFocusedField(null)}
+              inputStyle={inputStyle}
+            />
 
             <div
               style={{
@@ -619,3 +456,7 @@ export default function LandingScreen({ onStart }) {
     </div>
   );
 }
+
+LandingScreen.propTypes = {
+  onStart: PropTypes.func.isRequired,
+};

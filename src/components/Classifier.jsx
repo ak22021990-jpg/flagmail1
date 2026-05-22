@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { L1_CATEGORIES, L2_BY_L1 } from '../data/emails.js';
@@ -438,6 +439,14 @@ export default function Classifier({ selectedL1, selectedL2, onSelectL1, onSelec
     </div>
   );
 }
+
+Classifier.propTypes = {
+  selectedL1: PropTypes.string,
+  selectedL2: PropTypes.string,
+  onSelectL1: PropTypes.func.isRequired,
+  onSelectL2: PropTypes.func.isRequired,
+  disabled: PropTypes.bool.isRequired,
+};
 
 function hexToRgb(hex) {
   const r = parseInt(hex.slice(1, 3), 16);

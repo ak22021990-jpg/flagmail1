@@ -13,6 +13,7 @@ export function useLeaderboard() {
       await fetch(LEADERBOARD_URL, {
         method: 'POST',
         body: JSON.stringify(playerData),
+        mode: 'no-cors',
       });
       setSubmitted(true);
     } catch (err) {

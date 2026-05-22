@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 
 const AUTH_COLOR = { Pass: '#34C759', Fail: '#FF9500', None: '#AEAEB2' };
 
@@ -155,3 +156,19 @@ export default function EmailHeaderPanel({ email }) {
     </div>
   );
 }
+
+EmailHeaderPanel.propTypes = {
+  email: PropTypes.shape({
+    fromName: PropTypes.string,
+    sender: PropTypes.string,
+    replyTo: PropTypes.string,
+    subject: PropTypes.string,
+    auth: PropTypes.shape({
+      spf: PropTypes.string,
+      dkim: PropTypes.string,
+      dmarc: PropTypes.string,
+    }),
+    originIp: PropTypes.string,
+    from: PropTypes.string,
+  }).isRequired,
+};

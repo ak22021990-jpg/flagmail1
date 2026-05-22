@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
 import Lottie from 'lottie-react';
 import { BADGES } from '../hooks/useBadges.js';
@@ -134,3 +135,7 @@ export default function BadgeCollection({ earned }) {
     </div>
   );
 }
+
+BadgeCollection.propTypes = {
+  earned: PropTypes.arrayOf(PropTypes.string).isRequired,
+};

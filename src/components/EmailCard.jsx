@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import EmailHeaderPanel from './EmailHeaderPanel.jsx';
 
 function getInitials(name) {
@@ -273,3 +274,19 @@ export default function EmailCard({ email, giveawayHighlight = false }) {
     </div>
   );
 }
+
+EmailCard.propTypes = {
+  email: PropTypes.shape({
+    fromName: PropTypes.string,
+    sender: PropTypes.string,
+    replyTo: PropTypes.string,
+    subject: PropTypes.string,
+    from: PropTypes.string,
+    body: PropTypes.string.isRequired,
+    giveawayPhrase: PropTypes.string,
+    userContext: PropTypes.string,
+    clues: PropTypes.arrayOf(PropTypes.string),
+    explanation: PropTypes.string,
+  }),
+  giveawayHighlight: PropTypes.bool,
+};

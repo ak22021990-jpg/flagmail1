@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ClueSystem({ clues, revealed, onReveal, disabled }) {
@@ -128,3 +129,10 @@ export default function ClueSystem({ clues, revealed, onReveal, disabled }) {
     </div>
   );
 }
+
+ClueSystem.propTypes = {
+  clues: PropTypes.arrayOf(PropTypes.string).isRequired,
+  revealed: PropTypes.arrayOf(PropTypes.number).isRequired,
+  onReveal: PropTypes.func.isRequired,
+  disabled: PropTypes.bool.isRequired,
+};
