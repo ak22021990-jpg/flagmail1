@@ -31,7 +31,8 @@ function ensureSheets(ss) {
     summary.appendRow([
       'Timestamp', 'Name', 'Email', 'Status',
       'Score', 'Display Score', 'Tier',
-      'Zone 1', 'Zone 2', 'Zone 3', 'Proctoring Violations'
+      'Zone 1', 'Zone 2', 'Zone 3', 'Proctoring Violations',
+      'Zone 4 (SOC)', 'Final Score /100'
     ]);
   }
 
@@ -128,6 +129,123 @@ function doPost(e) {
           i === 0 ? (payload.proctoring_violations || 0) : '',
         ]);
       }
+      return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'submitFinal') {
+      var sheets = ensureSheets(ss);
+
+      // 1. Update Summary row with SOC + Final Score columns
+      var row = findRowByEmail(sheets.summary, payload.email || '');
+      var socScaled = payload.socScaled != null ? payload.socScaled : 0;
+      var finalScore = payload.finalScore != null ? payload.finalScore : 0;
+      var tierVal = payload.tier || '';
+
+      if (row > 0) {
+        // Update Tier (col 7) with combined-score tier
+        sheets.summary.getRange(row, 7, 1, 1).setValue(tierVal);
+        // Write Zone 4 (SOC) in col 12 and Final Score /100 in col 13
+        sheets.summary.getRange(row, 12, 1, 2).setValues([[socScaled, finalScore]]);
+      } else {
+        // Fallback: candidate started SOC without a prior register/submit row
+        sheets.summary.appendRow([
+          ts,
+          payload.name || '', payload.email || '',
+          'Completed',
+          (payload.zone1Score || 0) + (payload.zone2Score || 0) + (payload.zone3Score || 0),
+          '',
+          tierVal,
+          payload.zone1Score || 0,
+          payload.zone2Score || 0,
+          payload.zone3Score || 0,
+          payload.proctoring_violations || 0,
+          socScaled,
+          finalScore,
+        ]);
+      }
+
+      // 2. Write SOCData rows (preserves SOCData row shape)
+      var soc = ensureSOCSheet(ss);
+      var socAnswers = payload.socAnswers || [];
+      for (var i = 0; i < socAnswers.length; i++) {
+        var ans = socAnswers[i];
+        soc.appendRow([
+          ts,
+          payload.name || '',
+          payload.email || '',
+          sanitiseCell(ans.questionId || ''),
+          sanitiseCell(ans.score != null ? ans.score : ''),
+          sanitiseCell(ans.grade || ''),
+          sanitiseCell(ans.splText || ''),
+          sanitiseCell(ans.explanation || ''),
+          i === 0 ? (payload.proctoring_violations || 0) : '',
+        ]);
+      }
+
+      // 3. Build CSV string for attachment
+      var csvLines = ['Question ID,Selected Primary,Correct Primary,Selected Secondary,Correct Secondary,SPL Query,Explanation,Score,Grade'];
+      for (var j = 0; j < socAnswers.length; j++) {
+        var r = socAnswers[j];
+        csvLines.push([
+          csvEscape(r.questionId || ''),
+          csvEscape(r.selectedPrimary || ''),
+          csvEscape(r.correctPrimary || ''),
+          csvEscape(r.selectedSecondary || ''),
+          csvEscape(r.correctSecondary || ''),
+          csvEscape(r.splText || ''),
+          csvEscape(r.explanation || ''),
+          r.score != null ? r.score : '',
+          csvEscape(r.grade || ''),
+        ].join(','));
+      }
+      var csvString = csvLines.join('\r\n');
+      var csvBlob = Utilities.newBlob(
+        csvString,
+        'text/csv',
+        (payload.name || 'candidate').replace(/[^a-z0-9]/gi, '_') + '_soc_responses.csv'
+      );
+
+      // 4. Build email body
+      var bodyLines = [
+        'Email Abuse Assessment Results',
+        '',
+        'Applicant: ' + (payload.name || ''),
+        'Email: ' + (payload.email || ''),
+        '',
+        'Zone Scores:',
+        '  Zone 1 (Inbox):       ' + (payload.zone1Score || 0) + ' / 20',
+        '  Zone 2 (Queue):       ' + (payload.zone2Score || 0) + ' / 20',
+        '  Zone 3 (Escalation):  ' + (payload.zone3Score || 0) + ' / 20',
+        '  Zone 4 (SOC Inv.):    ' + socScaled + ' / 40',
+        '',
+        'Combined Final Score:   ' + finalScore + ' / 100',
+        'Competency Tier:        ' + tierVal,
+        'Proctoring Violations:  ' + (payload.proctoring_violations || 0),
+        '',
+        'SOC assessment responses are attached as a CSV.',
+      ];
+      var emailBody = bodyLines.join('\n');
+
+      // 5. Send email to reviewers
+      var recipients = [
+        'pavan.machala@sutherlandglobal.com',
+        'emilouvienna.nadela@sutherlandglobal.com',
+        'Anoop.krishnan1@sutherlandglobal.com',
+        'Sandhya.jobbin@sutherlandglobal.com',
+      ];
+      var subject = 'Email Abuse Assessment - "' + (payload.name || '') + '"';
+      try {
+        MailApp.sendEmail({
+          to: recipients.join(','),
+          subject: subject,
+          body: emailBody,
+          attachments: [csvBlob],
+        });
+      } catch (mailErr) {
+        // Email failure is non-fatal — Sheet writes already succeeded
+        Logger.log('MailApp error: ' + mailErr.message);
+      }
+
       return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -236,4 +354,12 @@ function sanitiseCell(val) {
     return "'" + val;
   }
   return val;
+}
+
+function csvEscape(val) {
+  var s = String(val == null ? '' : val);
+  if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
 }
