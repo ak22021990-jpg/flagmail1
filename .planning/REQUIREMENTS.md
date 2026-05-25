@@ -1,79 +1,61 @@
-# Requirements: FlagMail — SOC Investigation Level
+# Requirements: FlagMail v1.1 — SOC Investigation Overhaul + Email Fix
 
-**Defined:** 2026-05-22
-**Core Value:** A candidate can complete a realistic SOC investigation — classify the threat, write a working SPL query, and explain their reasoning — and get an automatic, defensible score plus feedback that a reviewer can trust.
+**Defined:** 2025-05-25
+**Core Value:** Zone 4 presents realistic SOC investigation scenarios — not vague quiz prompts — so candidates understand what they're investigating, what to look for, and what a good answer achieves, while managers reliably receive submission notifications.
 
-## v1 Requirements
+## v1.1 Requirements
 
 Requirements for this milestone. Each maps to roadmap phases.
 
-### Level Integration
+### Investigation Context
 
-- [ ] **LEVEL-01**: A new fourth zone "SOC Investigation" is reachable after the existing three classification zones, leaving zones 1–3 unchanged
-- [ ] **LEVEL-02**: The SOC level shows an intro card before its questions begin, consistent with existing zone intros
-- [ ] **LEVEL-03**: A progress indicator shows which SOC question the candidate is on (e.g. "Question N of 5")
+- [ ] **CTX-01**: Each SOC question displays an investigation goal statement describing what the analyst needs to determine (e.g., "Identify phishing emails using password expiration themes")
+- [ ] **CTX-02**: Each SOC question displays an analyst focus callout listing specific indicators to look for (e.g., "Suspicious sender domains, Credential harvesting URLs, Impacted recipients")
+- [ ] **CTX-03**: Each SOC question displays expected security outcomes describing what analyst actions should follow (e.g., "Block phishing URL, Reset compromised credentials, Notify affected users")
 
-### Question Content
+### SPL Task Prompts
 
-- [ ] **QSTN-01**: The level ships with ~5 SOC investigation questions authored from `Splunk Questions.docx` (Q1–Q4 and the multi-stage Q8)
-- [ ] **QSTN-02**: Each question displays a scenario description and a log evidence panel showing the email / proxy / EDR details relevant to that question
+- [ ] **TASK-01**: Each SOC question displays a clear, scenario-specific SPL task prompt above the query input (e.g., "Write an SPL query to find similar phishing emails and identify impacted recipients")
 
-### Candidate Input
+### Hints
 
-- [ ] **INPUT-01**: The candidate selects a primary classification from question-specific options
-- [ ] **INPUT-02**: The candidate selects a secondary diagnosis from question-specific options
-- [ ] **INPUT-03**: The candidate writes a Splunk SPL query in a plain multi-line text editor
-- [ ] **INPUT-04**: The candidate writes a free-text explanation of their reasoning
-- [ ] **INPUT-05**: The candidate cannot submit a question until both the SPL query and explanation contain content
+- [ ] **HINT-01**: Each SOC question offers one or more directional hints available after the first submit attempt, guiding without revealing exact SPL syntax (e.g., "Think about aggregation" not "use stats count")
+- [ ] **HINT-02**: Hints are revealed progressively — candidate requests one at a time, not all at once
 
-### Validation
+### Scoring Feedback
 
-- [ ] **VALID-01**: The SPL query is validated by keyword matching — required terms must be present, optional terms earn credit, blocked terms are penalized — with no query execution
-- [ ] **VALID-02**: SPL validation normalizes whitespace and supports alternate accepted terms so valid syntax variants are not falsely failed
-- [ ] **VALID-03**: The explanation is validated against expected concept keywords
+- [ ] **FDBK-01**: After submitting, the candidate sees per-dimension feedback labels clearly identifying how they scored on classification, SPL query, and explanation separately
+- [ ] **FDBK-02**: Feedback labels use human-readable descriptions (e.g., "SPL Query: 7/10 — matched core investigation terms, missed aggregation syntax")
 
-### Scoring
+### Email Delivery
 
-- [ ] **SCORE-01**: Each question is scored on a 23-point model — Primary classification 5, Secondary diagnosis 3, SPL query 10, Explanation 5
-- [ ] **SCORE-02**: Each question produces an overall grade band — Strong (20–23), Good (15–19), Needs improvement (10–14), Not ready (below 10)
+- [ ] **EMAIL-01**: The GAS email notification reliably delivers submission results to the configured manager/reviewer email addresses
+- [ ] **EMAIL-02**: GAS email delivery includes quota checking and logs failures with actionable error details rather than failing silently
+- [ ] **EMAIL-03**: The GAS deployment checklist documents the MailApp re-authorization step required after each script update
 
-### Candidate Feedback
+### Data Enrichment
 
-- [ ] **FDBK-01**: After submitting a question, the candidate sees a per-question pass/fail result with a per-dimension score breakdown
-- [ ] **FDBK-02**: The candidate sees per-dimension feedback explaining what was correct or missing
+- [ ] **DATA-01**: The `socQuestions.js` dataset is enriched with investigation_context (goal, analyst_focus, expected_outcome), task prompts, and hint arrays per question
+- [ ] **DATA-02**: All 5 SOC questions (Q1-Q4, Q8) are updated with content from the Splunk Query Context Explanations document
 
-### Submission Backend
+## Future Requirements
 
-- [ ] **BACK-01**: SOC submissions (classifications, SPL text, explanation, scores, feedback) are pushed to Google Sheets via the existing Apps Script backend using a new sheet and action
-- [ ] **BACK-02**: A failed submission surfaces a visible error to the candidate rather than failing silently
-- [ ] **BACK-03**: Candidate-supplied text written to Google Sheets is sanitized so spreadsheet formulas cannot execute
+Deferred beyond v1.1. Tracked but not in the current roadmap.
 
-### Reviewer View
+### Evidence Display
 
-- [ ] **REVW-01**: A reviewer view is reachable as a separate in-app route, gated by a shared passcode
-- [ ] **REVW-02**: The passcode is validated server-side (Apps Script) so it is not exposed in the client bundle
-- [ ] **REVW-03**: The reviewer view lists SOC submissions with candidate name, timestamp, scores, and grade band, read from the Google Sheet
-- [ ] **REVW-04**: The reviewer view shows each submission's raw SPL query and explanation text
+- **EVID-01**: Evidence displayed as typed cards (email headers, log summaries, EDR alerts) instead of flat field dump
+- **EVID-02**: Structured evidence with fixed labeled layout (Sender, Subject, Attachment, URL, Status)
 
-### Code Health
+### Learning
 
-- [ ] **HARD-01**: The SOC validation and scoring utilities are covered by automated unit tests run via a test framework (Vitest)
-- [ ] **HARD-02**: The existing leaderboard score submission surfaces a visible error on failure instead of failing silently
-- [ ] **HARD-03**: The repository documents `flagmail1/` as the canonical project and `flagmail/` as deprecated
+- **LEARN-01**: Worked-solution reveal shows model SPL answer with clause-by-clause annotations after scoring
+- **LEARN-02**: AI-generated coaching feedback based on candidate mistakes
 
-## v2 Requirements
+### Display
 
-Deferred to a future release. Tracked but not in the current roadmap.
-
-### Candidate Assistance
-
-- **HINT-01**: Each question offers one directional hint, available after the first submit attempt
-- **HINT-02**: A worked-solution reveal shows a model SPL answer with annotations after submission
-
-### Reviewer
-
-- **REVW-05**: Reviewer per-question drill-down for a single submission
-- **REVW-06**: Reviewer can filter or sort submissions by date, grade band, or candidate name
+- **DISP-01**: Dark-themed code surface for SPL textarea to signal "code input"
+- **DISP-02**: SPL syntax highlighting
 
 ### Progression
 
@@ -83,18 +65,24 @@ Deferred to a future release. Tracked but not in the current roadmap.
 
 - **CONT-01**: Fold the `Sample questions(1).xlsx` email bank into the existing classification zones
 
+### Reviewer
+
+- **REVW-05**: Reviewer per-question drill-down for a single submission
+- **REVW-06**: Reviewer can filter or sort submissions by date, grade band, or candidate name
+
 ## Out of Scope
 
 Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| Reviewer login / user accounts | Shared passcode is sufficient for v1; full auth is a large addition to a currently auth-free app |
-| Real Splunk query execution | Keyword validation is the chosen fidelity level; execution needs a Splunk backend |
-| LLM / AI semantic grading | Keyword and concept matching only for v1; keeps grading deterministic and API-free |
-| Timer on SOC questions | Time pressure tests anxiety, not SPL skill; existing countdown timer is not ported to the SOC level |
-| Leaderboard integration for SOC scores | The SOC level is an assessment, not a competition; mixing scores conflates the two modes |
-| Rewriting the existing three zones | The SOC level is purely additive |
+| Real Splunk query execution | Keyword validation is the chosen fidelity level |
+| LLM / AI semantic grading | Keyword and concept matching only; keeps grading deterministic |
+| Timer on SOC questions | Time pressure tests anxiety, not SPL skill |
+| Leaderboard integration for SOC scores | SOC level is assessment, not competition |
+| Evidence display restructure | Current flat display works; typed cards deferred to future milestone |
+| Worked-solution reveal | Requires authored content per question; deferred |
+| SPL syntax highlighting | 180KB+ library cost, mislabels SPL tokens |
 
 ## Traceability
 
@@ -102,39 +90,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QSTN-01 | Phase 1 | Pending |
-| QSTN-02 | Phase 1 | Pending |
-| HARD-03 | Phase 1 | Pending |
-| VALID-01 | Phase 2 | Pending |
-| VALID-02 | Phase 2 | Pending |
-| VALID-03 | Phase 2 | Pending |
-| SCORE-01 | Phase 2 | Pending |
-| SCORE-02 | Phase 2 | Pending |
-| HARD-01 | Phase 2 | Pending |
-| LEVEL-01 | Phase 3 | Pending |
-| LEVEL-02 | Phase 3 | Pending |
-| LEVEL-03 | Phase 3 | Pending |
-| INPUT-01 | Phase 4 | Pending |
-| INPUT-02 | Phase 4 | Pending |
-| INPUT-03 | Phase 4 | Pending |
-| INPUT-04 | Phase 4 | Pending |
-| INPUT-05 | Phase 4 | Pending |
-| FDBK-01 | Phase 4 | Pending |
-| FDBK-02 | Phase 4 | Pending |
-| BACK-01 | Phase 5 | Pending |
-| BACK-02 | Phase 5 | Pending |
-| BACK-03 | Phase 5 | Pending |
-| REVW-01 | Phase 5 | Pending |
-| REVW-02 | Phase 5 | Pending |
-| REVW-03 | Phase 5 | Pending |
-| REVW-04 | Phase 5 | Pending |
-| HARD-02 | Phase 5 | Pending |
-
-**Coverage:**
-- v1 requirements: 26 total
-- Mapped to phases: 26
-- Unmapped: 0
+| (filled by roadmapper) | | |
 
 ---
-*Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after HARD-01..03 folded into existing phases*
+*Requirements defined: 2025-05-25*
