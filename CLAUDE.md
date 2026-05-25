@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **flagmail1** (938 symbols, 1197 relationships, 12 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **flagmail1** (962 symbols, 1231 relationships, 12 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -72,164 +72,206 @@ plus feedback that a reviewer can trust.
 <!-- GSD:stack-start source:codebase/STACK.md -->
 ## Technology Stack
 
-## Languages & Runtime
-- **JavaScript (ES2020+)** — all source code. No TypeScript.
-- **Node.js** — dev/build toolchain only.
-- **Browser** — target runtime (Chrome, Firefox, Safari).
-## Framework
-- **React 19** (`19.2.0`) — UI library. Function components + hooks.
-- **Vite 7** (`7.3.1`) — bundler, dev server, HMR.
-- **@vitejs/plugin-react** — Babel-based Fast Refresh.
+## Languages
+- JavaScript (ES2020+) — All source code in `src/` uses JSX syntax with ES modules. No TypeScript.
+- CSS3 — Custom properties in `src/index.css`, keyframe animations in `src/styles/animations.css`
+- HTML5 — Entry point at `index.html`
+## Runtime
+- Node.js 20 (CI) / 22+ (local dev via `engines` not specified)
+- Browser (SPA — all logic runs client-side)
+- npm
+- Lockfile: `package-lock.json` present
+## Frameworks
+- React 19.2.0 — UI framework, no Next.js or SSR. Pure client-side SPA.
+- React DOM 19.2.0 — Renderer
+- framer-motion 11.18.2 — Component-level animations (`motion.div`, `AnimatePresence`). Used in ~20 components.
+- GSAP 3.12.5 — Scroll-linked animations in `GameRound.jsx`
+- animejs 3.2.2 — Declared dependency; usage TBD
+- lottie-react 2.4.1 — Lottie JSON animation player for badge celebrations (`ResultsScreen.jsx`)
+- matter-js 0.19.0 — 2D physics engine; declared but usage not confirmed
+- Vitest 4.1.7 — Unit test runner. Config at `vitest.config.js`
+- Playwright 1.59.1 — E2E/visual audit script at `scripts/playwright-audit.mjs`
+- Vite 7.3.1 — Bundler and dev server. Config at `vite.config.js`
+- ESLint 9.39.1 — Linting with `@eslint/js`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`. Config at `eslint.config.js`
 ## Key Dependencies
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `framer-motion` | ^11.18.2 | Animated transitions between screens |
-| `gsap` | ^3.12.5 | GSAP animation library (badge + game animations) |
-| `animejs` | ^3.2.2 | Alternative animation library |
-| `lottie-react` | ^2.4.1 | After Effects animation renderer |
-| `matter-js` | ^0.19.0 | 2D physics engine |
-| `papaparse` | ^5.5.3 | CSV parsing for email datasets |
-### Animation Assets
-- 10 Lottie `.json` files in `src/assets/animation/` (one per badge)
-- CSS keyframe animations in `src/styles/animations.css`
-- GSAP planned upgrade documented in `ANIMATION_BRIEF.md`
-## Dev Dependencies
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `eslint` | ^9.39.1 | Linter (flat config) |
-| `@eslint/js` | ^9.39.1 | ESLint recommended rules |
-| `eslint-plugin-react-hooks` | ^7.0.1 | React Hooks lint rules |
-| `eslint-plugin-react-refresh` | ^0.4.24 | HMR-safe exports lint |
-| `globals` | ^16.5.0 | Browser globals for ESLint |
-| `playwright` | ^1.59.1 | Headless browser screenshots + layout audit |
-| `vite` | ^7.3.1 | Bundler |
-| `@vitejs/plugin-react` | ^5.1.1 | Vite React plugin |
-| `@types/react` | ^19.2.7 | Type stubs (not used in code) |
-| `@types/react-dom` | ^19.2.3 | Type stubs |
+- `react` + `react-dom` ^19.2.0 — Core UI framework
+- `framer-motion` ^11.18.2 — Primary animation engine used in almost every component
+- `papaparse` ^5.5.3 — CSV parsing (for `email_dataset.csv`)
+- `prop-types` ^15.8.1 — Runtime type checking for component props
+- `src/data/emails.js` — Inline email dataset (742 lines, 15 emails with clues and classifications)
+- `src/data/socQuestions.js` — SOC assessment questions (356 lines, 6 questions)
+- `src/data/email_dataset.csv` — Raw CSV source (not imported directly in code)
 ## Configuration
-- `vite.config.js` — base path `/flagmail1/`, React plugin
-- `eslint.config.js` — flat config, JSX, browser globals, `no-unused-vars` error
-- `.gitignore` — standard Vite ignores + `*.local`, editor dirs
-## Build & Serve
-## Notable Absences
-- **No TypeScript** — all `.js` / `.jsx` with JSDoc-style comments
-- **No CSS framework** — plain CSS with CSS variables
-- **No state management library** — `useState`/`useCallback` only
-- **No router** — custom screen state machine in `useGameState`
-- **No testing framework** — no Jest, Vitest, or React Testing Library
+- No `.env` files. No `import.meta.env` usage.
+- Configuration managed through `src/config.js` (Google Apps Script URL)
+- Game constants in `src/config/game.js` (timers, durations)
+- Design tokens in `src/styles/tokens.js` (glass surface, scores, zone metadata)
+- CSS custom properties in `src/index.css` (colors, backgrounds)
+- `vite.config.js` — `base: '/flagmail1/'` for GitHub Pages subpath deployment
+- `eslint.config.js` — Flat config format, extends `js/recommended` + `react-hooks` + `react-refresh`
+## Platform Requirements
+- Node.js >= 18 (Vite 7 requirement)
+- npm
+- Browser with ES module support
+- Static file hosting (GitHub Pages)
+- No server-side runtime required
 <!-- GSD:stack-end -->
 
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
 ## Conventions
 
+## Language & Runtime
+## Naming Patterns
+- `kebab-case.js` / `kebab-case.jsx`: Component files (`game-round.jsx` → `GameRound.jsx`): PascalCase file name matches default export name.
+- `camelCase.js`: Utility files (`scoreSoc.js`, `validateSpl.js`, `shuffle.js`, `competency.js`, `confetti.js`)
+- `camelCase.js`: Hook files (`useGameState.js`, `useScoring.js`, `useBadges.js`)
+- `camelCase.js`: Config and data files (`game.js`, `emails.js`, `socQuestions.js`, `tokens.js`)
+- `PascalCase.jsx`: React component files (`GameRound.jsx`, `BadgeToast.jsx`, `ErrorBoundary.jsx`, `EmailCard.jsx`)
+- `.test.js` suffix for test files, co-located with source
+- `camelCase` for all functions and methods (e.g., `scaleSocScore`, `validateSpl`, `scoreSocRound`, `submitSocRound`)
+- `handle*` for event handler callbacks (`handleSubmit`, `handleTimeout`, `handleNext`, `handleSocSubmit`)
+- `on*` for callback props passed downwards (`onSubmit`, `onNext`, `onDismiss`)
+- `render*` for internal render helper functions within components (`renderBody` in `EmailCard.jsx`)
+- `camelCase` throughout
+- `UPPER_SNAKE_CASE` for module-level constants (`SOC_RAW_MAX`, `SCREENS`, `ROUND_DURATION_SECONDS`, `L1_HELP`, `BADGES`)
+- Boolean prefixes: `is*`/**`has`**/**`can`**/**`all`**/**`show`** (e.g., `isCompound`, `allStrong`, `canSubmit`, `showResults`, `hasMoreQuestions`)
+- Ref suffix: `Ref` for `useRef` bindings (`roundRef`, `scoreDisplayRef`, `canvasRef`)
+- `PascalCase` for class components (only `ErrorBoundary` in `src/components/ErrorBoundary.jsx`)
+- All components are `PascalCase` default exports
+- `use*` prefix for custom hooks (`useGameState`, `useScoring`, `useBadges`, `useTimer`, `useProctoring`, `useSocState`, `useLeaderboard`)
 ## Code Style
-- **Language**: JavaScript (ES2020+), no TypeScript
-- **JSX**: `.jsx` extension required
-- **Semicolons**: always
-- **Quotes**: single quotes for JS strings
-- **Indentation**: 2 spaces
-- **Trailing commas**: yes (in multiline arrays/objects)
-## Naming
-| Element | Convention | Example |
-|---------|-----------|---------|
-| Components | PascalCase | `GameRound.jsx` |
-| Hooks | `use` prefix, camelCase | `useGameState.js` |
-| Utils | camelCase | `shuffle.js` |
-| Constants | UPPER_SNAKE_CASE | `ROUND_DURATION_SECONDS` |
-| CSS classes | kebab-case | `anim-fadeSlideUp` |
-| CSS variables | kebab-case | `--flagmail-ink` |
-| Files | PascalCase for components | `LandingScreen.jsx` |
-## Component Patterns
-- **Function components only** — no class components
-- **Default exports** for all components
-- **Named exports** for hooks, utils, constants
-- Props destructured inline: `export default function GameRound({ email, zone, ... })`
-- Callbacks wrapped in `useCallback` with dependency arrays
-- No PropTypes or TypeScript interfaces
-## Hook Patterns
-- Each hook manages ONE concern (game state, scoring, badges, timer, leaderboard)
-- Hooks return objects with state + action functions
-- `useState` for local state, `useCallback` for actions, `useRef` for mutable refs
-- `useEffect` minimal — primarily used in `useTimer.js` for interval logic
-## CSS Patterns
-- **Global CSS** via `src/index.css` — CSS variables, resets, scrollbar styling
-- **Animation classes** in `animations.css` — utility classes with `.anim-*` prefix
-- **Inline styles** for dynamic JS values (e.g., gradient backgrounds)
-- No CSS modules, CSS-in-JS, or Tailwind
-- Glass surface pattern: `rgba(255,255,255,0.74)` background + blur + subtle border
+- **ESLint v9** with flat config (`eslint.config.js`)
+- Extends: `@eslint/js` recommended, `eslint-plugin-react-hooks` flat recommended, `eslint-plugin-react-refresh` Vite config
+- Custom rule: `no-unused-vars: ['error', { varsIgnorePattern: '^[A-Z_]' }]` — allows unused uppercase constants
+- Targets `**/*.{js,jsx}` files, ignores `dist/`
+## Import Organization
+- All imports use relative paths (no path aliases configured)
+- Extensions always explicit: `.js`, `.jsx`, `.css`, `.json`
 ## Error Handling
-- **Try/catch** in Google Apps Script `doPost`/`doGet` — returns `{ status: 'error', message }`
-- **Try/catch** in `useLeaderboard.js` and `useGameState.submitToSheet` — silent failure with `console.warn`
-- **No error boundaries** in React tree
-- **No fallback UI for API failures** — leaderboard simply shows empty state
-## File Organization
-- One component per file
-- Grouped by role: `components/`, `hooks/`, `data/`, `config/`, `styles/`, `utils/`
-- Assets split: `animation/` (Lottie), `images/` (reference images)
+## Logging
+- `console.warn('Score submit failed:', err)` — async fetch failures
+- `console.warn('ErrorBoundary caught:', error, info)` — React errors
+- Errors swallowed silently in Soc submission (`catch (_) {}`)
+- No info/debug/error level differentiation
+## Comments
+- Used sparingly for public utility functions
+- Used for hook docs:
+## Component Design
+## Module Design
+- Named exports for utility functions and constants (`export function scaleSocScore`, `export const SOC_RAW_MAX`)
+- Default exports for components (`export default function GameRound`)
+- Mixed exports in hook files (`export const SCREENS = { ... }; export function useGameState() { ... }`)
+## Styling Conventions
+## Data Conventions
+- `src/data/emails.js` — `EMAIL_POOL` array
+- `src/data/socQuestions.js` — `SOC_QUESTIONS` array
+- `src/config/game.js` — timing constants
+- `src/config.js` — external service URLs (root level, singular)
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->
 ## Architecture
 
-## Pattern
-## Screen Flow
+## System Overview
+```text
 ```
-```
+## Component Responsibilities
+| Component | Responsibility | File |
+|-----------|----------------|------|
+| `App` | Screen router — renders 1 of 11 screens based on `gs.screen` | `src/App.jsx` |
+| `useGameState` | Screen state machine, player data, email pool, zone/round progression | `src/hooks/useGameState.js` |
+| `useScoring` | Score calculation per email/zone/total + category tracking | `src/hooks/useScoring.js` |
+| `useSocState` | SOC quiz state (answers, SPL validation, scoring, final submission) | `src/hooks/useSocState.js` |
+| `useBadges` | Badge unlock conditions (10 badge types) | `src/hooks/useBadges.js` |
+| `useTimer` | Countdown timer with green/amber/red phase | `src/hooks/useTimer.js` |
+| `useProctoring` | Tab-switch detection via visibilitychange + blur/focus | `src/hooks/useProctoring.js` |
+| `useLeaderboard` | GET/POST to Google Apps Script leaderboard | `src/hooks/useLeaderboard.js` |
+| `ErrorBoundary` | Class component — catches render errors, shows reload UI | `src/components/ErrorBoundary.jsx` |
+## Pattern Overview
+- Single-page app — no router library. Screen transitions via `SCREENS` enum and `setScreen()`
+- State colocated in custom hooks (not global store) — `useGameState`, `useScoring`, `useSocState`, `useBadges`
+- `App.jsx` is orchestrator — instantiates hooks, wires callbacks, renders active screen
+- Components receive state + callbacks as props — no prop drilling beyond 1 level deep
+- Two independent scoring tracks converge at end: zones (1-3) + SOC (zone 4)
+- Data layer is entirely static (JS modules) until final result submission to Google Sheets
 ## Layers
-### 1. Entry (`src/main.jsx`)
-- Mounts `<App />` in `#root` via `createRoot`
-### 2. App Shell (`src/App.jsx`)
-- Reads `gs.screen` to conditionally render screens
-- Injects Google Apps Script URL from `config.js`
-- Handles submit/next/advanceZone via callbacks
-### 3. State Hooks (`src/hooks/`)
-- `useGameState.js` — game flow, zone progression, email pool, perfect-streak tracking
-- `useScoring.js` — scoring formula, per-email records, category accuracy
-- `useBadges.js` — badge unlocking, toast queue, streak tracking
-- `useTimer.js` — countdown timer (180s default)
-- `useLeaderboard.js` — leaderboard fetch + score submission
-### 4. Screen Components (`src/components/`)
-- `LandingScreen.jsx` — player registration form
-- `TutorialScreen.jsx` — gameplay instructions
-- `ZoneIntroCard.jsx` — zone preview
-- `GameRound.jsx` — main gameplay (email + classifier + timer)
-- `ExplanationCard.jsx` — post-round feedback
-- `ZoneComplete.jsx` — zone summary with badges
-- `ResultsScreen.jsx` — final scores, leaderboard
-### 5. Supporting Components
-- `EmailCard.jsx` — email display with auth headers
-- `Classifier.jsx` — L1/L2 category picker
-- `ClueSystem.jsx` — progressive clue reveal
-- `TimerBar.jsx` — countdown bar
-- `BadgeToast.jsx` — badge unlock notification
-- `BadgeCollection.jsx` — earned badges grid
-- `Leaderboard.jsx` — scores table
-- `CompetencySummary.jsx` — category strength analysis
-- `RankCard.jsx` — player rank display
-- `ReasoningModal.jsx` — explanation QA
-- `EmailHeaderPanel.jsx` — email metadata panel
-### 6. Data Layer (`src/data/`)
-- `emails.js` — 15 email objects with clues, correct answers, explanations
-### 7. Config (`src/config/`)
-- `game.js` — timing constants (180s round, 10s lightning read, etc.)
-- `tokens.js` — scoring constants (4 pts/email, 60 max), glass surface style, zone meta
-- `config.js` (root) — leaderboard URL
+- Purpose: Render UI screens and components
+- Location: `src/components/*.jsx`
+- Contains: 32 React components (screens, cards, UI elements)
+- Depends on: Props from `App.jsx`, shared style tokens from `src/styles/tokens.js`
+- Used by: `App.jsx` (renders one screen at a time)
+- Purpose: Encapsulate all mutable game state and actions
+- Location: `src/hooks/*.js`
+- Contains: 7 custom hooks — `useGameState`, `useScoring`, `useSocState`, `useBadges`, `useTimer`, `useLeaderboard`, `useProctoring`
+- Depends on: `src/data/` for static datasets, `src/config/` for constants, `src/utils/` for scoring/validation
+- Used by: `App.jsx`
+- Purpose: Static datasets and game configuration
+- Location: `src/data/`, `src/config/`, `src/config.js`
+- Contains: `emails.js` (15 emails), `socQuestions.js` (6 SOC questions), game timers, Google Script URL
+- Depends on: Nothing
+- Used by: hooks layer
+- Purpose: Pure functions for scoring, validation, shuffling, confetti rendering
+- Location: `src/utils/*.js`
+- Contains: `scoreSoc.js`, `validateSpl.js`, `shuffle.js`, `competency.js`, `confetti.js`
+- Depends on: Nothing (pure functions)
+- Used by: hooks layer
+- Purpose: Server-side data persistence and deployment
+- Location: `google-apps-script.js`, `.github/workflows/deploy.yml`
+- Contains: Google Apps Script web app (writes to Google Sheets), GitHub Pages deployment
+- Depends on: `src/config.js` (LEADERBOARD_URL)
 ## Data Flow
-```
-```
-- No context API — all state flows through `App.jsx`
-- `useGameState` and `useScoring` are independent hooks composed in `App`
-- Score is computed via `useScoring` which maintains its own state
-- Badge logic (`useBadges`) checks conditions after each round/zone/game
+### Primary Request Path (Email Classification)
+### Proctoring Data Flow
+### Leaderboard/Sheet Submission Flow
+- All state lives in `useState` inside custom hooks — no global store, no context
+- `App.jsx` instantiates hooks at top level, passes state + callbacks as props
+- No reducers — direct `setState` calls in hooks
+## Key Abstractions
+- Purpose: Screen identifiers used as state machine transitions
+- Location: `src/hooks/useGameState.js:5-18`
+- Values: `LANDING`, `TUTORIAL`, `ZONE_INTRO`, `ROUND`, `EXPLANATION`, `ZONE_COMPLETE`, `RESULTS`, `SOC_INTRO`, `SOC_ROUND`, `SOC_EXPLANATION`, `SOC_RESULTS`, `REVIEWER`
+- Purpose: Tracks player answers within a single email classification round
+- Shape: `{ cluesRevealed, selectedL1, selectedL2, submitted, timedOut, lastRecord }`
+- Location: `src/hooks/useGameState.js:22-31`
+- Purpose: Per-email scoring result stored in `sc.perEmail[]`
+- Shape: `{ emailId, zone, selectedL1, selectedL2, correctL1, correctL2, l1Correct, l2Correct, cluesUsed, timedOut, points, l1Points, l2Points, clueDeduction }`
+- Location: `src/hooks/useScoring.js:42-57`
+- Purpose: After each round, zone, and game completion — checks earned badges
+- Pattern: `checkAfterRound()` → `checkAfterZone()` → `checkAfterGame()`
+- Location: `src/hooks/useBadges.js`
+- Purpose: Shared visual style used across all screen components
+- Pattern: Import `glass` from `src/styles/tokens.js`, clone with per-component overrides
+- Location: `src/styles/tokens.js:4-10`
 ## Entry Points
-- `index.html` → `/src/main.jsx` → `App.jsx`
-- Deployed via `vite build` → `dist/` → static hosting
-- Base path: `/flagmail1/`
-## Key Architectural Decisions
-- **No router**: screen state managed by `SCREENS` enum + switch rendering — simpler for linear game flow
-- **Hooks over context**: each hook manages its own slice of state; parent (`App`) composes them
-- **Static dataset**: all emails embedded in source — no API dependency during gameplay
-- **Two-project structure**: `flagmail` (v1) and `flagmail1` (v2 with improved GAS backend)
+- Location: `src/main.jsx`
+- Triggers: Browser loads `index.html` with `#root` div
+- Responsibilities: Mounts React StrictMode → ErrorBoundary → App
+- Location: `vite.config.js`
+- Base path: `/flagmail1/` (for GitHub Pages)
+- Location: `.github/workflows/deploy.yml`
+- Triggers: Push to `main` branch
+- Pipeline: `npm ci` → `npm run build` → upload `dist/` → deploy to Pages
+- Location: `google-apps-script.js`
+- Triggers: HTTP POST (doPost) or GET (doGet) to deployed web app URL
+## Architectural Constraints
+- **State architecture:** No global state store (no Redux/Zustand/Context). All state in `useState` inside custom hooks. State reset on refresh.
+- **Navigation:** No React Router. Screen transitions via `setScreen()` on SCREENS enum. Single `App.jsx` conditional render.
+- **Data persistence:** Browser memory only until final submission. `sessionStorage` used for SOC submission failover only. No localStorage for game progress.
+- **UI rendering:** Full-screen SPA — each screen component is a full viewport view. No nested route layout.
+- **External dependency:** Google Apps Script web app has `no-cors` fetch mode — responses are opaque. Error handling is fire-and-forget with `console.warn` on failure.
+- **Animation approach:** Hybrid — CSS keyframes (`src/styles/animations.css`), Framer Motion (`motion`/`AnimatePresence`), Lottie (JSON animation files), GSAP (imperative timeline), plus canvas confetti (`src/utils/confetti.js`).
+## Anti-Patterns
+### Hook-Call Orchestration in App.jsx
+### No Separation Between Screen and Shared Components
+## Error Handling
+- `ErrorBoundary` (class component) wraps entire app — catches render errors, shows reload page
+- `fetch` calls to Google Apps Script wrapped in try/catch with `console.warn` only — silent failure
+- SOC submission uses `sessionStorage` as fallback if fetch fails
+- PropTypes validation on all components (no TypeScript)
+## Cross-Cutting Concerns
+- `validateSpl.js` — keyword-based SPL query validation (required, optional, blocked terms)
+- `validateSpl.test.js` and `scoreSoc.test.js` — unit tests for validation and scoring
+- No client-side input validation framework — manual checks in `LandingScreen` (name/email/re-attempt)
 <!-- GSD:architecture-end -->
 
 <!-- GSD:skills-start source:skills/ -->

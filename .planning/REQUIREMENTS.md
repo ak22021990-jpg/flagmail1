@@ -90,7 +90,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by roadmapper) | | |
+| DATA-01 | Phase 6 — Data Enrichment | Pending |
+| DATA-02 | Phase 6 — Data Enrichment | Pending |
+| EMAIL-01 | Phase 7 — GAS Email Fix | Pending |
+| EMAIL-02 | Phase 7 — GAS Email Fix | Pending |
+| EMAIL-03 | Phase 7 — GAS Email Fix | Pending |
+| HINT-01 | Phase 8 — Hint Engine | Pending |
+| HINT-02 | Phase 8 — Hint Engine | Pending |
+| CTX-01 | Phase 9 — SOC Round Overhaul | Pending |
+| CTX-02 | Phase 9 — SOC Round Overhaul | Pending |
+| CTX-03 | Phase 9 — SOC Round Overhaul | Pending |
+| TASK-01 | Phase 9 — SOC Round Overhaul | Pending |
+| FDBK-01 | Phase 9 — SOC Round Overhaul | Pending |
+| FDBK-02 | Phase 9 — SOC Round Overhaul | Pending |
 
 ---
 *Requirements defined: 2025-05-25*

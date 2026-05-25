@@ -17,6 +17,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: State Machine and Hook** - Extend the SCREENS enum, apply the one-line advanceZone patch, and build useSocState to own all SOC flow
 - [ ] **Phase 4: SOC Level UI** - Build all SOC screen components and wire them into App.jsx so the full play loop is playable end-to-end
 - [ ] **Phase 5: Backend and Reviewer View** - Add GAS submitSOC/getSOCSubmissions actions, formula injection protection, and the passcode-gated reviewer screen
+- [ ] **Phase 6: Data Enrichment** - Enrich socQuestions.js with investigation context, SPL task prompts, and hints per question — the data foundation every v1.1 UI phase reads from
+- [ ] **Phase 7: GAS Email Fix** - Fix manager/reviewer email delivery in the Google Apps Script backend with quota checking, failure logging, and a documented re-authorization checklist
+- [ ] **Phase 8: Hint Engine** - Add progressive hint reveal state to useSocState and build the HintPanel.jsx sub-component that surfaces hints post-first-submit
+- [ ] **Phase 9: SOC Round Overhaul** - Restructure SocRound.jsx to display investigation context, analyst focus, expected outcomes, scenario-specific SPL prompts, and human-readable per-dimension feedback
 
 ## Phase Details
 
@@ -83,10 +87,75 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: TBD
 **UI hint**: yes
 
+---
+
+## Milestone v1.1 — SOC Investigation Overhaul + Email Fix
+
+**Goal:** Make Zone 4 a realistic SOC investigation simulator with structured investigation context, scenario-tied prompts, progressive hints, human-readable scoring feedback — and fix manager email delivery.
+
+### v1.1 Phases
+
+- [ ] **Phase 6: Data Enrichment** - Enrich socQuestions.js with investigation context, SPL task prompts, and hints per question — the data foundation every v1.1 UI phase reads from
+- [ ] **Phase 7: GAS Email Fix** - Fix manager/reviewer email delivery in the Google Apps Script backend with quota checking, failure logging, and a documented re-authorization checklist
+- [ ] **Phase 8: Hint Engine** - Add progressive hint reveal state to useSocState and build the HintPanel.jsx sub-component that surfaces hints post-first-submit
+- [ ] **Phase 9: SOC Round Overhaul** - Restructure SocRound.jsx to display investigation context, analyst focus, expected outcomes, scenario-specific SPL prompts, and human-readable per-dimension feedback
+
+## Phase Details
+
+### Phase 6: Data Enrichment
+**Goal**: Every SOC question in socQuestions.js carries structured investigation context (goal, analyst focus, expected outcomes), a scenario-specific SPL task prompt, and a progressive hint array — so all UI changes in Phases 8 and 9 read from real data, not placeholders
+**Depends on**: Phase 5 (v1.0 complete)
+**Requirements**: DATA-01, DATA-02
+**Success Criteria** (what must be TRUE):
+  1. All 5 SOC questions (Q1–Q4, Q8) in `src/data/socQuestions.js` have an `investigation_context` object with `goal`, `analyst_focus`, and `expected_outcome` fields populated from the Splunk Query Context Explanations document
+  2. All 5 questions have a `task_prompt` string that describes the specific SPL investigation task in one sentence (e.g., "Write an SPL query to find similar phishing emails and identify impacted recipients")
+  3. All 5 questions have a `hints` array with at least one directional hint string per question — hints guide without revealing exact SPL syntax (e.g., "Think about aggregation" not "use stats count")
+  4. The enriched data file imports and exports cleanly with no runtime errors (no undefined field accesses when SocRound.jsx reads `question.investigation_context.goal`)
+**Plans**: TBD
+
+### Phase 7: GAS Email Fix
+**Goal**: Manager and reviewer email notifications reliably deliver after SOC submissions, with quota-aware failure handling and a documented ops checklist so the delivery failure does not silently recur after redeploys
+**Depends on**: Phase 5 (v1.0 complete; independent of Phases 6, 8, 9)
+**Requirements**: EMAIL-01, EMAIL-02, EMAIL-03
+**Success Criteria** (what must be TRUE):
+  1. After a SOC submission, the configured manager/reviewer email address receives a notification email containing the candidate's name, score, and grade band
+  2. When `MailApp.getRemainingDailyQuota()` returns 0, the GAS script logs a structured error (not a silent exception) and the `doPost` response includes an `emailStatus` field indicating delivery was skipped due to quota
+  3. When email delivery fails for any reason (quota exhausted, MailApp scope not authorized, recipient invalid), the failure is written to the GAS Execution Log with enough detail to diagnose the root cause without accessing the Sheets data
+  4. The GAS deployment checklist (in the repo as a `.md` or inline comment) documents the MailApp re-authorization step — specifically, that the GAS editor's "Run" button must be used to trigger the OAuth consent dialog after each new deployment
+**Plans**: TBD
+
+### Phase 8: Hint Engine
+**Goal**: A candidate who has submitted at least once on a SOC question can request hints one at a time — the hint state lives in useSocState and HintPanel.jsx renders the progressively revealed list
+**Depends on**: Phase 6
+**Requirements**: HINT-01, HINT-02
+**Success Criteria** (what must be TRUE):
+  1. After a candidate submits their first answer on a SOC question, a "Get a hint" button becomes visible — it is not shown before the first submit attempt
+  2. Each press of the hint button reveals exactly one additional hint from the question's `hints` array; pressing it again reveals the next, until all hints are shown
+  3. When all hints for a question have been revealed, the hint button is replaced by a message indicating no more hints are available (e.g., "No more hints") — it does not error or loop
+  4. Hint reveal state does not persist across questions — moving to the next question resets the hint index to 0
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 9: SOC Round Overhaul
+**Goal**: A candidate playing SocRound sees a structured investigation context block, a clear scenario-specific SPL task prompt, and receives human-readable per-dimension feedback labels that identify exactly what they scored on classification, SPL, and explanation
+**Depends on**: Phase 6, Phase 8
+**Requirements**: CTX-01, CTX-02, CTX-03, TASK-01, FDBK-01, FDBK-02
+**Success Criteria** (what must be TRUE):
+  1. Above the evidence panel, the candidate can read an investigation goal statement describing what the analyst needs to determine (sourced from `question.investigation_context.goal`)
+  2. The candidate can see an analyst focus callout listing the specific indicators to look for in the evidence (sourced from `question.investigation_context.analyst_focus`)
+  3. The candidate can see expected security outcomes describing what analyst actions should follow a confirmed finding (sourced from `question.investigation_context.expected_outcome`)
+  4. A scenario-specific SPL task prompt appears above the query textarea (sourced from `question.task_prompt`) — the prompt changes per question and is not a generic instruction
+  5. After submitting, the feedback panel displays three labeled sections — "Classification", "SPL Query", "Explanation" — each showing the points earned and a human-readable description of what was matched or missed (e.g., "SPL Query: 7/10 — matched core investigation terms, missed aggregation syntax")
+  6. Zone 1–3 game flow remains fully unchanged — completing a zone 1–3 round still navigates through the existing ExplanationCard and ZoneComplete screens without any regressions
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
+
+Note: Phase 7 (GAS Email Fix) is independent of Phases 6, 8, 9 and can execute in parallel with Phase 6 if bandwidth allows.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -95,3 +164,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. State Machine and Hook | 1/1 | Complete | 2026-05-22 |
 | 4. SOC Level UI | 1/1 | Complete | 2026-05-22 |
 | 5. Backend and Reviewer View | 1/1 | Complete | 2026-05-22 |
+| 6. Data Enrichment | 0/1 | Not started | - |
+| 7. GAS Email Fix | 0/1 | Not started | - |
+| 8. Hint Engine | 0/1 | Not started | - |
+| 9. SOC Round Overhaul | 0/1 | Not started | - |
