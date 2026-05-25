@@ -1,637 +1,409 @@
 # Architecture Research
 
-**Domain:** Adding a SOC Investigation level (Zone 4) to an existing React 19 classification game
-**Researched:** 2026-05-21
-**Confidence:** HIGH — based on direct codebase inspection, no training assumptions required
+**Domain:** SOC Investigation Zone 4 — restructuring existing implementation
+**Researched:** 2026-05-25
+**Confidence:** HIGH — based on direct codebase inspection of all relevant files
 
 ---
 
-## System Overview
+## Current As-Built State
 
-The existing system is a linear screen state machine rendered by `App.jsx`. `useGameState`
-owns all navigation. No router, no context API. Everything flows through the `gs` and `sc`
-objects composed at the App level.
+Zone 4 is already implemented and wired end-to-end. The milestone is a restructuring and
+bug-fix pass, not a greenfield build. The architecture below documents what exists and what
+must change.
+
+### System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         App.jsx (shell)                          │
-│  gs = useGameState()    sc = useScoring()                        │
-│                                                                  │
-│  gs.screen switch ────────────────────────────────────────────── │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐ │
-│  │ LANDING  │  │ TUTORIAL │  │ZONE_INTRO│  │      ROUND       │ │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘ │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────┐                │
-│  │ EXPLANATION │  │ ZONE_COMPLETE│  │ RESULTS  │                │
-│  └─────────────┘  └──────────────┘  └──────────┘                │
-├─────────────────────────────────────────────────────────────────┤
-│                        Hooks Layer                               │
-│  useGameState  useScoring  useBadges  useTimer  useLeaderboard  │
-├─────────────────────────────────────────────────────────────────┤
-│                         Data Layer                               │
-│   src/data/emails.js (static)    src/data/socQuestions.js (new) │
-├─────────────────────────────────────────────────────────────────┤
-│                       Backend (GAS)                              │
-│   POST register | POST submit | POST submitSOC | GET checkEmail │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                          App.jsx (shell)                          │
+│  gs = useGameState()                                              │
+│  sc = useScoring()                                                │
+│  soc = useSocState(gs)                                            │
+│  badges = useBadges()                                             │
+│                                                                   │
+│  Conditional screen render on gs.screen ────────────────────────  │
+│                                                                   │
+│  Zone 1–3 flow:                                                   │
+│  LANDING → TUTORIAL → ZONE_INTRO → ROUND → EXPLANATION            │
+│         → ZONE_COMPLETE (loop) → SOC_INTRO (after zone 3)         │
+│                                                                   │
+│  Zone 4 (SOC) flow:                                               │
+│  SOC_INTRO → SOC_ROUND → SOC_EXPLANATION → (repeat) → SOC_RESULTS │
+│                                                                   │
+│  Side paths:                                                      │
+│  LANDING → REVIEWER (passcode gate, independent of game flow)     │
+└──────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                       State Hook Layer                            │
+│  useGameState   — SCREENS enum, zone progression, player, email   │
+│  useScoring     — per-email/zone/total scores for zones 1–3       │
+│  useSocState    — SOC question index, per-question answers,        │
+│                   validation dispatch, score accumulation,        │
+│                   GAS submission                                  │
+│  useBadges      — badge unlock conditions                         │
+│  useProctoring  — tab-switch detection (inside SocRound)          │
+└──────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                       Utility Layer (pure functions)              │
+│  validateSpl.js   — keyword match: required/optional/blocked      │
+│  validateExplanation (exported from validateSpl.js)               │
+│  scoreSoc.js      — 23-pt model + scaleSocScore for combined /100 │
+└──────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                       Data Layer (static)                         │
+│  src/data/socQuestions.js  — 6 SOC question objects (Q1–Q5b)     │
+│  src/data/emails.js        — 15 classification emails (zones 1–3) │
+└──────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                       External Layer                              │
+│  Google Apps Script web app                                       │
+│    POST action:register | submit | submitFinal                    │
+│    GET  ?action=getSOCSubmissions&passcode=...                    │
+│    MailApp.sendEmail() → 4 hardcoded reviewer addresses           │
+└──────────────────────────────────────────────────────────────────┘
 ```
-
-The SOC Investigation level slots in between the existing `ZONE_COMPLETE` (zone 3) exit and
-`RESULTS`. The `advanceZone` function in `useGameState` currently goes straight to `RESULTS`
-when `zone > 3`. Zone 4 intercepts that moment.
 
 ---
 
-## Integration Strategy: Extend Without Rewriting
+## Component Inventory: Zone 4 (SOC)
 
-### Key Constraint
+### Existing — No Modification Needed
 
-`useGameState.js` must not change for zones 1–3. The zone counter already goes 1→2→3 and
-then routes to RESULTS. The SOC level is a discrete mode entered after zone 3 completes,
-not a 4th zone in the existing loop.
+| File | Role | Notes |
+|------|------|-------|
+| `src/hooks/useGameState.js` | SCREENS enum, screen transitions | `SOC_INTRO`, `SOC_ROUND`, `SOC_EXPLANATION`, `SOC_RESULTS`, `REVIEWER` already defined. `advanceZone` already routes zone-3 exit to `SOC_INTRO`. No changes needed here. |
+| `src/utils/validateSpl.js` | SPL + explanation keyword validation | Correct. Handles `anyOf` terms, normalized text. No changes needed. |
+| `src/utils/scoreSoc.js` | Per-question scoring + final score scaling | Correct. `scoreSocRound` + `scaleSocScore` cover all requirements. No changes needed. |
+| `src/components/SocIntroCard.jsx` | Zone 4 introduction screen | Renders correctly. Not in scope for restructuring. |
+| `src/components/SocExplanationCard.jsx` | Per-question feedback after submission | Score breakdown, keyword hits/misses, grade band. No structural changes needed. |
+| `src/components/ReviewerScreen.jsx` | Passcode gate + SOC submissions table | Fetches via GET `?action=getSOCSubmissions`. Works correctly for reviewer read path. |
 
-### Screen State Extension
+### Existing — Requires Modification
 
-Add three new entries to the `SCREENS` enum in `useGameState.js`:
+| File | What Changes | Reason |
+|------|-------------|--------|
+| `src/data/socQuestions.js` | Enrich each question object with `scenario_context`, `investigation_prompt`, `hints` array per question | Current questions have `scenario` (single line) but no investigation narrative, no structured hints for the hint engine, no explicit `investigation_context` that separates the scenario backdrop from the SPL task prompt. The `splRules.tasks[n].prompt` field exists but is not rendered in the UI. |
+| `src/components/SocRound.jsx` | Restructure layout from all-at-once to guided flow; add hint engine; expose SPL task prompt | Currently renders Evidence + Classification + SPL + Explanation simultaneously as a single scrollable panel. Needed: step-aware UI that contextualises the investigation. |
+| `src/hooks/useSocState.js` | Add hint reveal state, possibly a `stepIndex` for guided flow | Currently manages answers, validation, scoring, and submission. Hint engine needs `hintsRevealed` array per question. |
+| `google-apps-script.js` | Debug and fix `MailApp.sendEmail()` | Email delivery is broken. Cause is under investigation but likely: quota exhaustion, recipient list format, or GAS `MailApp` vs `GmailApp` API mismatch. |
+| `src/App.jsx` | Wire hint state from `useSocState` into `SocRound`; pass `onRevealHint` callback | If hint state is added to `useSocState`, App must thread it as a prop to `SocRound`. |
+
+### New Files Required
+
+| File | Purpose |
+|------|---------|
+| (none for components — restructure existing `SocRound.jsx`) | The existing `SocRound.jsx` is the right boundary; it should be restructured rather than replaced. A new `HintPanel.jsx` sub-component is the only new component likely needed. |
+| `src/components/HintPanel.jsx` | Renders collapsible hint cards for the active question; receives `hints` array and `hintsRevealed` index from parent. |
+
+---
+
+## Data Structure: What Must Change in `socQuestions.js`
+
+Current shape (Q1 example):
 
 ```js
-export const SCREENS = {
-  // existing — untouched
-  LANDING:         'landing',
-  TUTORIAL:        'tutorial',
-  ZONE_INTRO:      'zone_intro',
-  ROUND:           'round',
-  EXPLANATION:     'explanation',
-  ZONE_COMPLETE:   'zone_complete',
-  RESULTS:         'results',
-  // new — SOC level
-  SOC_INTRO:       'soc_intro',
-  SOC_ROUND:       'soc_round',
-  SOC_EXPLANATION: 'soc_explanation',
-  // new — reviewer
-  REVIEWER:        'reviewer',
+{
+  id: "Q1",
+  scenario: "A user reports...",          // single-line — too thin for UX
+  evidence: { email: {...}, proxy: null, edr: null },
+  classification: { options: {...}, correct: {...} },
+  splRules: {
+    tasks: [
+      {
+        prompt: "Write an SPL query...",  // exists but not rendered in current UI
+        required: [...],
+        optional: [...],
+        blocked: [...],
+      }
+    ]
+  },
+  conceptKeywords: { required: [...], optional: [...] },
+  feedback: { primaryCorrect: "...", primaryIncorrect: "...", ... },
+}
+```
+
+Required additions (new fields only, existing fields untouched):
+
+```js
+{
+  // ... all existing fields unchanged ...
+
+  // NEW: Richer investigation narrative shown above evidence
+  investigation_context: "You are a SOC Tier 1 analyst. A user in the Finance team...",
+
+  // NEW: Per-task hints (one hints array per splRules.tasks entry)
+  splRules: {
+    tasks: [
+      {
+        prompt: "...",        // already exists
+        required: [...],      // already exists
+        optional: [...],      // already exists
+        blocked: [...],       // already exists
+        hints: [              // NEW — revealed progressively
+          "Start by scoping to the correct index for this evidence type.",
+          "Include the sender field to identify the originating address.",
+          "Use stats to group the results — what dimension are you grouping by?",
+        ],
+      }
+    ]
+  },
+
+  // NEW: Explanation task prompt (what to write about)
+  explanation_prompt: "Explain why you classified this as phishing and what indicators led you to that conclusion.",
+}
+```
+
+**Constraint:** All existing field names (`scenario`, `evidence`, `classification`,
+`splRules`, `conceptKeywords`, `feedback`) are untouched. New fields are additive.
+`useSocState` and `validateSpl` do not need changes to handle these additions —
+they are display-only fields consumed by `SocRound`.
+
+---
+
+## Component Boundaries: SOC Flow
+
+### `SocRound.jsx` — Restructured Layout
+
+Current layout: single two-column grid (evidence left, all inputs right — classification,
+SPL textarea, explanation textarea, submit).
+
+Target layout: guided flow within the same two-column shell:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  Header: SOC Investigation | Q{n} of {total} | progress dots     │
+├─────────────────────────────┬────────────────────────────────────┤
+│  LEFT PANEL                 │  RIGHT PANEL                       │
+│  ─────────────────────────  │  ─────────────────────────────     │
+│  investigation_context      │  Classification (if applicable)    │
+│  (scenario narrative)       │    Primary picker                  │
+│                             │    Secondary picker (unlocks       │
+│  Evidence cards:            │    after primary selected)         │
+│    Email card               │                                    │
+│    Proxy card               │  SPL Task Prompt                   │
+│    EDR card                 │    (splRules.tasks[n].prompt)       │
+│                             │                                    │
+│  HintPanel                  │  SPL textarea (monospace)          │
+│    (collapsible hints)      │                                    │
+│                             │  Explanation Prompt                │
+│                             │    (explanation_prompt field)      │
+│                             │                                    │
+│                             │  Explanation textarea              │
+│                             │                                    │
+│                             │  [Submit] button                   │
+└─────────────────────────────┴────────────────────────────────────┘
+```
+
+The right panel already scrolls independently (`maxHeight: calc(100dvh - 140px)`).
+The evidence left panel stays sticky/visible. The structural change is:
+
+1. Render `investigation_context` above the evidence cards (currently `scenario` is in the
+   header only).
+2. Render `splRules.tasks[0].prompt` as a visible section label above the SPL textarea
+   (currently the prompt field exists in data but is not rendered anywhere in the UI).
+3. Render `explanation_prompt` as a visible section label above the explanation textarea.
+4. Add `<HintPanel>` at the bottom of the left panel.
+
+**Props interface remains unchanged.** `SocRound` already receives `question`, `answer`,
+`progress`, `onSetPrimary`, `onSetSecondary`, `onSetSplText`, `onSetExplanation`, `onSubmit`,
+`onViolationChange`. Add one new prop: `onRevealHint(questionIdx, hintIdx)`.
+
+### `HintPanel.jsx` — New Sub-component
+
+```
+Props:
+  hints:          string[]          — from question.splRules.tasks[0].hints
+  hintsRevealed:  number            — count of hints already shown (0..hints.length)
+  onRevealHint:   () => void        — increments hintsRevealed in useSocState
+
+Renders:
+  - Collapsed by default
+  - "Show hint {n}" button reveals next hint sequentially
+  - Already-revealed hints show as read-only cards
+  - When all hints revealed: "No more hints"
+```
+
+### `useSocState.js` — Hint State Addition
+
+New state in existing hook:
+
+```js
+// Existing state (untouched):
+const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+const [answers, setAnswers] = useState(initialAnswers);
+const [showResults, setShowResults] = useState(false);
+
+// NEW:
+const [hintsRevealed, setHintsRevealed] = useState(
+  () => SOC_QUESTIONS.map(() => 0)    // one counter per question
+);
+
+const revealNextHint = useCallback(() => {
+  setHintsRevealed(prev => {
+    const next = [...prev];
+    const q = SOC_QUESTIONS[currentQuestionIdx];
+    const maxHints = q.splRules?.tasks?.[0]?.hints?.length ?? 0;
+    next[currentQuestionIdx] = Math.min(prev[currentQuestionIdx] + 1, maxHints);
+    return next;
+  });
+}, [currentQuestionIdx]);
+```
+
+Return addition:
+
+```js
+return {
+  // ... all existing return values unchanged ...
+  hintsRevealed: hintsRevealed[currentQuestionIdx],
+  revealNextHint,
 };
 ```
 
-`SOC_INTRO` mirrors `ZONE_INTRO` — it introduces zone 4 before the first question.
-`SOC_ROUND` is the primary question screen (classify + SPL + explanation editor).
-`SOC_EXPLANATION` shows per-question feedback before advancing to the next question.
-`REVIEWER` is a passcode-gated screen reachable independently of normal game flow.
-
-### Transition Hook: Minimal Patch to `advanceZone`
-
-Only the zone-3 exit path in `useGameState` changes. Replace the `RESULTS` routing with
-`SOC_INTRO` routing:
-
-```js
-const advanceZone = useCallback(() => {
-  const nextZone = zone + 1;
-  if (nextZone > 3) {
-    // existing: setScreen(SCREENS.RESULTS);
-    setScreen(SCREENS.SOC_INTRO);  // zone 3 now hands off to SOC intro
-    return;
-  }
-  setZone(nextZone);
-  // ... rest unchanged
-}, [zone, zoneStart]);
-```
-
-This is a one-line change. All zone 1–3 transitions are unchanged.
-
-### SOC State Lives in a Dedicated Hook: `useSocState`
-
-The SOC level has distinct state needs that do not overlap with classification round state.
-Mixing them into `useGameState` would introduce branches into every existing action. Instead,
-a new isolated hook owns all SOC flow:
-
-```
-useSocState
-  socScreen:          'intro' | 'round' | 'explanation'
-  currentQuestionIdx: number
-  socRound: {
-    selectedPrimary:   string | null
-    selectedSecondary: string | null
-    splText:           string
-    explanationText:   string
-    submitted:         boolean
-    result:            SocResult | null
-  }
-  socRecords:         SocResult[]   // one per question, for final submit
-  // actions
-  startSoc()
-  selectPrimary(val)
-  selectSecondary(val)
-  setSplText(val)
-  setExplanationText(val)
-  submitSocRound()   → runs validation + scoring inline, stores result
-  nextSocQuestion()  → advances or exits to RESULTS
-  goToResults()      → calls into gs.goToResults()
-```
-
-`App.jsx` composes `useSocState` alongside `useGameState` and `useScoring`. The SOC hook
-receives `gs.goToResults` as a callback (or calls it directly if imported from the hook
-return value). No circular dependency because `useSocState` only reads from `gs.player`
-and calls `gs.goToResults`, both of which are stable references.
-
-### Reviewer Access via SCREENS.REVIEWER
-
-The reviewer screen needs to be reachable without completing the game. Two viable approaches:
-
-**Approach A (recommended):** A small "Reviewer" link on the `LandingScreen` (e.g., bottom
-corner, low-prominence) calls `gs.setScreen(SCREENS.REVIEWER)`. The reviewer screen prompts
-for the passcode before rendering submissions. This keeps everything in the same SPA
-without adding URL routing.
-
-**Approach B (simpler but slightly awkward):** A separate HTML page (`reviewer.html`) with
-its own minimal script, fetching from GAS directly. Avoids any App.jsx change but creates
-a second entry point to maintain.
-
-Approach A is recommended because it reuses the existing glass card components and CSS
-system, and the passcode validation is a client-side string comparison (acceptable for a
-shared password with no sensitive personal data beyond names/emails that are already
-public in the game flow).
-
 ---
 
-## Component Boundaries
-
-### New Components
-
-| Component | Location | Responsibility | Reuses |
-|-----------|----------|---------------|--------|
-| `SocIntroCard.jsx` | `src/components/` | Zone 4 introduction card | `ZoneIntroCard` pattern, `glass` token |
-| `SocRound.jsx` | `src/components/` | Question screen: scenario, evidence panel, pickers, SPL editor, explanation textarea, submit | `Classifier` for pickers, `glass` token |
-| `SocExplanationCard.jsx` | `src/components/` | Per-question feedback: scores breakdown, correct answer, keyword hits/misses | `ExplanationCard` pattern |
-| `ReviewerScreen.jsx` | `src/components/` | Passcode gate + submissions table | `glass` token |
-| `SplEditor.jsx` | `src/components/` | Multi-line `<textarea>` with monospace font and line-count indicator | New, no dependency |
-| `EvidencePanel.jsx` | `src/components/` | Displays scenario + log evidence for a SOC question | Mirrors `EmailCard` structure |
-
-### Existing Components Reused Without Modification
-
-| Component | Role in SOC Level |
-|-----------|------------------|
-| `LandingScreen.jsx` | Add reviewer link (single small addition) |
-| `Classifier.jsx` | Reused directly for primary and secondary pickers — pass question-specific `options` prop if Classifier accepts dynamic option lists; otherwise create `SocClassifier` variant |
-| `BadgeToast.jsx` | Can fire on SOC completion if badge logic is extended |
-| `ResultsScreen.jsx` | Receives combined final score after SOC completes |
-| `ZoneComplete.jsx` | May be reused for SOC zone complete summary, or skipped in favor of direct RESULTS routing |
-
-Note on `Classifier.jsx`: the existing component has hardcoded L1/L2 category lists. SOC
-questions have different option sets per question. Either (a) pass options as props and make
-the component data-driven, or (b) build a lightweight `SocClassifier` that mirrors the
-visual pattern with dynamic props. Option (b) is safer — it avoids touching a tested
-component — and is the recommended approach.
-
-### New Hook
-
-| Hook | Location | Responsibility |
-|------|----------|---------------|
-| `useSocState.js` | `src/hooks/` | SOC question flow, round state, validation dispatch, score accumulation, sheet submission for SOC records |
-
-### New Utilities
-
-| Utility | Location | Responsibility |
-|---------|----------|---------------|
-| `validateSpl.js` | `src/utils/` | Keyword-matching validation engine for SPL and explanation fields |
-| `scoreSoc.js` | `src/utils/` | 23-point scoring model: takes validation result, returns score breakdown |
-
-### New Data
-
-| File | Location | Shape |
-|------|----------|-------|
-| `socQuestions.js` | `src/data/` | Array of SOC question objects (see shape below) |
-
----
-
-## SOC Question Dataset Shape
-
-Mirrors the `EMAIL_POOL` convention in `emails.js` — a named export, static array, one
-object per question:
-
-```js
-export const SOC_QUESTIONS = [
-  {
-    id: 'SOC001',
-    zone: 4,
-    title: 'Credential Harvesting via Phishing Redirect',
-    scenario: 'A user reports receiving a suspicious email...',
-    evidence: {
-      email: {
-        from: 'hr-notifications@corp-hr-portal.co',
-        subject: 'Urgent: Update your payroll details',
-        body: '...',
-        auth: { spf: 'Fail', dkim: 'None', dmarc: 'Fail' },
-      },
-      proxy: [
-        'GET http://corp-hr-portal.co/payroll-update → 302 → http://185.220.x.x/harvest',
-        'POST http://185.220.x.x/harvest → 200',
-      ],
-      edr: [
-        'chrome.exe → Suspicious outbound connection to 185.220.x.x',
-      ],
-    },
-    primaryOptions: [
-      'Credential Harvesting',
-      'Business Email Compromise',
-      'Malware Delivery',
-      'Legitimate HR Communication',
-    ],
-    correctPrimary: 'Credential Harvesting',
-    secondaryOptions: [
-      'Phishing Redirect Chain',
-      'Lookalike Domain',
-      'Compromised Internal Account',
-      'None of the above',
-    ],
-    correctSecondary: 'Phishing Redirect Chain',
-    spl: {
-      required: ['index=proxy', 'dest_ip', '185.220'],
-      optional: ['action=blocked', 'bytes_out', 'http_method=POST'],
-      blocked:  ['index=main', 'earliest=-1y'],
-      exampleQuery: 'index=proxy dest_ip=185.220.101.42 | stats count by src_ip, http_method',
-    },
-    explanation: {
-      requiredConcepts: ['redirect', 'credential', 'phishing', 'domain'],
-      optionalConcepts: ['proxy log', 'edr', 'harvest'],
-      exampleExplanation: 'The proxy logs show a redirect from a lookalike HR domain to a known malicious IP...',
-    },
-    feedback: {
-      primaryFeedback: 'The redirect chain terminating at a POST to a suspicious IP is the defining indicator of credential harvesting.',
-      spl: 'A correct query must scope to the proxy index and filter on the destination IP observed in the logs.',
-      explanation: 'Key concepts: the redirect chain, the lookalike domain, and the POST to an unexpected IP.',
-    },
-  },
-  // Q2–Q5 follow the same shape
-];
-```
-
-**Field explanations:**
-
-- `evidence` is a structured object with `email`, `proxy` (array of log lines), and `edr`
-  (array of EDR events). `EvidencePanel` renders each sub-section with a tab or accordion.
-- `spl.required` — terms that must appear; each missing term loses points proportionally.
-- `spl.optional` — terms that add credit if present.
-- `spl.blocked` — terms that indicate incorrect approach; presence deducts points.
-- `explanation.requiredConcepts` — lower-cased keywords; presence in submitted explanation
-  awards concept points.
-- `feedback` — static strings shown after submission; not generated dynamically.
-
----
-
-## Validation Engine: `src/utils/validateSpl.js`
-
-Single pure function — no side effects, no imports, fully testable:
-
-```js
-/**
- * Validates a candidate SPL query against keyword rules.
- * @param {string} splText - Raw text from the editor
- * @param {{ required: string[], optional: string[], blocked: string[] }} rules
- * @returns {{ requiredHits, requiredMisses, optionalHits, blockedHits, rawScore, maxScore }}
- */
-export function validateSpl(splText, rules) {
-  const text = splText.toLowerCase();
-  const requiredHits  = rules.required.filter(k => text.includes(k.toLowerCase()));
-  const requiredMisses = rules.required.filter(k => !text.includes(k.toLowerCase()));
-  const optionalHits  = rules.optional.filter(k => text.includes(k.toLowerCase()));
-  const blockedHits   = rules.blocked.filter(k => text.includes(k.toLowerCase()));
-  // scoring computed in scoreSoc.js
-  return { requiredHits, requiredMisses, optionalHits, blockedHits };
-}
-
-export function validateExplanation(explanationText, conceptRules) {
-  const text = explanationText.toLowerCase();
-  const requiredHits  = conceptRules.required.filter(k => text.includes(k.toLowerCase()));
-  const optionalHits  = conceptRules.optional.filter(k => text.includes(k.toLowerCase()));
-  return { requiredHits, optionalHits };
-}
-```
-
----
-
-## Scoring Engine: `src/utils/scoreSoc.js`
-
-```js
-/**
- * Computes the 23-point SOC score for one question.
- * Primary 5 pts | Secondary 3 pts | SPL 10 pts | Explanation 5 pts
- */
-export function scoreSocRound({
-  selectedPrimary, correctPrimary,
-  selectedSecondary, correctSecondary,
-  splValidation,  // from validateSpl()
-  explanationValidation, // from validateExplanation()
-  question, // full question object for maxima
-}) {
-  const primaryScore     = selectedPrimary === correctPrimary ? 5 : 0;
-  const secondaryScore   = selectedSecondary === correctSecondary ? 3 : 0;
-
-  const requiredTotal    = question.spl.required.length;
-  const requiredHitCount = splValidation.requiredHits.length;
-  const optionalBonus    = Math.min(splValidation.optionalHits.length, 2);
-  const blockedPenalty   = splValidation.blockedHits.length * 2;
-  const splScore = Math.max(
-    0,
-    Math.round((requiredHitCount / requiredTotal) * 8)
-    + optionalBonus
-    - blockedPenalty
-  ); // max 10
-
-  const conceptTotal     = question.explanation.requiredConcepts.length;
-  const conceptHitCount  = explanationValidation.requiredHits.length;
-  const conceptBonus     = Math.min(explanationValidation.optionalHits.length, 1);
-  const explanationScore = Math.max(
-    0,
-    Math.round((conceptHitCount / conceptTotal) * 4) + conceptBonus
-  ); // max 5
-
-  const total = primaryScore + secondaryScore + splScore + explanationScore;
-
-  return {
-    primaryScore,
-    secondaryScore,
-    splScore,
-    explanationScore,
-    total,
-    splValidation,
-    explanationValidation,
-    gradeBand: total >= 20 ? 'Strong'
-             : total >= 15 ? 'Good'
-             : total >= 10 ? 'Needs improvement'
-             : 'Not ready',
-  };
-}
-```
-
-Both utilities live in `src/utils/`. They are pure functions — `useSocState` calls them
-inside `submitSocRound`, passes the result into `socRound.result`, and appends it to
-`socRecords`. No side effects in the validators.
-
----
-
-## Data Flow: SOC Question Lifecycle
+## Data Flow: SOC Question Lifecycle (As Restructured)
 
 ```
-Candidate opens SOC_ROUND screen
+Candidate enters SOC_ROUND screen
     ↓
 SocRound renders SOC_QUESTIONS[currentQuestionIdx]
+    │
+    ├── LEFT:  investigation_context + evidence cards + HintPanel
+    └── RIGHT: classification pickers → SPL prompt → SPL textarea
+                                      → explanation prompt → explanation textarea
     ↓
-  ┌── EvidencePanel (scenario + email + proxy + edr logs)
-  ├── SocClassifier (primary picker)
-  ├── SocClassifier (secondary picker, unlocked after primary)
-  ├── SplEditor (textarea, monospace, character hint)
-  └── explanation textarea
+Candidate optionally reveals hints (HintPanel → revealNextHint → hintsRevealed[idx]++)
     ↓
-Candidate clicks Submit
+Candidate fills classification, SPL, explanation → Submit button activates
     ↓
 useSocState.submitSocRound()
-    ├── validateSpl(splText, question.spl)
-    ├── validateExplanation(explanationText, question.explanation)
-    ├── scoreSocRound({ selections, validations, question })
-    ├── setRound({ submitted: true, result: scoreResult })
-    └── socRecords.push(scoreResult)
+    ├── validateSpl(answer.splText, task)           [per task in splRules.tasks]
+    ├── validateExplanation(answer.explanation, conceptKeywords)
+    ├── scoreSocRound({ primaryCorrect, secondaryRatio, splValidation, explanationValidation }, config)
+    └── setAnswers: answers[idx] = { ...answer, submitted: true, result: record }
     ↓
-gs.setScreen(SCREENS.SOC_EXPLANATION)
+App.jsx handleSocSubmit → gs.setScreen(SCREENS.SOC_EXPLANATION)
     ↓
-SocExplanationCard shows:
-  ├── Score breakdown (primary / secondary / SPL / explanation chips)
-  ├── Grade band pill
-  ├── Keyword hit/miss list (for SPL)
-  ├── Concept hit list (for explanation)
-  └── Reference answer (exampleQuery + exampleExplanation)
+SocExplanationCard shows score breakdown, keyword hits/misses, grade band
     ↓
-Candidate clicks Next
+Candidate clicks "Next question" → App.jsx handleSocNext → soc.nextQuestion()
+    │
+    ├── hasMore = true  → gs.setScreen(SCREENS.SOC_ROUND)
+    │
+    └── hasMore = false →
+            scaleSocScore(soc.socTotal, sc.totalScore)
+            soc.submitFinal(consolidatedPayload)    [POST to GAS + sessionStorage fallback]
+            gs.setScreen(SCREENS.SOC_RESULTS)
     ↓
-useSocState.nextSocQuestion()
-  ├── if more questions → increment currentQuestionIdx, reset socRound, SOC_ROUND
-  └── if last question →
-        submitSocToSheet({ player, socRecords })
-        gs.goToResults()
-    ↓
-ResultsScreen receives combined score (classification + SOC aggregate)
+ResultsScreen (SOC_RESULTS) shows combined final score
 ```
 
 ---
 
-## Backend Extension: Google Apps Script
+## Data Flow: Email Delivery (Bug Fix Path)
 
-### New Sheet: `SOCData`
-
-Columns: `Timestamp | Name | Email | QuestionID | Primary | Secondary | SPL Text | Explanation Text | Primary Score | Secondary Score | SPL Score | Explanation Score | Total Score | Grade Band`
-
-### New POST Action: `submitSOC`
+Current implementation in `google-apps-script.js` (lines 237–243):
 
 ```js
-if (action === 'submitSOC') {
-  var socSheet = ensureSOCSheet(ss);
-  var records = payload.records || [];
-  for (var i = 0; i < records.length; i++) {
-    var r = records[i];
-    socSheet.appendRow([
-      ts,
-      payload.name      || '',
-      payload.email     || '',
-      r.questionId      || '',
-      r.selectedPrimary || '',
-      r.selectedSecondary || '',
-      r.splText         || '',
-      r.explanationText || '',
-      r.primaryScore    || 0,
-      r.secondaryScore  || 0,
-      r.splScore        || 0,
-      r.explanationScore || 0,
-      r.total           || 0,
-      r.gradeBand       || '',
-    ]);
-  }
-  return ContentService
-    .createTextOutput(JSON.stringify({ ok: true }))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+MailApp.sendEmail({
+  to: recipients.join(','),
+  subject: subject,
+  body: emailBody,
+  attachments: [csvBlob],
+});
 ```
 
-`ensureSOCSheet` follows the same pattern as the existing `ensureSheets` helper — creates
-the sheet with headers if absent, returns reference.
+Known failure modes to investigate:
 
-### New GET Action: `getSOCSubmissions`
+1. **`MailApp` daily quota** — free Google accounts: 100 emails/day; Workspace: 1500/day.
+   `MailApp.getRemainingDailyQuota()` can be checked before calling.
 
-```js
-if (e.parameter.action === 'getSOCSubmissions') {
-  var socSheet = ss.getSheetByName('SOCData');
-  if (!socSheet || socSheet.getLastRow() < 2) {
-    return ContentService.createTextOutput(JSON.stringify({ rows: [] }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-  var data = socSheet.getDataRange().getValues();
-  var headers = data[0];
-  var rows = data.slice(1).map(function(row) {
-    var obj = {};
-    headers.forEach(function(h, i) { obj[h] = row[i]; });
-    return obj;
-  });
-  return ContentService.createTextOutput(JSON.stringify({ rows: rows }))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-```
+2. **`to` field format** — passing a comma-joined string with 4 addresses may be rejected
+   silently in some GAS runtime versions. Confirmed correct format for `MailApp.sendEmail`
+   is comma-delimited string.
 
-The reviewer screen fetches with `?action=getSOCSubmissions` and renders the response.
+3. **Recipient domain restrictions** — Workspace admins can restrict outbound mail to
+   approved domains. `sutherlandglobal.com` recipients from a personal Google account
+   sending via GAS may be blocked server-side.
 
-### Passcode Gate
+4. **Blob MIME type mismatch** — `text/csv` MIME type with `.csv` extension is correct
+   but some GAS deployments reject non-standard MIME blobs.
 
-The passcode is a constant in `src/config/game.js`:
+5. **`Logger.log` loss** — the `catch` block logs but the log is ephemeral. Add
+   `console.log` + check GAS execution transcripts to capture the actual error.
 
-```js
-export const REVIEWER_PASSCODE = 'flagmail-soc-review';
-```
-
-`ReviewerScreen` renders a passcode input. On match, it fetches SOC submissions and renders
-the table. Client-side only — appropriate for a shared passcode with no sensitive data beyond
-what already exists in the public GAS endpoint.
+Fix approach:
+- Add `MailApp.getRemainingDailyQuota()` guard before `sendEmail`.
+- Split `to` into multiple `sendEmail` calls (one per recipient) to isolate failures.
+- Log the full exception object, not just `mailErr.message`.
+- Consider `GmailApp.sendEmail()` as an alternative (same quota, sometimes more permissive).
+- Move recipient list to `PropertiesService` for runtime configurability.
 
 ---
 
-## Recommended File Structure (New Files Only)
+## Existing vs New File Classification
 
-```
-src/
-├── components/
-│   ├── SocIntroCard.jsx        # Zone 4 intro (mirrors ZoneIntroCard)
-│   ├── SocRound.jsx            # Main SOC question screen
-│   ├── SocExplanationCard.jsx  # Per-question feedback
-│   ├── EvidencePanel.jsx       # Scenario + log evidence display
-│   ├── SplEditor.jsx           # SPL textarea with monospace styling
-│   ├── SocClassifier.jsx       # Dynamic option picker (mirrors Classifier)
-│   └── ReviewerScreen.jsx      # Passcode gate + submissions table
-├── hooks/
-│   └── useSocState.js          # All SOC-level flow and state
-├── data/
-│   └── socQuestions.js         # 5 question objects
-└── utils/
-    ├── validateSpl.js          # SPL + explanation keyword validation
-    └── scoreSoc.js             # 23-point scoring model
+### Files to Modify
 
-google-apps-script.js           # Add submitSOC + getSOCSubmissions to existing file
-```
+| File | Modification Scope | Risk |
+|------|--------------------|------|
+| `src/data/socQuestions.js` | Add `investigation_context`, `explanation_prompt`, `hints` per task | LOW — additive only; no existing field renamed or removed |
+| `src/components/SocRound.jsx` | Add left-panel narrative + hint panel; expose SPL/explanation prompts | MEDIUM — layout restructure, prop interface grows by 2 |
+| `src/hooks/useSocState.js` | Add `hintsRevealed` state + `revealNextHint` action | LOW — additive; existing actions unchanged |
+| `src/App.jsx` | Thread `hintsRevealed` and `revealNextHint` into `SocRound` props | LOW — one new prop pair |
+| `google-apps-script.js` | Debug and fix `MailApp.sendEmail`; add quota guard | MEDIUM — GAS deployment required after change |
 
----
+### Files That Are New
 
-## App.jsx Changes (Additive Only)
+| File | Type |
+|------|------|
+| `src/components/HintPanel.jsx` | New sub-component |
 
-The existing `App.jsx` receives three additions:
+### Files That Are Untouched
 
-1. Import `useSocState` and `SOC_SCREENS` constants.
-2. Pass `goToResults` callback to `useSocState` so the SOC hook can exit to RESULTS.
-3. Add three new conditional renders below the existing seven, guarded by the new screen
-   constants. No existing render blocks are modified.
-
-```jsx
-// New additions only — existing blocks unchanged
-const soc = useSocState({ player: gs.player, goToResults: gs.goToResults });
-
-{gs.screen === SCREENS.SOC_INTRO && (
-  <SocIntroCard onStart={soc.startSoc} />
-)}
-{gs.screen === SCREENS.SOC_ROUND && (
-  <SocRound soc={soc} />
-)}
-{gs.screen === SCREENS.SOC_EXPLANATION && (
-  <SocExplanationCard soc={soc} onNext={soc.nextSocQuestion} />
-)}
-{gs.screen === SCREENS.REVIEWER && (
-  <ReviewerScreen />
-)}
-```
-
-The `handleAdvanceZone` callback in `App.jsx` must also be updated for the zone-3 case:
-instead of calling `gs.goToResults()`, it calls `gs.setScreen(SCREENS.SOC_INTRO)`. This is
-a one-line change inside the existing `if (gs.zone === 3)` branch.
+All zones 1–3 components, hooks, and data files. The `validateSpl.js`, `scoreSoc.js`,
+`SocExplanationCard.jsx`, `SocIntroCard.jsx`, and `ReviewerScreen.jsx` require no changes.
 
 ---
 
-## Build Order
+## Suggested Build Order
 
-Build in dependency order — each step unblocks the next:
+Dependencies listed; each step unblocks the next:
 
-1. **Dataset (`src/data/socQuestions.js`)** — all downstream components and hooks consume
-   this; author the ~5 questions from `Splunk Questions.docx` before any UI work begins.
-   Unblocks everything else.
+1. **`src/data/socQuestions.js` — data enrichment**
+   Add `investigation_context`, `explanation_prompt`, and `hints` arrays to all 6 questions.
+   No code changes; pure data authoring. Unblocks SocRound restructure and HintPanel.
 
-2. **Validation + scoring utilities (`validateSpl.js`, `scoreSoc.js`)** — pure functions
-   with no UI dependency; can be exercised with `console.log` tests before any component
-   is built. Unblocks `useSocState`.
+2. **`google-apps-script.js` — email delivery fix**
+   Can be worked on in parallel with UI changes. Requires GAS editor access + redeployment.
+   Test with a single-recipient `sendEmail` call before restoring multi-recipient.
 
-3. **`useSocState.js`** — wires dataset + validators into hook API; testable by calling
-   actions directly from a minimal test harness. Unblocks `App.jsx` changes and all
-   SOC screens.
+3. **`src/hooks/useSocState.js` — hint state**
+   Add `hintsRevealed` and `revealNextHint`. 10–15 lines. No existing logic changes.
+   Unblocks `HintPanel` and `SocRound` prop interface.
 
-4. **SCREENS enum extension + `advanceZone` patch in `useGameState.js`** — two-line change;
-   do this before building screens so the routing exists. Low risk to existing zones.
+4. **`src/components/HintPanel.jsx` — new component**
+   Pure display component; no hook dependencies. Receives `hints`, `hintsRevealed`, and
+   `onRevealHint` as props. Can be developed and visually verified in isolation.
 
-5. **Level UI: `SocIntroCard`, `EvidencePanel`, `SplEditor`, `SocClassifier`, `SocRound`,
-   `SocExplanationCard`** — build in that sub-order (display components before composition).
-   The full SOC play loop is playable after this step.
+5. **`src/components/SocRound.jsx` — layout restructure**
+   Depends on: enriched data shape (step 1), `HintPanel` (step 4), updated prop interface
+   from `useSocState` (step 3). This is the largest change. Restructure left panel to show
+   `investigation_context`, render `splRules.tasks[0].prompt` above SPL textarea, render
+   `explanation_prompt` above explanation textarea, mount `<HintPanel>`.
 
-6. **Reviewer view: `ReviewerScreen`** — passcode gate + fetch from GAS; requires backend
-   to be deployed first (or mock data during development).
-
-7. **Backend: `google-apps-script.js` additions** — add `submitSOC` action, `ensureSOCSheet`
-   helper, `getSOCSubmissions` GET handler. Deploy new GAS version. Connects both the
-   submission path (from `useSocState`) and the reviewer fetch path.
-
-8. **`App.jsx` wiring** — add imports, compose `useSocState`, add screen conditionals,
-   update `handleAdvanceZone`. Final integration step.
-
----
-
-## Anti-Patterns to Avoid
-
-### Anti-Pattern 1: Merging SOC State into `useGameState`
-
-**What people do:** Add `socRound`, `socRecords`, `currentQuestionIdx` directly to
-`useGameState` because it already owns `screen`.
-
-**Why it is wrong:** It intermingles concerns. Every existing action (`submitRound`,
-`nextEmail`, `advanceZone`) would need defensive branches to avoid affecting SOC state.
-The hook becomes fragile for both paths.
-
-**Do this instead:** `useSocState` owns all SOC-specific state. It reads `gs.player` and
-calls `gs.goToResults` as its only coupling to `useGameState`. The `gs.screen` setter is
-the only shared surface — SOC screens are just additional enum values.
-
-### Anti-Pattern 2: Making `Classifier` Data-Driven by Modifying It
-
-**What people do:** Add a `options` prop to the existing `Classifier.jsx` to handle
-SOC-specific category lists.
-
-**Why it is wrong:** `Classifier` is exercised by all 15 existing rounds. Changing it risks
-breaking the proven classification UI. It also has hardcoded L1/L2 structure that does not
-map cleanly to single-tier SOC pickers.
-
-**Do this instead:** Build `SocClassifier.jsx` as a new component. It can share the same
-visual tokens and button pattern but is independent. If the existing `Classifier` is later
-found to be a superset, consolidation is easy — building it new first is risk-free.
-
-### Anti-Pattern 3: Running SPL Validation on the Backend
-
-**What people do:** POST the SPL text to GAS and validate there.
-
-**Why it is wrong:** GAS has no query execution capability, adds a round-trip before
-showing feedback, and couples the scoring step to network availability. The requirement
-explicitly specifies deterministic keyword matching.
-
-**Do this instead:** All validation and scoring runs client-side in `validateSpl.js` and
-`scoreSoc.js`. Only the final scored record is sent to GAS for storage.
-
-### Anti-Pattern 4: Using URL Hash Routing for the Reviewer Screen
-
-**What people do:** Add `#/reviewer` URL routing so reviewers can bookmark the screen.
-
-**Why it is wrong:** The app has no router. Adding `window.location.hash` logic is a bespoke
-mini-router that is inconsistent with the existing screen state machine.
-
-**Do this instead:** Add a low-prominence link on `LandingScreen` that calls
-`gs.setScreen(SCREENS.REVIEWER)`. The passcode gate makes unauthorized access inconsequential,
-so lack of a bookmarkable URL is an acceptable trade-off for v1.
+6. **`src/App.jsx` — wire new props**
+   Thread `soc.hintsRevealed` and `soc.revealNextHint` into `<SocRound>`. One-line prop
+   additions.
 
 ---
 
@@ -641,18 +413,85 @@ so lack of a bookmarkable URL is an acceptable trade-off for v1.
 
 | Boundary | Communication | Notes |
 |----------|--------------|-------|
-| `useSocState` → `useGameState` | Calls `gs.goToResults` (passed as prop) | One-directional; SOC hook never reads `gs.screen` |
-| `SocRound` → `useSocState` | Props: all state + action callbacks | Matches existing GameRound ↔ useGameState pattern |
-| `useSocState` → `validateSpl` / `scoreSoc` | Direct function calls inside `submitSocRound` | Pure functions; no state coupling |
-| `App.jsx` → `handleAdvanceZone` | Modified to route zone-3 exit to SOC_INTRO | Only the `gs.zone === 3` branch changes |
-| `ReviewerScreen` → GAS | `fetch(LEADERBOARD_URL + '?action=getSOCSubmissions')` | GET; no-cors not needed since reviewer expects response body |
+| `App.jsx` → `useSocState` | Hook call; returns state + actions | `soc.hintsRevealed` + `soc.revealNextHint` are new additions |
+| `App.jsx` → `SocRound` | Props: all answer state + action callbacks | Add `hintsRevealed` + `onRevealHint` props |
+| `SocRound` → `HintPanel` | Props: `hints`, `hintsRevealed`, `onRevealHint` | One-directional; HintPanel is display-only |
+| `useSocState.submitSocRound` → `validateSpl` / `scoreSocRound` | Direct function calls | Pure functions; no change needed |
+| `useSocState.submitFinal` → GAS | `fetch(LEADERBOARD_URL, { method: 'POST', mode: 'no-cors' })` | Existing pattern; `no-cors` means response is opaque |
+| `ReviewerScreen` → GAS | GET `?action=getSOCSubmissions&passcode=...` | Existing pattern; returns JSON with CORS headers |
 
 ### External Services
 
 | Service | Integration Pattern | Notes |
 |---------|---------------------|-------|
-| Google Apps Script (submit) | POST with `action: 'submitSOC'`, `mode: 'no-cors'` | Matches existing `submitToSheet` pattern in `useGameState` |
-| Google Apps Script (reviewer fetch) | GET `?action=getSOCSubmissions` | Requires CORS-enabled response; GAS GET returns JSON already |
+| Google Apps Script (submitFinal) | POST, `mode: 'no-cors'`, fire-and-forget | `sessionStorage` fallback on failure. MailApp bug on server side — fix in GAS, not client. |
+| Google Apps Script (getSOCSubmissions) | GET with query params, full JSON response | Needs GAS `doGet` returning `ContentService.createTextOutput` with JSON MIME type |
+
+---
+
+## Architectural Constraints to Honour
+
+These are non-negotiable given the existing system:
+
+- No router, no context API — screen transitions via `gs.setScreen(SCREENS.X)` only.
+- No new hook dependencies between hooks — `useSocState` only couples to `gs` via the
+  `gs` parameter passed at construction; hint state stays internal to `useSocState`.
+- All validation runs client-side — `validateSpl` and `scoreSocRound` are called inside
+  `useSocState.submitSocRound`, not in the component and not on the backend.
+- The zone 1–3 flow must not be touched — `useGameState`, `useScoring`, `useBadges`,
+  `useTimer`, all existing screen components are out of scope for this milestone.
+- Static data only — `socQuestions.js` stays a plain JS export; no fetch, no async loading.
+
+---
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Adding Step State to `useGameState`
+
+**What people do:** Add a `socStep` enum (`scenario | evidence | classify | spl | explain`)
+to `useGameState` so the SOC question flow uses the main screen machine.
+
+**Why it is wrong:** `useGameState` owns zone/email progression. Adding SOC sub-step state
+turns 12 SCREENS into 12+5 and makes zone 1–3 logic defensive against SOC step leakage.
+
+**Do this instead:** If a guided step flow is needed within `SOC_ROUND`, manage it as local
+component state in `SocRound.jsx` or as an additional state slice in `useSocState`. It is
+a question-local UI concern, not a top-level navigation concern.
+
+### Anti-Pattern 2: Revealing All Hints at Once
+
+**What people do:** Show all `hints` as an accordion that expands to reveal all items.
+
+**Why it is wrong:** This defeats the pedagogical intent of progressive disclosure; candidates
+bypass hints as a learning scaffold.
+
+**Do this instead:** Reveal hints one at a time, in order, via a "Show next hint" button.
+Track `hintsRevealed` as a per-question integer index in `useSocState`.
+
+### Anti-Pattern 3: Putting `investigation_context` in the Header
+
+**What people do:** Append `investigation_context` to the existing header bar where `scenario`
+already appears.
+
+**Why it is wrong:** The header is a compact nav element. Investigation context is a multi-
+sentence narrative — cramming it into the header makes the header too large and obscures
+navigation chrome.
+
+**Do this instead:** Render `investigation_context` as the first card in the left evidence
+panel, above the evidence artifact cards. It acts as the "briefing" before the evidence.
+
+### Anti-Pattern 4: Fixing Email by Changing the Fetch Mode
+
+**What people do:** Change `mode: 'no-cors'` to `mode: 'cors'` on the `submitFinal` POST,
+assuming the fetch mode is what prevents email delivery.
+
+**Why it is wrong:** The email send happens entirely server-side in GAS. The fetch mode
+controls CORS headers on the response, not what GAS does with the payload. The email bug
+is in `google-apps-script.js`, not in the client fetch call.
+
+**Do this instead:** Debug by reading GAS execution logs (Apps Script editor → Executions).
+Add `Logger.log('Email error:', JSON.stringify(mailErr))` in the catch block. Check quota
+with `MailApp.getRemainingDailyQuota()`. Consider splitting multi-recipient sends.
 
 ---
 
@@ -660,15 +499,15 @@ so lack of a bookmarkable URL is an acceptable trade-off for v1.
 
 | Area | Confidence | Basis |
 |------|-----------|-------|
-| Screen state extension approach | HIGH | Direct inspection of `useGameState.js` — enum + switch pattern confirmed |
-| Hook isolation strategy | HIGH | Existing hook conventions observed; `useSocState` follows identical structure |
-| Dataset shape | HIGH | Derived from `emails.js` shape + requirements in `Splunk.md` and `PROJECT.md` |
-| Validation engine design | HIGH | Requirements are explicit: keyword matching, no execution, deterministic |
-| GAS backend extension | HIGH | Existing `doPost`/`doGet` pattern is clear; new action follows identical structure |
-| Scoring model | HIGH | 23-point breakdown explicitly specified in `Splunk.md` |
-| Reviewer passcode approach | MEDIUM | Simple but adequate for v1; a shared static passcode in config is the correct trade-off given no auth system |
+| Existing screen state machine | HIGH | Direct inspection of `useGameState.js` — SCREENS enum and advanceZone confirmed correct |
+| useSocState existing behaviour | HIGH | Full file read — answers, validation, scoring, submitFinal all working |
+| Hint engine design | HIGH | Standard progressive disclosure pattern; fits cleanly into useSocState |
+| SocRound layout restructure scope | HIGH | Full component read — layout targets are clear |
+| Data enrichment fields needed | HIGH | Derived from milestone requirements vs. current question shape |
+| Email delivery bug cause | MEDIUM | Root cause unconfirmed — GAS logs not yet inspected; multiple plausible causes identified |
+| HintPanel implementation | HIGH | Simple display component, no novel patterns |
 
 ---
 
-*Architecture research for: FlagMail SOC Investigation Level (Zone 4)*
-*Researched: 2026-05-21*
+*Architecture research for: FlagMail SOC Investigation Zone 4 Restructure (v1.1)*
+*Researched: 2026-05-25*

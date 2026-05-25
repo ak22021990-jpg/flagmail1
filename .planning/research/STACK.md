@@ -1,8 +1,27 @@
 # Stack Research
 
-**Domain:** SOC Investigation level — 4th zone added to an existing React 19 + Vite 7 + plain-JS game
-**Researched:** 2026-05-21
-**Confidence:** HIGH (all recommendations drawn directly from the existing codebase; zero new dependencies required)
+**Domain:** SOC Investigation level — v1.1 overhaul of Zone 4 in an existing React 19 + Vite 7 + plain-JS game
+**Researched:** 2026-05-25
+**Confidence:** HIGH
+
+---
+
+## Context: What Already Exists
+
+The following are already installed and must not be changed. Do not re-research them.
+
+| Package | Version | Role |
+|---------|---------|------|
+| react, react-dom | 19.2.0 | UI |
+| vite, @vitejs/plugin-react | 7.3.1 / 5.1.1 | Build |
+| framer-motion | ^11.18.2 | Screen transitions, button micro-interactions |
+| gsap | ^3.12.5 | Badge animations |
+| lottie-react | ^2.4.1 | Badge unlock animations |
+| papaparse | ^5.5.3 | CSV (not used by SOC level) |
+| prop-types | ^15.8.1 | Runtime prop validation |
+| vitest | ^4.1.7 | Test runner (used in validateSpl.test.js, scoreSoc.test.js) |
+
+The existing SOC implementation already has: `SocRound.jsx`, `SocExplanationCard.jsx`, `SocIntroCard.jsx`, `ReviewerScreen.jsx`, `useSocState.js`, `validateSpl.js`, `scoreSoc.js`, `socQuestions.js`. The overhaul refines these — it does not start from scratch.
 
 ---
 
@@ -10,259 +29,146 @@
 
 ### Core Technologies
 
-All core technologies are already present. This milestone adds no new framework, router, or runtime dependency.
+All core framework choices stay unchanged. Zero new frameworks or runtimes.
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| React 19 | 19.2.0 (existing) | UI components, state, effects | Already in project; the SOC screen is one more conditional branch in `App.jsx`, identical to how `SCREENS.ROUND` works |
-| Vite 7 | 7.3.1 (existing) | Build and dev server | No change needed; base path `/flagmail1/` already set |
-| Plain JS (ES2020+) | — | All logic | Codebase convention; SPL keyword matching and passcode gating are simple string operations that need no TypeScript or special runtime |
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| React 19 | 19.2.0 (existing) | All UI components and state | Zero change; SOC overhaul is additive to existing component tree |
+| Vite 7 | 7.3.1 (existing) | Build and dev server | No config change needed |
+| Plain JS ES2020+ | — | All logic | Codebase convention; SPL scoring, hint engine, form validation are pure string/array operations |
 
-### New Source Files to Create (zero new packages)
+### New Dependencies — Scoped Analysis
 
-These are files to author, not packages to install.
+The v1.1 overhaul has five specific areas requiring a stack decision. Each is evaluated below.
 
-| File | Role | Pattern It Follows |
-|------|------|--------------------|
-| `src/data/socQuestions.js` | Static dataset of SOC questions, classification options, and validation rules | Mirrors `src/data/emails.js` — a plain JS export of an array of objects |
-| `src/utils/splValidation.js` | Keyword-matching engine for SPL queries and explanations | Plain function, no dependencies; mirrors `src/utils/competency.js` |
-| `src/hooks/useSocState.js` | State machine for the SOC question flow (question index, inputs, results) | Follows `useGameState.js` exactly — `useState` + `useCallback`, returns state + action object |
-| `src/components/SocInvestigation.jsx` | Top-level screen component for zone 4 | Added as a new conditional branch in `App.jsx`; follows the same props-down pattern as `GameRound.jsx` |
-| `src/components/SocReviewer.jsx` | Passcode-gated reviewer screen | New screen branch in `App.jsx`; passcode stored in a `useState`, validated inline |
+---
 
-### Supporting Libraries
+#### Area 1: SPL Code Editor (syntax highlighting)
 
-No new libraries are needed or recommended. The table below lists existing packages that serve the SOC level.
+**Decision: Do NOT add a code editor library. Keep the `<textarea>` with monospace font.**
 
-| Library | Version | Purpose | When Used in SOC Level |
-|---------|---------|---------|------------------------|
-| React (existing) | 19.2.0 | `useState`, `useCallback`, controlled inputs | SPL textarea, classification pickers, passcode input |
-| `framer-motion` (existing) | ^11.18.2 | Screen transition animations | SOC intro card → question → result — same `AnimatePresence` wrapping used in existing screens |
-| Plain `fetch` (existing pattern) | browser native | POST submissions, GET reviewer data | SOC submit action; reviewer GET action — follows `submitToSheet` / `useLeaderboard` patterns exactly |
+The existing `SocRound.jsx` already uses a `<textarea>` with `fontFamily: 'ui-monospace, "SF Mono", monospace'`. The question is whether to replace it with CodeMirror or Monaco.
 
-### Development Tools
+**Analysis of @uiw/react-codemirror:**
+- Latest version: 4.25.10 (npm verified, 2026-05-25)
+- Peer dependencies: React >=17.0.0 (React 19 compatible), codemirror >=6.0.0
+- SQL language pack (@codemirror/lang-sql, version 6.10.0) is the closest existing grammar to Splunk SPL
+- Bundle cost: CodeMirror 6 core + @codemirror/lang-sql adds approximately 180–220 KB gzipped to the bundle
+- Splunk SPL is not SQL — column names like `index=`, `sourcetype=`, pipe-chained commands, and `stats` functions are structurally different. The SQL grammar would highlight SPL incorrectly (wrong keywords as errors), creating learner confusion
 
-No changes. Existing toolchain is sufficient.
+**Analysis of Monaco Editor:**
+- Bundle cost: approximately 3–5 MB (includes full language worker infrastructure)
+- Completely disproportionate for a `<textarea>` replacement in a game
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| ESLint (existing) | Lint `.jsx`/`.js` | Flat config already covers all new files in `src/` |
-| Vite dev server (existing) | HMR during development | No config change needed |
-| Playwright (existing) | Visual audit | Can screenshot SOC screens with the same `playwright-audit.mjs` script |
+**Verdict:** Syntax highlighting has zero impact on the keyword-match scoring engine. The only benefit would be cosmetic. The bundle cost and incorrect SPL highlighting (using SQL grammar as a proxy) make this a net negative for learners. Keep the native `<textarea>`. If SPL highlighting is ever needed, a custom CSS-token approach via Prism.js + a hand-authored SPL grammar is the lower-cost path — but this is out of scope for v1.1.
+
+**What to improve instead:** Visual affordance of the SPL textarea — a dark code-surface background (`rgba(17,24,39,0.92)`), light text (`#F8F8F2`), slightly larger font (14px), and a character counter. This is pure CSS and communicates "code editor" without any library.
+
+---
+
+#### Area 2: Hint / Tooltip Engine for Investigation Guidance
+
+**Decision: Build a zero-dependency hint system using existing framer-motion. Do NOT add @floating-ui/react.**
+
+**Analysis of @floating-ui/react:**
+- Latest version: 0.27.19 (npm verified, 2026-05-25)
+- Peer dependencies: React >=17.0.0, React-DOM >=17.0.0 (React 19 compatible)
+- Bundle cost: ~25 KB gzipped
+- Purpose: Anchor positioning for floating elements (tooltips, popovers)
+- Problem for this use case: The hint system for SOC questions is not a cursor-positioned tooltip. It is a question-level hint panel (think: "Need a hint? Click here") that reveals hint text below the relevant section. This is a toggle pattern, not an anchor-positioned floating layer.
+
+**What the hint engine actually needs:**
+1. A `useHint` hook that tracks which hints have been revealed per question (array of booleans, persisted in `useSocState`)
+2. A `HintPanel` component that renders a collapsible hint text block beneath each SPL prompt
+3. Animation via existing `framer-motion` `AnimatePresence` — the same pattern already used in `ExplanationCard.jsx` and `ZoneComplete.jsx`
+
+**Verdict:** @floating-ui/react solves a problem this project does not have. A positioned tooltip above a word is not the UX pattern needed here. The hint panel is a disclosed region — a framer-motion `AnimatePresence` + `motion.div` with `initial={{ height: 0 }} animate={{ height: 'auto' }}` covers this completely. Zero new packages.
+
+---
+
+#### Area 3: Better Form Validation UX
+
+**Decision: Implement inline validation state in existing hooks via `useState`. Do NOT add react-hook-form or zod.**
+
+The SOC form has three validated fields: primary classification (required), SPL textarea (required, non-empty), explanation textarea (required, non-empty). The existing `SocRound.jsx` already gates the Submit button on `!!answer.splText?.trim() && !!answer.explanation?.trim()`.
+
+**What "better form validation UX" means in this context:**
+- Per-field error messages shown after the first attempted submit (not on mount)
+- A `touched` flag per field (has the user interacted with this field?)
+- Visual border color changes (`border-color: #FF3B30` on invalid, `#34C759` on valid)
+
+**Implementation:** Add `touched` state object to `useSocState` and expose a `markTouched(field)` action. On submit-attempt with missing fields, set all fields touched. Each field reads `touched.spl && !answer.splText?.trim()` to decide whether to show the error border. This is 20 lines of React state — no library needed.
+
+**Alternatives rejected:**
+- **react-hook-form**: Designed for complex multi-step forms with dozens of fields and cross-field validation. The SOC form has 2 textareas and button pickers. Overhead is not justified.
+- **zod**: A TypeScript-first schema validation library. This project has no TypeScript and the validation rules (non-empty string) are too simple to warrant a schema definition language.
+
+---
+
+#### Area 4: Restructured SOC Question UI (scenario → evidence → classification → SPL → explanation)
+
+**Decision: Zero new libraries. Refactor existing `SocRound.jsx` layout using CSS grid columns.**
+
+The current `SocRound.jsx` already implements a two-column grid layout (`1.08fr / 0.92fr`). The overhaul restructures the right column into a vertical accordion-style flow:
+
+1. Classification pickers (existing, unchanged)
+2. SPL task prompt + hint panel (new: prompt text from `question.splRules.tasks[0].prompt`)
+3. SPL textarea (existing, restyled)
+4. Explanation textarea (existing, unchanged)
+
+The SPL task prompt is already in the data layer (`socQuestions.js` has `splRules.tasks[n].prompt` per task). The overhaul surfaces it in the UI above the textarea. This requires no new library — only reading the existing data field and rendering a `<p>` element.
+
+---
+
+#### Area 5: GAS Email Delivery Fix
+
+**Decision: Fix the existing GAS `doPost` handler in the Apps Script source file. No new packages or services.**
+
+**Root cause analysis:**
+The current `useSocState.js` uses `mode: 'no-cors'` in all fetch calls. With `no-cors`, the browser sends an opaque request — the response is unreadable, but crucially: the request body content-type is restricted to `text/plain`, `multipart/form-data`, or `application/x-www-form-urlencoded`. The fetch call sends `JSON.stringify(...)` as the body without setting a Content-Type header. GAS receives this as `text/plain` content (not parsed JSON), so `JSON.parse(e.postData.contents)` may fail silently if the body is not valid JSON in that context.
+
+However, per the GAS docs and community knowledge, `no-cors` with a raw JSON string body **does** work for GAS `doPost` when GAS reads `e.postData.contents` directly (not `e.postData.object`). The real issue is most likely one of:
+
+1. **Email field name mismatch**: GAS `MailApp.sendEmail()` is called with a recipient field drawn from the payload. If the field name in the payload changed (e.g., `email` vs `managerEmail`), GAS throws "no recipient" silently and the try/catch swallows it.
+2. **GAS execution quota**: Free account is limited to 100 email recipients/day. Exceeding it causes silent failures unless `MailApp.getRemainingDailyQuota()` is checked before the call.
+3. **GAS deployment not re-published**: After editing the `.gs` file, you must click "Deploy > Manage deployments > New version" for the live URL to pick up changes. The old version keeps running.
+
+**Fix approach (no new packages):**
+- In the GAS script: wrap `MailApp.sendEmail()` in a try/catch that logs to `Logger.log()` with the full error message and recipient value, so failures appear in the GAS execution log (Apps Script dashboard > Executions).
+- Add `MailApp.getRemainingDailyQuota()` check before sending; if quota is 0, log and skip gracefully.
+- Confirm the `to` parameter matches what the payload sends. The payload in `App.jsx` sends `email: gs.player.email` — the GAS script must read `payload.email`, not a different field name.
+- After editing, redeploy as a new version and update the URL in `config.js` if the deployment ID changed.
+
+**On the front-end side:** The `submitFinal` call in `useSocState.js` already uses `mode: 'no-cors'`. This is correct and unavoidable for GAS web apps called from a browser (GAS does not support CORS preflight). The fix is entirely server-side in the GAS script.
 
 ---
 
 ## Installation
 
-No new packages. The command is intentionally empty.
+No new packages required for the v1.1 overhaul.
 
 ```bash
-# Nothing to install — zero new dependencies for this milestone
+# Nothing to install
+# All five feature areas are addressed by:
+# - Refactoring existing components
+# - Adding pure-JS utility functions
+# - Editing the GAS script (outside the npm/Vite project)
 ```
-
----
-
-## Implementation Patterns
-
-### (1) Plain-Text SPL Query Input
-
-Use a native `<textarea>` controlled via `useState`. No library needed.
-
-```js
-// Inside SocInvestigation.jsx (or a child component)
-const [spl, setSpl] = useState('');
-
-<textarea
-  value={spl}
-  onChange={e => setSpl(e.target.value)}
-  rows={8}
-  placeholder="index=... | ..."
-  style={{ fontFamily: 'monospace', width: '100%' }}
-/>
-```
-
-Rationale: `<textarea>` is a standard HTML element, fully controlled by React's `onChange`. Code-editor libraries (CodeMirror, Monaco) would add 200–500 KB for zero validation benefit — keyword matching works identically on raw text.
-
-### (2) Deterministic Keyword-Matching Validation Engine
-
-Author `src/utils/splValidation.js` as a pure function module — no state, no side effects.
-
-```js
-// src/utils/splValidation.js
-
-/**
- * Validate a candidate's SPL text against a question's rule set.
- *
- * @param {string} text  - raw SPL string from textarea
- * @param {object} rules - { required: string[], optional: string[], blocked: string[] }
- * @returns {{ score: number, max: number, feedback: string[], matched: string[], missed: string[], penalised: string[] }}
- */
-export function validateSpl(text, rules) {
-  const lower = text.toLowerCase();
-  const matched = rules.required.filter(t => lower.includes(t.toLowerCase()));
-  const missed = rules.required.filter(t => !lower.includes(t.toLowerCase()));
-  const optMatched = (rules.optional || []).filter(t => lower.includes(t.toLowerCase()));
-  const penalised = (rules.blocked || []).filter(t => lower.includes(t.toLowerCase()));
-
-  // Scoring: required terms share the 10 SPL points proportionally;
-  // optional terms add 1pt each (capped at remaining); each blocked term deducts 2pt.
-  const basePerRequired = rules.required.length > 0 ? 10 / rules.required.length : 0;
-  let score = matched.length * basePerRequired;
-  score += optMatched.length * 1;
-  score -= penalised.length * 2;
-  score = Math.max(0, Math.min(10, Math.round(score)));
-
-  const feedback = [
-    ...missed.map(t => `Missing keyword: "${t}"`),
-    ...penalised.map(t => `Blocked keyword used: "${t}"`),
-    ...optMatched.map(t => `Bonus term found: "${t}"`),
-  ];
-
-  return { score, max: 10, feedback, matched, missed, penalised };
-}
-
-/**
- * Validate a free-text explanation against expected concept keywords.
- *
- * @param {string} text     - candidate's explanation
- * @param {string[]} concepts - expected concept strings
- * @returns {{ score: number, max: number, feedback: string[], found: string[], missing: string[] }}
- */
-export function validateExplanation(text, concepts) {
-  const lower = text.toLowerCase();
-  const found = concepts.filter(c => lower.includes(c.toLowerCase()));
-  const missing = concepts.filter(c => !lower.includes(c.toLowerCase()));
-  const score = concepts.length > 0
-    ? Math.round((found.length / concepts.length) * 5)
-    : 0;
-  const feedback = missing.map(c => `Concept not addressed: "${c}"`);
-  return { score, max: 5, feedback, found, missing };
-}
-```
-
-Key design decisions:
-- Pure functions — deterministic, trivially testable, no React dependency
-- `toLowerCase()` on both sides — case-insensitive match, no regex complexity needed
-- `String.prototype.includes()` — sufficient for keyword presence; no tokeniser or SPL parser
-- Scoring formula expressed inline — reviewer can audit it directly
-
-### (3) Passcode-Gated Reviewer View Without a Router Library
-
-Add two entries to the `SCREENS` enum in `useGameState.js`:
-
-```js
-export const SCREENS = {
-  // ... existing screens ...
-  SOC_INTRO:    'soc_intro',
-  SOC_ROUND:    'soc_round',
-  SOC_RESULT:   'soc_result',
-  REVIEWER:     'reviewer',
-};
-```
-
-Trigger entry to `SCREENS.REVIEWER` from the `RESULTS` screen (a small "Reviewer access" link) or from the `LANDING` screen. The passcode itself lives in a component-local `useState` — it never needs to be in the game state:
-
-```js
-// Inside SocReviewer.jsx
-const PASSCODE = import.meta.env.VITE_REVIEWER_PASSCODE || 'flagmail-review';
-
-export default function SocReviewer({ onExit }) {
-  const [input, setInput] = useState('');
-  const [unlocked, setUnlocked] = useState(false);
-  const [submissions, setSubmissions] = useState([]);
-
-  const handleUnlock = useCallback(() => {
-    if (input === PASSCODE) {
-      setUnlocked(true);
-      fetchSubmissions().then(setSubmissions);
-    }
-  }, [input]);
-
-  if (!unlocked) {
-    return (
-      <div className="reviewer-gate">
-        <input type="password" value={input} onChange={e => setInput(e.target.value)} />
-        <button onClick={handleUnlock}>Enter</button>
-        <button onClick={onExit}>Back</button>
-      </div>
-    );
-  }
-
-  return <ReviewerTable submissions={submissions} onExit={onExit} />;
-}
-```
-
-Passcode stored in `.env.local` as `VITE_REVIEWER_PASSCODE` — Vite exposes it at build time via `import.meta.env`. Never commit `.env.local`. Default fallback keeps the app functional without it.
-
-The `onExit` callback calls `setScreen(SCREENS.LANDING)` in `App.jsx`, which is exactly how every other screen exits.
-
-This approach:
-- Needs no router library — it is one more `{gs.screen === SCREENS.REVIEWER && <SocReviewer />}` in `App.jsx`
-- Needs no auth provider — a shared passcode is the specified requirement
-- Is server-invisible — the passcode check is client-side; this is acceptable because the data is not secret to an authenticated user, only casual-access protected
-
-### (4) Extending the Google Apps Script Backend
-
-Add a third sheet `SOCData` and two new action dispatches in `google-apps-script.js`. The existing `doPost`/`doGet` structure already uses an `action` string switch — extend it.
-
-**New POST action: `"submitSoc"`**
-
-Payload shape:
-```json
-{
-  "action": "submitSoc",
-  "name": "...",
-  "email": "...",
-  "questionId": "q1",
-  "primaryClassification": "Phishing",
-  "secondaryDiagnosis": "Credential Harvesting",
-  "splQuery": "index=email_logs ...",
-  "explanation": "...",
-  "primaryScore": 5,
-  "secondaryScore": 3,
-  "splScore": 8,
-  "explanationScore": 4,
-  "totalScore": 20,
-  "gradeBand": "Good",
-  "feedback": ["Missing keyword: stats", "Concept not addressed: lateral movement"]
-}
-```
-
-**New GET action: `?action=getSoc&passcode=...`**
-
-Returns all rows from `SOCData`. Passcode checked server-side using a `PropertiesService` script property (not hardcoded in the script) so the passcode is not visible in the deployed URL history:
-
-```js
-// In doGet, inside google-apps-script.js
-if (e.parameter.action === 'getSoc') {
-  var stored = PropertiesService.getScriptProperties().getProperty('REVIEWER_PASSCODE');
-  if (e.parameter.passcode !== stored) {
-    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Forbidden' }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-  var soc = ss.getSheetByName('SOCData');
-  // ... return rows
-}
-```
-
-`SOCData` sheet columns:
-`Timestamp | Name | Email | QuestionID | PrimaryClass | SecondaryDiagnosis | SPLQuery | Explanation | PrimaryScore | SecondaryScore | SPLScore | ExplanationScore | TotalScore | GradeBand | Feedback`
-
-This extends the existing script without touching existing `register`/`submit`/`checkEmail` paths — zero risk to the existing leaderboard.
 
 ---
 
 ## Alternatives Considered
 
-| Recommended | Alternative | Why Not |
-|-------------|-------------|---------|
-| Native `<textarea>` | CodeMirror / Monaco editor | 200–500 KB bundle increase; syntax highlighting has no impact on keyword-match scoring; violates zero-new-deps constraint |
-| `String.includes()` keyword matching | SPL grammar parser (e.g., a custom tokeniser) | SPL parsing is complex (pipes, subsearches, macros); keyword presence is the specified validation fidelity; a parser would add weeks of work and a new maintenance surface |
-| `SCREENS` enum extension (existing state machine) | React Router v6 / TanStack Router | Router library adds a dependency and requires URL-based navigation that conflicts with the SPA-with-no-URL-change design; SCREENS enum already handles 7 screens without it |
-| Component-local `useState` for passcode | React Context / Zustand for auth state | Auth state never needs to be shared across components; component-local is the simplest correct scope; context or Zustand would add indirection with no benefit |
-| `VITE_REVIEWER_PASSCODE` env var | Hardcoded constant in source | Env var keeps the passcode out of git history; `import.meta.env` is standard Vite — no new tool required |
-| GAS `PropertiesService` for server-side passcode | Passcode in GET query param only | Query params appear in GAS execution logs and browser history; PropertiesService keeps the passcode in script configuration, not in the deployed URL surface |
-| `src/data/socQuestions.js` static file | CMS, API, or Google Sheets as question store | Matches existing `emails.js` pattern; no API call during gameplay; content editing is a code change, which is acceptable at this team size |
+| Area | Recommended | Alternative | Why Not |
+|------|-------------|-------------|---------|
+| SPL editor | Native `<textarea>` (restyled) | @uiw/react-codemirror 4.25.10 | 180–220 KB bundle; SQL grammar highlights SPL incorrectly; no scoring benefit |
+| SPL editor | Native `<textarea>` | Monaco Editor | 3–5 MB bundle; completely disproportionate |
+| Hint engine | framer-motion AnimatePresence (existing) | @floating-ui/react 0.27.19 | Solves anchor-positioning, not the toggle-panel pattern needed here |
+| Hint engine | framer-motion (existing) | Radix UI Collapsible | Adds ~30 KB; framer-motion already handles the animation requirement |
+| Form validation | useState + touched flags | react-hook-form | Designed for large forms; the SOC form has 2 textareas |
+| Form validation | useState + touched flags | zod | TypeScript-first; this codebase has no TypeScript |
+| Email fix | Edit GAS script | New backend service | Violates project constraint; GAS is the mandated backend |
+| Email fix | Edit GAS script | SendGrid / Resend | New billing, new service, new credentials — not justified for a single email notification |
 
 ---
 
@@ -270,41 +176,56 @@ This extends the existing script without touching existing `register`/`submit`/`
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| CodeMirror / Monaco | Adds 200–500 KB bundle weight; syntax highlighting provides no scoring benefit | Native `<textarea>` with `fontFamily: monospace` |
-| SPL parser / grammar library | SPL is a complex query language; parsing it correctly is a multi-week project; the spec calls for keyword matching, not query execution | `String.includes()` in `splValidation.js` |
-| React Router / TanStack Router | Requires URL-based navigation; conflicts with the SPA-no-URL design; adds a dependency | Extend `SCREENS` enum in `useGameState.js`; add one conditional render in `App.jsx` |
-| Zustand / Jotai / Redux | Passcode and reviewer fetch state are local to `SocReviewer.jsx`; shared state management is unnecessary complexity | Component-local `useState` |
-| Firebase / Supabase / any new backend | Project constraint is to reuse GAS + Sheets; a new backend service has auth, billing, and ops overhead | Extend `google-apps-script.js` with `submitSoc` and `getSoc` actions |
-| TypeScript migration | Codebase is intentionally plain JS; adding TS mid-project requires tsconfig, type stubs, and build changes across all files | JSDoc comments for critical function signatures (validation engine, data shapes) |
-| `window.location.hash` routing | Appears simpler than a router but creates URL state that must be synced with React state — adds complexity without removing it | `SCREENS` enum which is already the source of truth |
+| @uiw/react-codemirror / Monaco | Bundle cost (180 KB – 5 MB) with no scoring benefit; SQL grammar mislabels SPL tokens | Native `<textarea>` + dark background CSS |
+| @floating-ui/react | Anchor-positioned tooltips are the wrong UX pattern for a disclosed hint panel | framer-motion `AnimatePresence` expand/collapse |
+| react-hook-form / zod | 2-field form does not need a form management library or schema language | `useState` + `touched` flags in `useSocState` |
+| React Router / TanStack Router | Violates the SPA-no-URL design; the `SCREENS` enum already handles all navigation | Extend `SCREENS` enum; `App.jsx` conditional render |
+| New backend service | Violates project constraints | Extend existing GAS script with new action handlers |
+| TypeScript migration | Codebase convention is plain JS; mid-project migration disrupts all existing tooling | JSDoc comments on new utility functions |
 
 ---
 
 ## Version Compatibility
 
-No new packages means no new compatibility surface. The existing lockfile governs everything.
+| Package | Version | React 19 Compatible | Notes |
+|---------|---------|---------------------|-------|
+| @uiw/react-codemirror | 4.25.10 | YES (peer: React >=17) | Not adding — documented here for future reference |
+| @floating-ui/react | 0.27.19 | YES (peer: React >=17, React-DOM >=17) | Not adding — documented here for future reference |
+| @codemirror/lang-sql | 6.10.0 | YES (via @uiw/react-codemirror) | Not adding — SQL grammar is wrong for SPL anyway |
+| framer-motion | ^11.18.2 (existing) | YES | Already installed; handles hint panel animation |
+| vitest | ^4.1.7 (existing) | YES | Test coverage for validateSpl.js and scoreSoc.js already exists |
 
-| Concern | Status |
-|---------|--------|
-| React 19 controlled `<textarea>` | Standard; no breaking changes in React 19 for controlled inputs |
-| `import.meta.env` in Vite 7 | Fully supported; `.env.local` is already in `.gitignore` via standard Vite template |
-| GAS `PropertiesService` | Stable GAS API; no version concern |
+---
+
+## Integration Points with Existing Stack
+
+| New Feature | Integrates With | How |
+|-------------|-----------------|-----|
+| Hint panel | `useSocState.js` | Add `hintsRevealed: []` per question; expose `revealHint(questionIdx, hintIdx)` action |
+| Hint panel animation | `framer-motion` (existing) | `AnimatePresence` + `motion.div` with `height` animation — same pattern as `ExplanationCard.jsx` |
+| SPL task prompt in UI | `socQuestions.js` (existing) | `question.splRules.tasks[0].prompt` is already authored; just render it in `SocRound.jsx` |
+| Touched/validation UX | `useSocState.js` | Add `touched: { spl: false, explanation: false }` state; expose `markTouched(field)` |
+| GAS email fix | `google-apps-script.js` (GAS file, outside npm) | Add `Logger.log()` + quota check + correct field name in `MailApp.sendEmail()` |
+| Dark SPL textarea | `SocRound.jsx` (existing) | Inline style change: `background: 'rgba(17,24,39,0.92)', color: '#F8F8F2'` |
 
 ---
 
 ## Sources
 
-- `C:\Users\anoop\OneDrive\Desktop\apple\flagmail1\.planning\codebase\STACK.md` — existing stack confirmed (HIGH confidence, direct codebase read)
-- `C:\Users\anoop\OneDrive\Desktop\apple\flagmail1\.planning\codebase\ARCHITECTURE.md` — screen state machine pattern, hook composition confirmed (HIGH confidence)
-- `C:\Users\anoop\OneDrive\Desktop\apple\flagmail1\.planning\codebase\INTEGRATIONS.md` — GAS action/sheet schema confirmed (HIGH confidence)
-- `C:\Users\anoop\OneDrive\Desktop\apple\flagmail1\src\hooks\useGameState.js` — SCREENS enum and submitToSheet pattern confirmed (HIGH confidence, direct source read)
-- `C:\Users\anoop\OneDrive\Desktop\apple\flagmail1\src\hooks\useScoring.js` — pure-function scoring engine pattern confirmed (HIGH confidence, direct source read)
-- `C:\Users\anoop\OneDrive\Desktop\apple\flagmail1\google-apps-script.js` — doPost/doGet action dispatch pattern confirmed (HIGH confidence, direct source read)
-- `C:\Users\anoop\OneDrive\Desktop\apple\flagmail1\.planning\PROJECT.md` — 23-point scoring model, validation spec, passcode requirement confirmed (HIGH confidence)
-- Vite docs (import.meta.env): standard feature, documented since Vite 2 — no version risk (HIGH confidence)
-- GAS PropertiesService: stable GAS platform API — no version risk (HIGH confidence)
+- `package.json` (direct file read, 2026-05-25) — confirmed existing dependency versions (HIGH confidence)
+- `src/components/SocRound.jsx` (direct file read, 2026-05-25) — confirmed existing textarea, classification picker, layout (HIGH confidence)
+- `src/hooks/useSocState.js` (direct file read, 2026-05-25) — confirmed no-cors fetch pattern, submit flow (HIGH confidence)
+- `src/data/socQuestions.js` (direct file read, 2026-05-25) — confirmed `splRules.tasks[n].prompt` field exists in data (HIGH confidence)
+- `npm info @uiw/react-codemirror` (shell, 2026-05-25) — version 4.25.10, peer React >=17 (HIGH confidence)
+- `npm info @uiw/react-codemirror peerDependencies` (shell, 2026-05-25) — codemirror >=6.0.0 required (HIGH confidence)
+- `npm info @codemirror/lang-sql version` (shell, 2026-05-25) — version 6.10.0 (HIGH confidence)
+- `npm info @floating-ui/react version peerDependencies` (shell, 2026-05-25) — version 0.27.19, peer React >=17 (HIGH confidence)
+- WebSearch: "@floating-ui/react npm latest version 2025 tooltip React 19" — confirmed 0.27.19, actively maintained (MEDIUM confidence, corroborated by npm CLI)
+- WebSearch: "Google Apps Script MailApp no-cors fetch mode email delivery missing recipient field" — confirmed no-cors limitation, MailApp quota, field name mismatch as common causes (MEDIUM confidence)
+- [GAS MailApp docs](https://developers.google.com/apps-script/reference/mail/mail-app) — MailApp.getRemainingDailyQuota() confirmed, sendEmail() signature confirmed (HIGH confidence)
+- [GAS Quotas](https://developers.google.com/apps-script/guides/services/quotas) — 100 recipients/day free, 1500 paid (HIGH confidence, official docs updated April 2026)
 
 ---
 
-*Stack research for: SOC Investigation level — flagmail1 milestone*
-*Researched: 2026-05-21*
+*Stack research for: SOC Investigation level v1.1 overhaul — flagmail1*
+*Researched: 2026-05-25*
