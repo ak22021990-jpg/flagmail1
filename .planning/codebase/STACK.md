@@ -1,70 +1,86 @@
-# Stack
+# Technology Stack
 
-> Generated: 2026-05-21
+**Analysis Date:** 2026-05-25
 
-## Languages & Runtime
+## Languages
 
-- **JavaScript (ES2020+)** — all source code. No TypeScript.
-- **Node.js** — dev/build toolchain only.
-- **Browser** — target runtime (Chrome, Firefox, Safari).
+**Primary:**
+- JavaScript (ES2020+) — All source code in `src/` uses JSX syntax with ES modules. No TypeScript.
+- CSS3 — Custom properties in `src/index.css`, keyframe animations in `src/styles/animations.css`
 
-## Framework
+**Secondary:**
+- HTML5 — Entry point at `index.html`
 
-- **React 19** (`19.2.0`) — UI library. Function components + hooks.
-- **Vite 7** (`7.3.1`) — bundler, dev server, HMR.
-- **@vitejs/plugin-react** — Babel-based Fast Refresh.
+## Runtime
+
+**Environment:**
+- Node.js 20 (CI) / 22+ (local dev via `engines` not specified)
+- Browser (SPA — all logic runs client-side)
+
+**Package Manager:**
+- npm
+- Lockfile: `package-lock.json` present
+
+## Frameworks
+
+**Core:**
+- React 19.2.0 — UI framework, no Next.js or SSR. Pure client-side SPA.
+- React DOM 19.2.0 — Renderer
+
+**Animation:**
+- framer-motion 11.18.2 — Component-level animations (`motion.div`, `AnimatePresence`). Used in ~20 components.
+- GSAP 3.12.5 — Scroll-linked animations in `GameRound.jsx`
+- animejs 3.2.2 — Declared dependency; usage TBD
+- lottie-react 2.4.1 — Lottie JSON animation player for badge celebrations (`ResultsScreen.jsx`)
+- matter-js 0.19.0 — 2D physics engine; declared but usage not confirmed
+
+**Testing:**
+- Vitest 4.1.7 — Unit test runner. Config at `vitest.config.js`
+- Playwright 1.59.1 — E2E/visual audit script at `scripts/playwright-audit.mjs`
+
+**Build/Dev:**
+- Vite 7.3.1 — Bundler and dev server. Config at `vite.config.js`
+- ESLint 9.39.1 — Linting with `@eslint/js`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`. Config at `eslint.config.js`
 
 ## Key Dependencies
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `framer-motion` | ^11.18.2 | Animated transitions between screens |
-| `gsap` | ^3.12.5 | GSAP animation library (badge + game animations) |
-| `animejs` | ^3.2.2 | Alternative animation library |
-| `lottie-react` | ^2.4.1 | After Effects animation renderer |
-| `matter-js` | ^0.19.0 | 2D physics engine |
-| `papaparse` | ^5.5.3 | CSV parsing for email datasets |
+**Critical:**
+- `react` + `react-dom` ^19.2.0 — Core UI framework
+- `framer-motion` ^11.18.2 — Primary animation engine used in almost every component
 
-### Animation Assets
+**Utilities:**
+- `papaparse` ^5.5.3 — CSV parsing (for `email_dataset.csv`)
+- `prop-types` ^15.8.1 — Runtime type checking for component props
 
-- 10 Lottie `.json` files in `src/assets/animation/` (one per badge)
-- CSS keyframe animations in `src/styles/animations.css`
-- GSAP planned upgrade documented in `ANIMATION_BRIEF.md`
-
-## Dev Dependencies
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `eslint` | ^9.39.1 | Linter (flat config) |
-| `@eslint/js` | ^9.39.1 | ESLint recommended rules |
-| `eslint-plugin-react-hooks` | ^7.0.1 | React Hooks lint rules |
-| `eslint-plugin-react-refresh` | ^0.4.24 | HMR-safe exports lint |
-| `globals` | ^16.5.0 | Browser globals for ESLint |
-| `playwright` | ^1.59.1 | Headless browser screenshots + layout audit |
-| `vite` | ^7.3.1 | Bundler |
-| `@vitejs/plugin-react` | ^5.1.1 | Vite React plugin |
-| `@types/react` | ^19.2.7 | Type stubs (not used in code) |
-| `@types/react-dom` | ^19.2.3 | Type stubs |
+**Data:**
+- `src/data/emails.js` — Inline email dataset (742 lines, 15 emails with clues and classifications)
+- `src/data/socQuestions.js` — SOC assessment questions (356 lines, 6 questions)
+- `src/data/email_dataset.csv` — Raw CSV source (not imported directly in code)
 
 ## Configuration
 
-- `vite.config.js` — base path `/flagmail1/`, React plugin
-- `eslint.config.js` — flat config, JSX, browser globals, `no-unused-vars` error
-- `.gitignore` — standard Vite ignores + `*.local`, editor dirs
+**Environment:**
+- No `.env` files. No `import.meta.env` usage.
+- Configuration managed through `src/config.js` (Google Apps Script URL)
+- Game constants in `src/config/game.js` (timers, durations)
+- Design tokens in `src/styles/tokens.js` (glass surface, scores, zone metadata)
+- CSS custom properties in `src/index.css` (colors, backgrounds)
 
-## Build & Serve
+**Build:**
+- `vite.config.js` — `base: '/flagmail1/'` for GitHub Pages subpath deployment
+- `eslint.config.js` — Flat config format, extends `js/recommended` + `react-hooks` + `react-refresh`
 
-```
-npm run dev      → vite dev server
-npm run build    → vite build → dist/
-npm run preview  → vite preview (used by Playwright audit)
-npm run lint     → eslint .
-```
+## Platform Requirements
 
-## Notable Absences
+**Development:**
+- Node.js >= 18 (Vite 7 requirement)
+- npm
+- Browser with ES module support
 
-- **No TypeScript** — all `.js` / `.jsx` with JSDoc-style comments
-- **No CSS framework** — plain CSS with CSS variables
-- **No state management library** — `useState`/`useCallback` only
-- **No router** — custom screen state machine in `useGameState`
-- **No testing framework** — no Jest, Vitest, or React Testing Library
+**Production:**
+- Static file hosting (GitHub Pages)
+- No server-side runtime required
+
+---
+
+*Stack analysis: 2026-05-25*
