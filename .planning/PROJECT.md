@@ -94,6 +94,19 @@ plus feedback that a reviewer can trust.
 | SOC questions stored as a new static dataset | Matches existing `emails.js` pattern; no API dependency during play | — Pending |
 | xlsx email bank deferred to v2 | Keeps this milestone focused on the SOC level | — Pending |
 
+## Current Milestone: v1.1 SOC Investigation Overhaul + Email Fix
+
+**Goal:** Make Zone 4 a realistic SOC investigation simulator with structured scenarios, evidence, and investigation context per question — and fix manager email delivery.
+
+**Target features:**
+- Each SOC question presents a full investigation scenario with evidence artifacts
+- Classification task with question-specific primary/secondary option sets
+- SPL task with clear investigation prompt and investigation context
+- Hint engine for learning assistance
+- Validation uses required/optional/blocked terms logic (not exact string matching)
+- Per-component scoring feedback (classification, SPL, explanation)
+- Fix GAS email notification delivery to managers/reviewers
+
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
@@ -112,4 +125,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-21 after initialization*
+*Last updated: 2025-05-25 after milestone v1.1 initialization*
