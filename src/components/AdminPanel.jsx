@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { motion, AnimatePresence } from "framer-motion";
 import { glass } from "../styles/tokens.js";
 import { useAdmin } from "../hooks/useAdmin.js";
+import CandidateList from "./CandidateList.jsx";
 
 const localGlass = { ...glass, backdropFilter: "blur(30px) saturate(165%)", WebkitBackdropFilter: "blur(30px) saturate(165%)", border: "1px solid rgba(255,255,255,0.84)" };
 
@@ -190,38 +191,7 @@ export default function AdminPanel({ onBack }) {
         )}
 
         <CollapsiblePanel title="Candidates" count={candidates.length} defaultOpen={true}>
-          {candidates.length === 0 ? (
-            <div style={{ fontSize: 13, color: "rgba(17,24,39,0.46)", padding: "12px 0" }}>No candidates yet.</div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ textAlign: "left" }}>
-                    <th style={cellTh}>Name</th>
-                    <th style={cellTh}>Email</th>
-                    <th style={cellTh}>Score</th>
-                    <th style={cellTh}>Grade</th>
-                    <th style={cellTh}>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {candidates.map((c, i) => (
-                    <tr key={i}>
-                      <td style={cellTd}>{c[0] || c.name || "-"}</td>
-                      <td style={cellTd}>{c[1] || c.email || "-"}</td>
-                      <td style={cellTd}>{c[6] || c.totalScore || c.score || "-"}</td>
-                      <td style={cellTd}>
-                        <span style={{ padding: "3px 8px", borderRadius: 8, fontSize: 11, fontWeight: 700, ...gradeColor(c[7] || c.grade) }}>
-                          {c[7] || c.grade || "-"}
-                        </span>
-                      </td>
-                      <td style={cellTd}>{c[2] || c.date || c.timestamp || "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <CandidateList candidates={candidates} />
         </CollapsiblePanel>
 
         <CollapsiblePanel title="Raw Classifications" count={rawData.length} defaultOpen={false}>
