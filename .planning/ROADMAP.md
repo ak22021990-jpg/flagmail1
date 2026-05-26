@@ -229,7 +229,7 @@ Plans:
 **Goal**: An admin can drill into any candidate's full submission record
 
 Plans:
-- [ ] 13-01-PLAN.md — Build AnswerSheet.jsx with Zone 1-3 answer review, Zone 4 SPL keyword highlighting, wire into AdminPanel with preserved list state — seeing their exact Zone 1-3 classification answers and Zone 4 SPL query text with keyword annotations — to make a defensible hiring decision
+- [x] 13-01-PLAN.md — Build AnswerSheet.jsx with Zone 1-3 answer review, Zone 4 SPL keyword highlighting, wire into AdminPanel with preserved list state — seeing their exact Zone 1-3 classification answers and Zone 4 SPL query text with keyword annotations — to make a defensible hiring decision
 **Depends on**: Phase 12
 **Requirements**: ANS-01, ANS-02, ANS-03
 **Success Criteria** (what must be TRUE):
@@ -259,5 +259,5 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14
 | 10. GAS Backend | 0/1 | Planned | - |
 | 11. Admin Infrastructure | 1/1 | Complete | 2026-05-26 |
 | 12. Candidate List | 1/1 | Complete | 2026-05-26 |
-| 13. Answer Sheet | 0/1 | Planned | - |
+| 13. Answer Sheet | 1/1 | Complete | 2026-05-26 |
 | 14. Reports and Export | 0/0 | Not started | - |
