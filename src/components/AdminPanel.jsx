@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { glass } from "../styles/tokens.js";
 import { useAdmin } from "../hooks/useAdmin.js";
 import CandidateList from "./CandidateList.jsx";
+import AnswerSheet from "./AnswerSheet.jsx";
 
 const localGlass = { ...glass, backdropFilter: "blur(30px) saturate(165%)", WebkitBackdropFilter: "blur(30px) saturate(165%)", border: "1px solid rgba(255,255,255,0.84)" };
 
@@ -57,6 +58,7 @@ function CollapsiblePanel({ title, count, defaultOpen, children }) {
 export default function AdminPanel({ onBack }) {
   const { data, loading, error, authenticated, fetchAdminData, refresh, reset } = useAdmin();
   const [passcode, setPasscode] = useState("");
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
 
   function handleLogin() {
     if (!passcode.trim()) return;
@@ -145,6 +147,17 @@ export default function AdminPanel({ onBack }) {
   const rawData = data?.rawData || [];
   const socData = data?.socData || [];
 
+  if (selectedCandidate) {
+    return (
+      <AnswerSheet
+        candidate={selectedCandidate}
+        rawData={rawData}
+        socData={socData}
+        onBack={() => setSelectedCandidate(null)}
+      />
+    );
+  }
+
   return (
     <div style={{
       minHeight: "100dvh", padding: "clamp(18px, 3vw, 30px)",
@@ -191,7 +204,10 @@ export default function AdminPanel({ onBack }) {
         )}
 
         <CollapsiblePanel title="Candidates" count={candidates.length} defaultOpen={true}>
-          <CandidateList candidates={candidates} />
+          <CandidateList
+            candidates={candidates}
+            onSelectCandidate={setSelectedCandidate}
+          />
         </CollapsiblePanel>
 
         <CollapsiblePanel title="Raw Classifications" count={rawData.length} defaultOpen={false}>

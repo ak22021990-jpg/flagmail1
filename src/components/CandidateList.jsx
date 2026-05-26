@@ -53,7 +53,7 @@ function sortCandidates(list, sortKey, sortDir) {
   });
 }
 
-export default function CandidateList({ candidates }) {
+export default function CandidateList({ candidates, onSelectCandidate }) {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState("desc");
@@ -152,7 +152,13 @@ export default function CandidateList({ candidates }) {
               {filtered.map((c, i) => {
                 const sw = safeTabSwitches(c);
                 return (
-                  <tr key={i}>
+                  <tr
+                    key={i}
+                    onClick={() => onSelectCandidate && onSelectCandidate(c)}
+                    style={{ cursor: onSelectCandidate ? "pointer" : "default" }}
+                    onMouseEnter={e => { if (onSelectCandidate) e.currentTarget.style.background = "rgba(10,132,255,0.04)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = ""; }}
+                  >
                     <td style={cellTd}>{safeName(c)}</td>
                     <td style={cellTd}>{safeEmail(c)}</td>
                     <td style={cellTd}>{safeScore(c) ?? "-"}</td>
@@ -184,4 +190,5 @@ export default function CandidateList({ candidates }) {
 
 CandidateList.propTypes = {
   candidates: PropTypes.array.isRequired,
+  onSelectCandidate: PropTypes.func,
 };
