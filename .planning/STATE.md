@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin Panel
 status: planning
-last_updated: "2026-05-26T06:12:21.499Z"
+last_updated: "2026-05-26T07:00:00.000Z"
 last_activity: 2026-05-26
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,22 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-25)
+See: .planning/PROJECT.md (updated 2026-05-26)
 
-**Core value:** A candidate can complete a realistic SOC investigation — classify the threat, write a working SPL query, and explain their reasoning — and get an automatic, defensible score plus feedback that a reviewer can trust.
-**Current focus:** Phase 9 — SOC Round Overhaul (Complete)
+**Core value:** A candidate can complete a realistic SOC investigation — classify the threat, write a working SPL query, and explain their reasoning — and get an automatic, defensible score plus feedback that an admin/reviewer can trust and act on from a unified panel.
+**Current focus:** Phase 10 — GAS Backend (Not started)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 10 — GAS Backend
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-26 — Milestone v1.2 started
+Status: Ready to plan
+Last activity: 2026-05-26 — Milestone v1.2 roadmap created
+
+```
+[          ] 0% complete
+Phase 10 of 14 (v1.2: 0/5 phases done)
+```
 
 ## Performance Metrics
 
@@ -37,7 +42,7 @@ Last activity: 2026-05-26 — Milestone v1.2 started
 - Average duration: —
 - Total execution time: —
 
-**By Phase:**
+**By Phase (v1.1 history):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -45,6 +50,16 @@ Last activity: 2026-05-26 — Milestone v1.2 started
 | 7. GAS Email Fix | 1 | Immediate | - |
 | 8. Hint Engine | 1 | Immediate | - |
 | 9. SOC Round Overhaul | 1 | Immediate | - |
+
+**v1.2 By Phase:**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| 10. GAS Backend | 0 | - | - |
+| 11. Admin Infrastructure | 0 | - | - |
+| 12. Candidate List | 0 | - | - |
+| 13. Answer Sheet | 0 | - | - |
+| 14. Reports and Export | 0 | - | - |
 
 **Recent Trend:**
 
@@ -73,14 +88,21 @@ Recent decisions affecting current work:
 - Roadmap (v1.1): Hints are post-first-submit only — not revealed on initial load; state resets per question
 - Roadmap (v1.1): Per-dimension feedback (FDBK-01, FDBK-02) is grouped into Phase 9 (SocRound Overhaul) since both touch the same component and render pass
 - Roadmap (v1.1): Zero new npm packages — framer-motion AnimatePresence handles hint panel animation, plain useState handles form validation
+- Roadmap (v1.2): GAS backend (Phase 10) comes first — defines the data contract before any React code is written
+- Roadmap (v1.2): AdminPanel replaces ReviewerScreen entirely — one unified entry point (ADMN-01)
+- Roadmap (v1.2): AdminPanel is React.lazy from the start (ADMN-03) — candidates never download admin code
+- Roadmap (v1.2): Passcode validated against GAS PropertiesService endpoint — not a hardcoded client string (ADMN-02)
+- Roadmap (v1.2): PDF via browser print dialog only — jsPDF deferred to v1.3 (zero new library dependency)
+- Roadmap (v1.2): Dashboard (DASH-01 through DASH-04) deferred to future milestone — summary stats via plain HTML, no recharts
+- Roadmap (v1.2): CSV export is pure client-side string generation — no library needed for RFC 4180 escaping at this scale
 
 ### Pending Todos
 
-- None — milestone v1.1 complete
+- Run `/gsd:plan-phase 10` to begin Phase 10 planning
 
 ### Blockers/Concerns
 
-- None — milestone v1.1 complete
+- None
 
 ### Quick Tasks Completed
 
@@ -102,8 +124,12 @@ Recent decisions affecting current work:
 | Gamification | SOC Investigation badge (BADGE-01) | v2 | v1.1 REQUIREMENTS.md |
 | Reviewer | Per-question drill-down (REVW-05) | v2 | v1.0 Roadmap creation |
 | Reviewer | Filter/sort submissions (REVW-06) | v2 | v1.0 Roadmap creation |
+| Admin | Dashboard with score overview stats (DASH-01–DASH-04) | v1.3 | v1.2 Roadmap creation |
+| Admin | Batch PDF export for multiple candidates (RPT-03) | v1.3 | v1.2 REQUIREMENTS.md |
+| Admin | Excel (XLSX) export format (RPT-04) | v2 | v1.2 REQUIREMENTS.md |
+| Admin | Custom date-range filtering for exports (RPT-05) | v1.3 | v1.2 REQUIREMENTS.md |
 
 ## Session Continuity
 
-Last session: 2026-05-25
-Stopped at: Milestone v1.1 complete — all 4 phases done. Phase 9: SocRound.jsx has investigation context, task prompt, human-readable per-dimension feedback. Ready for milestone completion audit.
+Last session: 2026-05-26
+Stopped at: Milestone v1.2 roadmap created — 5 phases (10–14), 17/17 requirements mapped. Ready to plan Phase 10 (GAS Backend).

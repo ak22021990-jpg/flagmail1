@@ -17,10 +17,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: State Machine and Hook** - Extend the SCREENS enum, apply the one-line advanceZone patch, and build useSocState to own all SOC flow
 - [ ] **Phase 4: SOC Level UI** - Build all SOC screen components and wire them into App.jsx so the full play loop is playable end-to-end
 - [ ] **Phase 5: Backend and Reviewer View** - Add GAS submitSOC/getSOCSubmissions actions, formula injection protection, and the passcode-gated reviewer screen
-- [ ] **Phase 6: Data Enrichment** - Enrich socQuestions.js with investigation context, SPL task prompts, and hints per question — the data foundation every v1.1 UI phase reads from
-- [ ] **Phase 7: GAS Email Fix** - Fix manager/reviewer email delivery in the Google Apps Script backend with quota checking, failure logging, and a documented re-authorization checklist
-- [ ] **Phase 8: Hint Engine** - Add progressive hint reveal state to useSocState and build the HintPanel.jsx sub-component that surfaces hints post-first-submit
-- [ ] **Phase 9: SOC Round Overhaul** - Restructure SocRound.jsx to display investigation context, analyst focus, expected outcomes, scenario-specific SPL prompts, and human-readable per-dimension feedback
+- [x] **Phase 6: Data Enrichment** - Enrich socQuestions.js (Q1–Q4, Q5a, Q5b) with investigation context, SPL task prompts, and hints per question — the data foundation every v1.1 UI phase reads from
+- [x] **Phase 7: GAS Email Fix** - Fix manager/reviewer email delivery in the Google Apps Script backend with quota checking, failure logging, and a documented re-authorization checklist
+- [x] **Phase 8: Hint Engine** - Add progressive hint reveal state to useSocState and build the HintPanel.jsx sub-component that surfaces hints post-first-submit
+- [x] **Phase 9: SOC Round Overhaul** - Restructure SocRound.jsx to display investigation context, analyst focus, expected outcomes, scenario-specific SPL prompts, and human-readable per-dimension feedback
 
 ## Phase Details
 
@@ -95,8 +95,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### v1.1 Phases
 
-- [ ] **Phase 6: Data Enrichment** - Enrich socQuestions.js with investigation context, SPL task prompts, and hints per question — the data foundation every v1.1 UI phase reads from
-- [ ] **Phase 7: GAS Email Fix** - Fix manager/reviewer email delivery in the Google Apps Script backend with quota checking, failure logging, and a documented re-authorization checklist
+- [x] **Phase 6: Data Enrichment** - Enrich socQuestions.js (Q1–Q4, Q5a, Q5b) with investigation context, SPL task prompts, and hints per question — the data foundation every v1.1 UI phase reads from
+- [x] **Phase 7: GAS Email Fix** - Fix manager/reviewer email delivery in the Google Apps Script backend with quota checking, failure logging, and a documented re-authorization checklist
 - [ ] **Phase 8: Hint Engine** - Add progressive hint reveal state to useSocState and build the HintPanel.jsx sub-component that surfaces hints post-first-submit
 - [ ] **Phase 9: SOC Round Overhaul** - Restructure SocRound.jsx to display investigation context, analyst focus, expected outcomes, scenario-specific SPL prompts, and human-readable per-dimension feedback
 
@@ -107,9 +107,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Phase 5 (v1.0 complete)
 **Requirements**: DATA-01, DATA-02
 **Success Criteria** (what must be TRUE):
-  1. All 5 SOC questions (Q1–Q4, Q8) in `src/data/socQuestions.js` have an `investigation_context` object with `goal`, `analyst_focus`, and `expected_outcome` fields populated from the Splunk Query Context Explanations document
-  2. All 5 questions have a `task_prompt` string that describes the specific SPL investigation task in one sentence (e.g., "Write an SPL query to find similar phishing emails and identify impacted recipients")
-  3. All 5 questions have a `hints` array with at least one directional hint string per question — hints guide without revealing exact SPL syntax (e.g., "Think about aggregation" not "use stats count")
+  1. All 6 SOC question objects (Q1–Q4, Q5a, Q5b) in `src/data/socQuestions.js` have an `investigation_context` object with `goal`, `analyst_focus`, and `expected_outcome` fields populated from the Splunk Query Context Explanations document
+  2. All 6 questions have a `task_prompt` string that describes the specific SPL investigation task in one sentence (e.g., "Write an SPL query to find similar phishing emails and identify impacted recipients")
+  3. All 6 questions have a `hints` array with at least 2 directional hint strings per question — hints guide without revealing exact SPL syntax (e.g., "Think about aggregation" not "use stats count")
   4. The enriched data file imports and exports cleanly with no runtime errors (no undefined field accesses when SocRound.jsx reads `question.investigation_context.goal`)
 **Plans**: TBD
 
@@ -164,7 +164,90 @@ Note: Phase 7 (GAS Email Fix) is independent of Phases 6, 8, 9 and can execute i
 | 3. State Machine and Hook | 1/1 | Complete | 2026-05-22 |
 | 4. SOC Level UI | 1/1 | Complete | 2026-05-22 |
 | 5. Backend and Reviewer View | 1/1 | Complete | 2026-05-22 |
-| 6. Data Enrichment | 0/1 | Not started | - |
-| 7. GAS Email Fix | 0/1 | Not started | - |
-| 8. Hint Engine | 0/1 | Not started | - |
-| 9. SOC Round Overhaul | 0/1 | Not started | - |
+| 6. Data Enrichment | 1/1 | Complete | 2026-05-25 |
+| 7. GAS Email Fix | 1/1 | Complete | 2026-05-25 |
+| 8. Hint Engine | 1/1 | Complete | 2026-05-25 |
+| 9. SOC Round Overhaul | 1/1 | Complete | 2026-05-25 |
+
+---
+
+## Milestone v1.2 — Admin Panel
+
+**Goal:** Replace the reviewer screen with a full admin panel giving assessors a unified view of all candidate submissions across all zones — with passcode-gated access, candidate management, answer sheet drill-downs, and downloadable reports.
+
+### v1.2 Phases
+
+- [ ] **Phase 10: GAS Backend** - Add the `getAdminData` endpoint to google-apps-script.js, reading Summary, RawData, and SOCData sheets in a single passcode-gated call and returning structured JSON
+- [ ] **Phase 11: Admin Infrastructure** - Replace ReviewerScreen with a lazy-loaded AdminPanel entry point, wire the useAdmin hook and passcode gate into App.jsx, and add manual refresh
+- [ ] **Phase 12: Candidate List** - Build the candidate table with search, sort, and grade-band filter — the primary list view every admin session starts from
+- [ ] **Phase 13: Answer Sheet** - Build the candidate drill-down showing Zone 1-3 classification answers and Zone 4 SOC answers with SPL keyword annotations
+- [ ] **Phase 14: Reports and Export** - Add CSV download of all submission data and per-candidate print-to-PDF via browser print dialog
+
+## Phase Details
+
+### Phase 10: GAS Backend
+**Goal**: A single `getAdminData` GAS endpoint exists that reads all three data sheets, validates the passcode server-side, and returns structured JSON the React app can consume — establishing the data contract before any React code is written
+**Depends on**: Phase 9 (v1.1 complete)
+**Requirements**: GAS-01, GAS-02, GAS-03
+**Success Criteria** (what must be TRUE):
+  1. A POST to the GAS web app with `{ action: "getAdminData", passcode: "..." }` returns `{ candidates: [...], rawData: [...], socData: [...] }` when the passcode is correct
+  2. A POST with an incorrect passcode returns `{ error: "Unauthorized" }` and no data — the passcode is validated via `PropertiesService` before any sheet is read
+  3. Each candidate object in the response includes name, email, total score, grade band, submission date, and tab-switch count (proctoring flags)
+  4. The endpoint reads Summary, RawData, and SOCData sheets in a single request — no client-side multi-fetch required to load the admin view
+
+### Phase 11: Admin Infrastructure
+**Goal**: The admin panel is reachable from the app, lazy-loaded so candidates never download admin code, passcode-gated using the GAS endpoint, and capable of refreshing data on demand
+**Depends on**: Phase 10
+**Requirements**: ADMN-01, ADMN-02, ADMN-03, ADMN-04
+**Success Criteria** (what must be TRUE):
+  1. The existing reviewer screen entry point (passcode prompt on the landing page) now loads AdminPanel instead of ReviewerScreen — the reviewer screen component is fully replaced
+  2. AdminPanel is imported via `React.lazy` — the admin bundle chunk is absent from the network waterfall when a candidate plays the game normally
+  3. After entering the correct passcode, the admin sees the panel load with candidate data — the passcode is validated against the GAS endpoint, not a hardcoded string in the client
+  4. An admin can click a "Refresh" button to re-fetch the latest submissions from Google Sheets without reloading the page
+**UI hint**: yes
+
+### Phase 12: Candidate List
+**Goal**: An admin can see all candidates in a sortable, searchable, filterable table and identify at a glance who needs review — the primary landing view of every admin session
+**Depends on**: Phase 11
+**Requirements**: CAND-01, CAND-02, CAND-03, CAND-04, CAND-05
+**Success Criteria** (what must be TRUE):
+  1. The candidate table displays name, email, total score, grade band, submission date, and proctoring flag (tab-switch count) for every submission
+  2. Typing in a search box instantly filters the table to rows where name or email contains the search string — no submit required
+  3. Clicking a column header for score, date, or grade band sorts the table by that column; clicking again reverses the sort order
+  4. A grade-band filter (Strong / Good / Needs improvement / Not ready / All) narrows the table to candidates in that band only
+  5. Candidates with one or more tab-switch violations are visibly flagged — the proctoring count is displayed and distinguishable from clean submissions
+**UI hint**: yes
+
+### Phase 13: Answer Sheet
+**Goal**: An admin can drill into any candidate's full submission record — seeing their exact Zone 1-3 classification answers and Zone 4 SPL query text with keyword annotations — to make a defensible hiring decision
+**Depends on**: Phase 12
+**Requirements**: ANS-01, ANS-02, ANS-03
+**Success Criteria** (what must be TRUE):
+  1. Clicking a candidate row opens their answer sheet showing each Zone 1-3 email with the candidate's L1/L2 picks, the correct answers, and points earned per email
+  2. The answer sheet also shows each Zone 4 SOC question with the candidate's SPL query text, explanation text, and per-dimension scores (primary / secondary / SPL / explanation)
+  3. Within each SOC answer, required SPL terms that were matched are highlighted in one color, optional matched terms in another, and missed required terms are called out — the admin can see exactly which keywords the candidate's query contained or lacked
+  4. Navigating back from the answer sheet returns the admin to the candidate list with the previous search/filter/sort state intact
+**UI hint**: yes
+
+### Phase 14: Reports and Export
+**Goal**: An admin can download a CSV of all submission data for offline analysis and generate a printable PDF report for any individual candidate via the browser's native print dialog
+**Depends on**: Phase 13
+**Requirements**: RPT-01, RPT-02
+**Success Criteria** (what must be TRUE):
+  1. Clicking "Download CSV" in the admin panel triggers a file download containing all candidate records — name, email, scores per dimension, grade band, submission date, and proctoring count — as a properly escaped CSV file
+  2. The downloaded CSV opens correctly in Excel and Google Sheets — fields containing commas or quotes are properly quoted per RFC 4180
+  3. Clicking "Print Report" on a candidate's answer sheet opens the browser print dialog with a print-optimised layout — the candidate's name, scores, and answer text are all visible and the game UI chrome (navigation, animations) is hidden via `@media print`
+**UI hint**: yes
+
+## v1.2 Progress
+
+**Execution Order:**
+Phases execute in numeric order: 10 → 11 → 12 → 13 → 14
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 10. GAS Backend | 0/0 | Not started | - |
+| 11. Admin Infrastructure | 0/0 | Not started | - |
+| 12. Candidate List | 0/0 | Not started | - |
+| 13. Answer Sheet | 0/0 | Not started | - |
+| 14. Reports and Export | 0/0 | Not started | - |

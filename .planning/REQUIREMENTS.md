@@ -100,29 +100,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ADMN-01 | TBD | Pending |
-| ADMN-02 | TBD | Pending |
-| ADMN-03 | TBD | Pending |
-| ADMN-04 | TBD | Pending |
-| CAND-01 | TBD | Pending |
-| CAND-02 | TBD | Pending |
-| CAND-03 | TBD | Pending |
-| CAND-04 | TBD | Pending |
-| CAND-05 | TBD | Pending |
-| ANS-01 | TBD | Pending |
-| ANS-02 | TBD | Pending |
-| ANS-03 | TBD | Pending |
-| RPT-01 | TBD | Pending |
-| RPT-02 | TBD | Pending |
-| GAS-01 | TBD | Pending |
-| GAS-02 | TBD | Pending |
-| GAS-03 | TBD | Pending |
+| ADMN-01 | Phase 11 | Pending |
+| ADMN-02 | Phase 11 | Pending |
+| ADMN-03 | Phase 11 | Pending |
+| ADMN-04 | Phase 11 | Pending |
+| CAND-01 | Phase 12 | Pending |
+| CAND-02 | Phase 12 | Pending |
+| CAND-03 | Phase 12 | Pending |
+| CAND-04 | Phase 12 | Pending |
+| CAND-05 | Phase 12 | Pending |
+| ANS-01 | Phase 13 | Pending |
+| ANS-02 | Phase 13 | Pending |
+| ANS-03 | Phase 13 | Pending |
+| RPT-01 | Phase 14 | Pending |
+| RPT-02 | Phase 14 | Pending |
+| GAS-01 | Phase 10 | Pending |
+| GAS-02 | Phase 10 | Pending |
+| GAS-03 | Phase 10 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17
+- Mapped to phases: 17
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-26*
-*Last updated: 2026-05-26 after initial definition*
+*Last updated: 2026-05-26 after roadmap creation (traceability complete)*
