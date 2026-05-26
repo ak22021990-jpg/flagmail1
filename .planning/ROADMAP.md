@@ -189,11 +189,15 @@ Note: Phase 7 (GAS Email Fix) is independent of Phases 6, 8, 9 and can execute i
 **Goal**: A single `getAdminData` GAS endpoint exists that reads all three data sheets, validates the passcode server-side, and returns structured JSON the React app can consume — establishing the data contract before any React code is written
 **Depends on**: Phase 9 (v1.1 complete)
 **Requirements**: GAS-01, GAS-02, GAS-03
+**Plans**: 1 plan
 **Success Criteria** (what must be TRUE):
   1. A POST to the GAS web app with `{ action: "getAdminData", passcode: "..." }` returns `{ candidates: [...], rawData: [...], socData: [...] }` when the passcode is correct
   2. A POST with an incorrect passcode returns `{ error: "Unauthorized" }` and no data — the passcode is validated via `PropertiesService` before any sheet is read
   3. Each candidate object in the response includes name, email, total score, grade band, submission date, and tab-switch count (proctoring flags)
   4. The endpoint reads Summary, RawData, and SOCData sheets in a single request — no client-side multi-fetch required to load the admin view
+
+Plans:
+- [ ] 10-01-PLAN.md — Extract checkPasscode() helper, refactor doGet, add getAdminData POST endpoint with passcode-gated 3-sheet read
 
 ### Phase 11: Admin Infrastructure
 **Goal**: The admin panel is reachable from the app, lazy-loaded so candidates never download admin code, passcode-gated using the GAS endpoint, and capable of refreshing data on demand
@@ -246,7 +250,7 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 10. GAS Backend | 0/0 | Not started | - |
+| 10. GAS Backend | 0/1 | Planned | - |
 | 11. Admin Infrastructure | 0/0 | Not started | - |
 | 12. Candidate List | 0/0 | Not started | - |
 | 13. Answer Sheet | 0/0 | Not started | - |
