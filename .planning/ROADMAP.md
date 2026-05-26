@@ -219,8 +219,11 @@ Plans:
   2. Typing in a search box instantly filters the table to rows where name or email contains the search string — no submit required
   3. Clicking a column header for score, date, or grade band sorts the table by that column; clicking again reverses the sort order
   4. A grade-band filter (Strong / Good / Needs improvement / Not ready / All) narrows the table to candidates in that band only
-  5. Candidates with one or more tab-switch violations are visibly flagged — the proctoring count is displayed and distinguishable from clean submissions
+   5. Candidates with one or more tab-switch violations are visibly flagged — the proctoring count is displayed and distinguishable from clean submissions
 **UI hint**: yes
+
+Plans:
+- [x] 12-01-PLAN.md — CandidateList.jsx with search, sort, grade-band filter, proctoring column
 
 ### Phase 13: Answer Sheet
 **Goal**: An admin can drill into any candidate's full submission record — seeing their exact Zone 1-3 classification answers and Zone 4 SPL query text with keyword annotations — to make a defensible hiring decision
@@ -252,6 +255,6 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14
 |-------|----------------|--------|-----------|
 | 10. GAS Backend | 0/1 | Planned | - |
 | 11. Admin Infrastructure | 1/1 | Complete | 2026-05-26 |
-| 12. Candidate List | 0/0 | Not started | - |
+| 12. Candidate List | 1/1 | Complete | 2026-05-26 |
 | 13. Answer Sheet | 0/0 | Not started | - |
 | 14. Reports and Export | 0/0 | Not started | - |
