@@ -1,46 +1,54 @@
-# Requirements: FlagMail v1.1 — SOC Investigation Overhaul + Email Fix
+# Requirements: FlagMail v1.2 — Admin Panel
 
-**Defined:** 2025-05-25
-**Core Value:** Zone 4 presents realistic SOC investigation scenarios — not vague quiz prompts — so candidates understand what they're investigating, what to look for, and what a good answer achieves, while managers reliably receive submission notifications.
+**Defined:** 2026-05-26
+**Core Value:** An admin/reviewer can access a unified panel to view all candidate submissions across all zones, drill into answer sheets, and download reports — with data they can trust and act on.
 
-## v1.1 Requirements
+## v1.2 Requirements
 
 Requirements for this milestone. Each maps to roadmap phases.
 
-### Investigation Context
+### Admin Infrastructure
 
-- [ ] **CTX-01**: Each SOC question displays an investigation goal statement describing what the analyst needs to determine (e.g., "Identify phishing emails using password expiration themes")
-- [ ] **CTX-02**: Each SOC question displays an analyst focus callout listing specific indicators to look for (e.g., "Suspicious sender domains, Credential harvesting URLs, Impacted recipients")
-- [ ] **CTX-03**: Each SOC question displays expected security outcomes describing what analyst actions should follow (e.g., "Block phishing URL, Reset compromised credentials, Notify affected users")
+- [ ] **ADMN-01**: Admin panel replaces the existing reviewer screen as the single entry point for assessment management
+- [ ] **ADMN-02**: Admin panel is passcode-gated using the existing server-side GAS PropertiesService validation
+- [ ] **ADMN-03**: Admin panel is lazy-loaded via React.lazy so candidates never download admin code
+- [ ] **ADMN-04**: Admin can manually refresh data to pull latest submissions from Google Sheets
 
-### SPL Task Prompts
+### Candidate Management
 
-- [ ] **TASK-01**: Each SOC question displays a clear, scenario-specific SPL task prompt above the query input (e.g., "Write an SPL query to find similar phishing emails and identify impacted recipients")
+- [ ] **CAND-01**: Admin can view a table of all candidates with name, email, total score, grade band, and submission date
+- [ ] **CAND-02**: Admin can search candidates by name or email with instant filtering
+- [ ] **CAND-03**: Admin can sort the candidate list by score, date, or grade band
+- [ ] **CAND-04**: Admin can filter candidates by grade band (Strong / Good / Needs improvement / Not ready)
+- [ ] **CAND-05**: Admin can see proctoring violation flags (tab-switch count) per candidate
 
-### Hints
+### Answer Sheet
 
-- [ ] **HINT-01**: Each SOC question offers one or more directional hints available after the first submit attempt, guiding without revealing exact SPL syntax (e.g., "Think about aggregation" not "use stats count")
-- [ ] **HINT-02**: Hints are revealed progressively — candidate requests one at a time, not all at once
+- [ ] **ANS-01**: Admin can drill down into a candidate's Zone 1-3 classification answers showing L1/L2 picks, correct answers, and points per email
+- [ ] **ANS-02**: Admin can view a candidate's SOC Investigation answers showing SPL query text, explanation text, and per-dimension scores for each question
+- [ ] **ANS-03**: Admin can see SPL keyword annotations highlighting which required/optional/blocked terms were matched or missed
 
-### Scoring Feedback
+### Reports & Export
 
-- [ ] **FDBK-01**: After submitting, the candidate sees per-dimension feedback labels clearly identifying how they scored on classification, SPL query, and explanation separately
-- [ ] **FDBK-02**: Feedback labels use human-readable descriptions (e.g., "SPL Query: 7/10 — matched core investigation terms, missed aggregation syntax")
+- [ ] **RPT-01**: Admin can download all submission data as a CSV file
+- [ ] **RPT-02**: Admin can generate a printable PDF report for a candidate via browser print dialog
 
-### Email Delivery
+### Backend (GAS)
 
-- [ ] **EMAIL-01**: The GAS email notification reliably delivers submission results to the configured manager/reviewer email addresses
-- [ ] **EMAIL-02**: GAS email delivery includes quota checking and logs failures with actionable error details rather than failing silently
-- [ ] **EMAIL-03**: The GAS deployment checklist documents the MailApp re-authorization step required after each script update
-
-### Data Enrichment
-
-- [ ] **DATA-01**: The `socQuestions.js` dataset is enriched with investigation_context (goal, analyst_focus, expected_outcome), task prompts, and hint arrays per question
-- [ ] **DATA-02**: All 5 SOC questions (Q1-Q4, Q8) are updated with content from the Splunk Query Context Explanations document
+- [ ] **GAS-01**: A new `getAdminData` GAS endpoint reads Summary, RawData, and SOCData sheets in a single call, gated by passcode
+- [ ] **GAS-02**: The GAS endpoint includes a `checkPasscode()` helper that validates against PropertiesService before returning any data
+- [ ] **GAS-03**: The GAS endpoint returns structured JSON with candidates, rawData, and socData arrays
 
 ## Future Requirements
 
-Deferred beyond v1.1. Tracked but not in the current roadmap.
+Deferred beyond v1.2. Tracked but not in the current roadmap.
+
+### Dashboard
+
+- **DASH-01**: Score overview dashboard showing total submissions, average scores, pass/fail rates
+- **DASH-02**: Grade band distribution chart (bar/pie) across all zones
+- **DASH-03**: Zone-by-zone comparison stats (Zones 1-3 vs Zone 4 SOC)
+- **DASH-04**: Trend charts showing score distribution over time
 
 ### Evidence Display
 
@@ -65,10 +73,11 @@ Deferred beyond v1.1. Tracked but not in the current roadmap.
 
 - **CONT-01**: Fold the `Sample questions(1).xlsx` email bank into the existing classification zones
 
-### Reviewer
+### Reporting (Advanced)
 
-- **REVW-05**: Reviewer per-question drill-down for a single submission
-- **REVW-06**: Reviewer can filter or sort submissions by date, grade band, or candidate name
+- **RPT-03**: Batch PDF export for multiple candidates at once
+- **RPT-04**: Excel (XLSX) export format
+- **RPT-05**: Custom date-range filtering for exports
 
 ## Out of Scope
 
@@ -76,13 +85,14 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
+| Real-time auto-refresh / polling | Exhausts GAS quota; manual refresh is sufficient |
+| Role-based access / user accounts | Requires identity provider; shared passcode is sufficient |
+| Manual score override by admin | Requires GAS write-back with concurrent-access risks |
+| Excel (XLSX) export | CSV covers spreadsheet needs without adding ~170KB library |
+| jsPDF programmatic PDF | `window.print()` is zero-library, zero-hazard; jsPDF deferred to v1.3 |
 | Real Splunk query execution | Keyword validation is the chosen fidelity level |
 | LLM / AI semantic grading | Keyword and concept matching only; keeps grading deterministic |
-| Timer on SOC questions | Time pressure tests anxiety, not SPL skill |
-| Leaderboard integration for SOC scores | SOC level is assessment, not competition |
-| Evidence display restructure | Current flat display works; typed cards deferred to future milestone |
-| Worked-solution reveal | Requires authored content per question; deferred |
-| SPL syntax highlighting | 180KB+ library cost, mislabels SPL tokens |
+| Dashboard charts (recharts) | Deferred to future milestone; summary stats can use plain HTML |
 
 ## Traceability
 
@@ -90,19 +100,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 6 — Data Enrichment | Pending |
-| DATA-02 | Phase 6 — Data Enrichment | Pending |
-| EMAIL-01 | Phase 7 — GAS Email Fix | Pending |
-| EMAIL-02 | Phase 7 — GAS Email Fix | Pending |
-| EMAIL-03 | Phase 7 — GAS Email Fix | Pending |
-| HINT-01 | Phase 8 — Hint Engine | Pending |
-| HINT-02 | Phase 8 — Hint Engine | Pending |
-| CTX-01 | Phase 9 — SOC Round Overhaul | Pending |
-| CTX-02 | Phase 9 — SOC Round Overhaul | Pending |
-| CTX-03 | Phase 9 — SOC Round Overhaul | Pending |
-| TASK-01 | Phase 9 — SOC Round Overhaul | Pending |
-| FDBK-01 | Phase 9 — SOC Round Overhaul | Pending |
-| FDBK-02 | Phase 9 — SOC Round Overhaul | Pending |
+| ADMN-01 | TBD | Pending |
+| ADMN-02 | TBD | Pending |
+| ADMN-03 | TBD | Pending |
+| ADMN-04 | TBD | Pending |
+| CAND-01 | TBD | Pending |
+| CAND-02 | TBD | Pending |
+| CAND-03 | TBD | Pending |
+| CAND-04 | TBD | Pending |
+| CAND-05 | TBD | Pending |
+| ANS-01 | TBD | Pending |
+| ANS-02 | TBD | Pending |
+| ANS-03 | TBD | Pending |
+| RPT-01 | TBD | Pending |
+| RPT-02 | TBD | Pending |
+| GAS-01 | TBD | Pending |
+| GAS-02 | TBD | Pending |
+| GAS-03 | TBD | Pending |
+
+**Coverage:**
+- v1.2 requirements: 17 total
+- Mapped to phases: 0
+- Unmapped: 17
 
 ---
-*Requirements defined: 2025-05-25*
+*Requirements defined: 2026-05-26*
+*Last updated: 2026-05-26 after initial definition*
