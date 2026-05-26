@@ -1,3 +1,7 @@
+/**
+ * @deprecated Replaced by AdminPanel.jsx in Phase 11.
+ * Kept for reference. Remove after AdminPanel is stable.
+ */
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { motion } from "framer-motion";
@@ -175,17 +179,6 @@ export default function ReviewerScreen({ onBack }) {
                           }}>
                             {q.splText || "(empty)"}
                           </pre>
-                        </div>
-                        <div style={{ display: "grid", gap: 4 }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(17,24,39,0.48)" }}>
-                            Explanation
-                          </div>
-                          <div style={{
-                            padding: 10, borderRadius: 10, fontSize: 13, lineHeight: 1.5,
-                            background: "rgba(255,255,255,0.88)", color: "#111827",
-                          }}>
-                            {q.explanation || "(empty)"}
-                          </div>
                         </div>
                       </div>
                     ))}

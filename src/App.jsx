@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, lazy, Suspense } from 'react';
 import { scaleSocScore } from './utils/scoreSoc.js';
 import { SOC_QUESTIONS } from './data/socQuestions.js';
 import './styles/animations.css';
@@ -18,7 +18,7 @@ import ResultsScreen    from './components/ResultsScreen.jsx';
 import SocIntroCard     from './components/SocIntroCard.jsx';
 import SocRound         from './components/SocRound.jsx';
 import SocExplanationCard from './components/SocExplanationCard.jsx';
-import ReviewerScreen   from './components/ReviewerScreen.jsx';
+const AdminPanel = lazy(() => import('./components/AdminPanel.jsx'));
 
 const BG = 'linear-gradient(180deg, #f5f7fb 0%, #edf3fb 42%, #f7f4ef 100%)';
 
@@ -61,7 +61,6 @@ export default function App() {
                 : q.classification.correct.secondary)
             : null,
           splText: a.splText,
-          explanation: a.explanation,
           score: a.result ? a.result.score.total : 0,
           grade: a.result ? a.result.score.grade : '',
         }));
@@ -72,6 +71,10 @@ export default function App() {
         zone1Score: sc.zoneScores[1] || 0,
         zone2Score: sc.zoneScores[2] || 0,
         zone3Score: sc.zoneScores[3] || 0,
+        displayScore: sc.displayScore,
+        categoryCorrect: sc.categoryCorrect,
+        perEmail: sc.perEmail,
+        socTotal: soc.socTotal,
         socScaled,
         finalScore,
         tier,
@@ -142,7 +145,7 @@ export default function App() {
           }} />
           <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 100 }}>
             <button
-              onClick={() => gs.setScreen(SCREENS.REVIEWER)}
+              onClick={() => gs.setScreen(SCREENS.ADMIN)}
               style={{
                 padding: '10px 16px', borderRadius: 12, fontSize: 12, fontWeight: 600,
                 border: '1px solid rgba(13,26,51,0.10)',
@@ -151,7 +154,7 @@ export default function App() {
                 cursor: 'pointer', backdropFilter: 'blur(12px)',
               }}
             >
-              Reviewer
+              Admin
             </button>
           </div>
         </div>
@@ -218,7 +221,6 @@ export default function App() {
           onSetPrimary={soc.setPrimary}
           onSetSecondary={soc.setSecondary}
           onSetSplText={soc.setSplText}
-          onSetExplanation={soc.setExplanation}
           onSubmit={handleSocSubmit}
           onViolationChange={setSocViolations}
         />
@@ -227,9 +229,11 @@ export default function App() {
       {gs.screen === SCREENS.SOC_EXPLANATION && soc.currentAnswer.submitted && soc.currentAnswer.result && (
         <SocExplanationCard
           result={soc.currentAnswer.result}
-          question={soc.currentQuestion}
-          hasMore={soc.hasMoreQuestions}
-          onNext={handleSocNext}
+           question={soc.currentQuestion}
+           hasMore={soc.hasMoreQuestions}
+           onNext={handleSocNext}
+           hintIndex={soc.hintIndex}
+           onRevealHint={soc.revealHint}
         />
       )}
 
@@ -257,8 +261,10 @@ export default function App() {
         />
       )}
 
-      {gs.screen === SCREENS.REVIEWER && (
-        <ReviewerScreen onBack={() => gs.setScreen(SCREENS.LANDING)} />
+      {gs.screen === SCREENS.ADMIN && (
+        <Suspense fallback={<div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif', fontSize: 15, color: 'rgba(17,24,39,0.54)' }}>Loading admin panel...</div>}>
+          <AdminPanel onBack={() => gs.setScreen(SCREENS.LANDING)} />
+        </Suspense>
       )}
     </div>
     </ErrorBoundary>

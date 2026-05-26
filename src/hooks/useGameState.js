@@ -15,6 +15,7 @@ export const SCREENS = {
   SOC_EXPLANATION: 'soc_explanation',
   SOC_RESULTS:   'soc_results',
   REVIEWER:      'reviewer',
+  ADMIN:         'admin',
 };
 
 const ZONE_EMAIL_COUNTS = { 1: 5, 2: 5, 3: 5 };
