@@ -178,7 +178,7 @@ Note: Phase 7 (GAS Email Fix) is independent of Phases 6, 8, 9 and can execute i
 ### v1.2 Phases
 
 - [ ] **Phase 10: GAS Backend** - Add the `getAdminData` endpoint to google-apps-script.js, reading Summary, RawData, and SOCData sheets in a single passcode-gated call and returning structured JSON
-- [ ] **Phase 11: Admin Infrastructure** - Replace ReviewerScreen with a lazy-loaded AdminPanel entry point, wire the useAdmin hook and passcode gate into App.jsx, and add manual refresh
+- [x] **Phase 11: Admin Infrastructure** - Replace ReviewerScreen with a lazy-loaded AdminPanel entry point, wire the useAdmin hook and passcode gate into App.jsx, and add manual refresh
 - [ ] **Phase 12: Candidate List** - Build the candidate table with search, sort, and grade-band filter — the primary list view every admin session starts from
 - [ ] **Phase 13: Answer Sheet** - Build the candidate drill-down showing Zone 1-3 classification answers and Zone 4 SOC answers with SPL keyword annotations
 - [ ] **Phase 14: Reports and Export** - Add CSV download of all submission data and per-candidate print-to-PDF via browser print dialog
@@ -251,7 +251,7 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 10. GAS Backend | 0/1 | Planned | - |
-| 11. Admin Infrastructure | 0/0 | Not started | - |
+| 11. Admin Infrastructure | 1/1 | Complete | 2026-05-26 |
 | 12. Candidate List | 0/0 | Not started | - |
 | 13. Answer Sheet | 0/0 | Not started | - |
 | 14. Reports and Export | 0/0 | Not started | - |
