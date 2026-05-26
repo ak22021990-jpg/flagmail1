@@ -1,513 +1,651 @@
-# Architecture Research
+# Architecture Patterns — v1.2 Admin Panel
 
-**Domain:** SOC Investigation Zone 4 — restructuring existing implementation
-**Researched:** 2026-05-25
-**Confidence:** HIGH — based on direct codebase inspection of all relevant files
+**Domain:** Admin panel replacing the existing reviewer screen in a React 19 SPA
+**Researched:** 2026-05-26
+**Confidence:** HIGH — based on direct inspection of all relevant source files
 
 ---
 
 ## Current As-Built State
 
-Zone 4 is already implemented and wired end-to-end. The milestone is a restructuring and
-bug-fix pass, not a greenfield build. The architecture below documents what exists and what
-must change.
+The existing reviewer screen (`ReviewerScreen.jsx`) is a minimal passcode-gated table that
+reads only from the `SOCData` sheet via `GET ?action=getSOCSubmissions`. It has no knowledge
+of classification data (Zones 1–3), no dashboard, no search/filter, no export. The admin
+panel replaces this screen entirely.
+
+The SCREENS enum already contains `REVIEWER`. The entry point is a fixed button in the
+landing screen that calls `gs.setScreen(SCREENS.REVIEWER)`. That wiring stays unchanged;
+only the screen component it renders is replaced.
+
+### What the Sheets Contain Today
+
+Three sheets exist and are written by the existing GAS script:
+
+| Sheet | Written by | Columns |
+|-------|-----------|---------|
+| `Summary` | `register` + `submit` + `submitFinal` | Timestamp, Name, Email, Status, Score, Display Score, Tier, Zone 1, Zone 2, Zone 3, Proctoring Violations, Zone 4 (SOC), Final Score /100 |
+| `RawData` | `submit` | Timestamp, Name, Email, Email ID, Zone, Selected L1, Selected L2, Correct L1, Correct L2, L1 Correct, L2 Correct, Clues Used, Timed Out, Points |
+| `SOCData` | `submitSOC` + `submitFinal` | Timestamp, Name, Email, Question ID, Score, Grade, SPL Text, Explanation, Proctoring Violations |
+
+The `Summary` sheet is the primary source for per-candidate aggregate scores and tier data.
+`RawData` has per-email classification records needed for answer sheet drill-downs.
+`SOCData` has per-question SPL + explanation text needed for SOC answer sheets.
+
+---
+
+## Recommended Architecture
 
 ### System Overview
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                          App.jsx (shell)                          │
-│  gs = useGameState()                                              │
-│  sc = useScoring()                                                │
-│  soc = useSocState(gs)                                            │
-│  badges = useBadges()                                             │
-│                                                                   │
-│  Conditional screen render on gs.screen ────────────────────────  │
-│                                                                   │
-│  Zone 1–3 flow:                                                   │
-│  LANDING → TUTORIAL → ZONE_INTRO → ROUND → EXPLANATION            │
-│         → ZONE_COMPLETE (loop) → SOC_INTRO (after zone 3)         │
-│                                                                   │
-│  Zone 4 (SOC) flow:                                               │
-│  SOC_INTRO → SOC_ROUND → SOC_EXPLANATION → (repeat) → SOC_RESULTS │
-│                                                                   │
-│  Side paths:                                                      │
-│  LANDING → REVIEWER (passcode gate, independent of game flow)     │
-└──────────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                       State Hook Layer                            │
-│  useGameState   — SCREENS enum, zone progression, player, email   │
-│  useScoring     — per-email/zone/total scores for zones 1–3       │
-│  useSocState    — SOC question index, per-question answers,        │
-│                   validation dispatch, score accumulation,        │
-│                   GAS submission                                  │
-│  useBadges      — badge unlock conditions                         │
-│  useProctoring  — tab-switch detection (inside SocRound)          │
-└──────────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                       Utility Layer (pure functions)              │
-│  validateSpl.js   — keyword match: required/optional/blocked      │
-│  validateExplanation (exported from validateSpl.js)               │
-│  scoreSoc.js      — 23-pt model + scaleSocScore for combined /100 │
-└──────────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                       Data Layer (static)                         │
-│  src/data/socQuestions.js  — 6 SOC question objects (Q1–Q5b)     │
-│  src/data/emails.js        — 15 classification emails (zones 1–3) │
-└──────────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                       External Layer                              │
-│  Google Apps Script web app                                       │
-│    POST action:register | submit | submitFinal                    │
-│    GET  ?action=getSOCSubmissions&passcode=...                    │
-│    MailApp.sendEmail() → 4 hardcoded reviewer addresses           │
-└──────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                          App.jsx (shell)                             │
+│  gs = useGameState()                                                 │
+│  ...existing hooks unchanged...                                      │
+│                                                                      │
+│  SCREENS.REVIEWER → <AdminPanel passcode="" onBack={...} />          │
+│  (replaces <ReviewerScreen> import and render)                       │
+└─────────────────────────────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    AdminPanel.jsx (screen)                            │
+│  Passcode gate (local state) → authenticated sub-views               │
+│                                                                      │
+│  Sub-views (tab or section):                                         │
+│    AdminDashboard.jsx    — aggregate stats, grade bands, pass/fail   │
+│    AdminCandidateList.jsx — search/filter candidate table            │
+│    AdminAnswerSheet.jsx  — per-candidate drill-down (all zones)      │
+│    AdminExportBar.jsx    — CSV download button + PDF trigger         │
+└─────────────────────────────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    useAdmin hook                                      │
+│  Owns: passcode auth state, all data fetches, view routing,          │
+│        search/filter state, export trigger                           │
+│  Fetches from:                                                       │
+│    GET ?action=getAdminData&passcode=...                             │
+│        → { summary[], rawData[], socData[] }                         │
+└─────────────────────────────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Google Apps Script                                 │
+│  NEW: GET ?action=getAdminData&passcode=...                          │
+│    Reads Summary, RawData, SOCData sheets                            │
+│    Groups rows into per-candidate objects                            │
+│    Returns { ok: true, candidates: [...], rawData: [...],            │
+│              socData: [...] }                                        │
+│                                                                      │
+│  Existing actions unchanged:                                         │
+│    POST register | submit | submitSOC | submitFinal                  │
+│    GET  checkEmail | getSOCSubmissions (keep for backward compat)    │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Component Inventory: Zone 4 (SOC)
+## Component Inventory
 
-### Existing — No Modification Needed
+### New Components
 
-| File | Role | Notes |
-|------|------|-------|
-| `src/hooks/useGameState.js` | SCREENS enum, screen transitions | `SOC_INTRO`, `SOC_ROUND`, `SOC_EXPLANATION`, `SOC_RESULTS`, `REVIEWER` already defined. `advanceZone` already routes zone-3 exit to `SOC_INTRO`. No changes needed here. |
-| `src/utils/validateSpl.js` | SPL + explanation keyword validation | Correct. Handles `anyOf` terms, normalized text. No changes needed. |
-| `src/utils/scoreSoc.js` | Per-question scoring + final score scaling | Correct. `scoreSocRound` + `scaleSocScore` cover all requirements. No changes needed. |
-| `src/components/SocIntroCard.jsx` | Zone 4 introduction screen | Renders correctly. Not in scope for restructuring. |
-| `src/components/SocExplanationCard.jsx` | Per-question feedback after submission | Score breakdown, keyword hits/misses, grade band. No structural changes needed. |
-| `src/components/ReviewerScreen.jsx` | Passcode gate + SOC submissions table | Fetches via GET `?action=getSOCSubmissions`. Works correctly for reviewer read path. |
+| Component | File | Responsibility |
+|-----------|------|---------------|
+| `AdminPanel` | `src/components/AdminPanel.jsx` | Replaces `ReviewerScreen`. Passcode gate wrapper. Mounts `useAdmin` and distributes state to sub-views. Owns tab/view switching. Renders `AdminDashboard`, `AdminCandidateList`, `AdminAnswerSheet`, `AdminExportBar`. |
+| `AdminDashboard` | `src/components/AdminDashboard.jsx` | Score overview: total submissions count, average final score, grade band distribution bars (Foundation / Proficient / Advanced), pass rate. Reads from `useAdmin.candidates`. |
+| `AdminCandidateList` | `src/components/AdminCandidateList.jsx` | Searchable, filterable table of all candidates. Columns: Name, Email, Date, Zone 1-3 Scores, SOC Score, Final Score, Tier. Row click navigates to answer sheet for that candidate. |
+| `AdminAnswerSheet` | `src/components/AdminAnswerSheet.jsx` | Full drill-down for one candidate. Classification zone section (per-email L1/L2 selections and correct answers from `rawData`). SOC section (per-question SPL text, explanation, score, grade from `socData`). |
+| `AdminExportBar` | `src/components/AdminExportBar.jsx` | CSV export button (client-side, no server call). PDF export button (uses `window.print()` with print-specific CSS). Receives formatted data arrays from `useAdmin`. |
 
-### Existing — Requires Modification
+### Modified Files
 
-| File | What Changes | Reason |
-|------|-------------|--------|
-| `src/data/socQuestions.js` | Enrich each question object with `scenario_context`, `investigation_prompt`, `hints` array per question | Current questions have `scenario` (single line) but no investigation narrative, no structured hints for the hint engine, no explicit `investigation_context` that separates the scenario backdrop from the SPL task prompt. The `splRules.tasks[n].prompt` field exists but is not rendered in the UI. |
-| `src/components/SocRound.jsx` | Restructure layout from all-at-once to guided flow; add hint engine; expose SPL task prompt | Currently renders Evidence + Classification + SPL + Explanation simultaneously as a single scrollable panel. Needed: step-aware UI that contextualises the investigation. |
-| `src/hooks/useSocState.js` | Add hint reveal state, possibly a `stepIndex` for guided flow | Currently manages answers, validation, scoring, and submission. Hint engine needs `hintsRevealed` array per question. |
-| `google-apps-script.js` | Debug and fix `MailApp.sendEmail()` | Email delivery is broken. Cause is under investigation but likely: quota exhaustion, recipient list format, or GAS `MailApp` vs `GmailApp` API mismatch. |
-| `src/App.jsx` | Wire hint state from `useSocState` into `SocRound`; pass `onRevealHint` callback | If hint state is added to `useSocState`, App must thread it as a prop to `SocRound`. |
+| File | Change | Why |
+|------|--------|-----|
+| `src/App.jsx` | Replace `ReviewerScreen` import with `AdminPanel`. Replace `<ReviewerScreen onBack={...} />` render with `<AdminPanel onBack={...} />`. | One-line swap; the `SCREENS.REVIEWER` entry point and `gs.setScreen` wiring are unchanged. |
+| `google-apps-script.js` | Add `getAdminData` GET action. Reads all three sheets; returns grouped per-candidate JSON. Add `getCandidateDetail` GET action for deep drill-down if payload is too large for single call. | New read-only endpoint. No writes. Passcode-gated via `PropertiesService` (same `REVIEWER_PASSCODE` property as today). |
 
-### New Files Required
+### Deprecated/Removed
 
-| File | Purpose |
-|------|---------|
-| (none for components — restructure existing `SocRound.jsx`) | The existing `SocRound.jsx` is the right boundary; it should be restructured rather than replaced. A new `HintPanel.jsx` sub-component is the only new component likely needed. |
-| `src/components/HintPanel.jsx` | Renders collapsible hint cards for the active question; receives `hints` array and `hintsRevealed` index from parent. |
+| File | Disposition |
+|------|------------|
+| `src/components/ReviewerScreen.jsx` | Delete when `AdminPanel` is complete. Keep until then for reference. |
 
 ---
 
-## Data Structure: What Must Change in `socQuestions.js`
+## New Hook: useAdmin
 
-Current shape (Q1 example):
+**Do not extend `useLeaderboard`.** `useLeaderboard` handles anonymous leaderboard POST/GET.
+`useAdmin` handles passcode-authenticated reads across three sheets with internal view
+routing. These are different concerns at different auth levels. Mixing them would break the
+separation between public game flow and gated admin flow.
 
 ```js
-{
-  id: "Q1",
-  scenario: "A user reports...",          // single-line — too thin for UX
-  evidence: { email: {...}, proxy: null, edr: null },
-  classification: { options: {...}, correct: {...} },
-  splRules: {
-    tasks: [
-      {
-        prompt: "Write an SPL query...",  // exists but not rendered in current UI
-        required: [...],
-        optional: [...],
-        blocked: [...],
-      }
-    ]
-  },
-  conceptKeywords: { required: [...], optional: [...] },
-  feedback: { primaryCorrect: "...", primaryIncorrect: "...", ... },
+// src/hooks/useAdmin.js (new file)
+
+export function useAdmin() {
+  const [authed, setAuthed] = useState(false);
+  const [passcode, setPasscode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Data from GAS
+  const [candidates, setCandidates] = useState([]);   // from Summary sheet
+  const [rawData, setRawData] = useState([]);          // from RawData sheet
+  const [socData, setSocData] = useState([]);          // from SOCData sheet
+
+  // View routing within the panel (no SCREENS enum — local to admin)
+  const [view, setView] = useState('dashboard');       // 'dashboard' | 'candidates' | 'detail'
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+
+  // Search/filter
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterTier, setFilterTier] = useState('all'); // 'all' | 'Foundation' | 'Proficient' | 'Advanced'
+
+  async function authenticate(passcodeInput) { ... }
+
+  function selectCandidate(candidateKey) { ... }
+
+  function clearSelection() { ... }
+
+  // Derived: filtered candidate list
+  const filteredCandidates = useMemo(() => { ... }, [candidates, searchQuery, filterTier]);
+
+  // Derived: records for selected candidate
+  const selectedRawData = useMemo(() => { ... }, [rawData, selectedCandidate]);
+  const selectedSocData = useMemo(() => { ... }, [socData, selectedCandidate]);
+
+  return {
+    authed, passcode, setPasscode, loading, error,
+    candidates, rawData, socData,
+    view, setView,
+    selectedCandidate, selectCandidate, clearSelection,
+    searchQuery, setSearchQuery, filterTier, setFilterTier,
+    filteredCandidates, selectedRawData, selectedSocData,
+  };
 }
 ```
 
-Required additions (new fields only, existing fields untouched):
-
-```js
-{
-  // ... all existing fields unchanged ...
-
-  // NEW: Richer investigation narrative shown above evidence
-  investigation_context: "You are a SOC Tier 1 analyst. A user in the Finance team...",
-
-  // NEW: Per-task hints (one hints array per splRules.tasks entry)
-  splRules: {
-    tasks: [
-      {
-        prompt: "...",        // already exists
-        required: [...],      // already exists
-        optional: [...],      // already exists
-        blocked: [...],       // already exists
-        hints: [              // NEW — revealed progressively
-          "Start by scoping to the correct index for this evidence type.",
-          "Include the sender field to identify the originating address.",
-          "Use stats to group the results — what dimension are you grouping by?",
-        ],
-      }
-    ]
-  },
-
-  // NEW: Explanation task prompt (what to write about)
-  explanation_prompt: "Explain why you classified this as phishing and what indicators led you to that conclusion.",
-}
-```
-
-**Constraint:** All existing field names (`scenario`, `evidence`, `classification`,
-`splRules`, `conceptKeywords`, `feedback`) are untouched. New fields are additive.
-`useSocState` and `validateSpl` do not need changes to handle these additions —
-they are display-only fields consumed by `SocRound`.
+**Key design decisions:**
+- `view` is local admin state — not a SCREENS enum entry. Adding `ADMIN_DASHBOARD`,
+  `ADMIN_CANDIDATES`, `ADMIN_DETAIL` to `useGameState.SCREENS` would pollute the game
+  state machine with admin sub-views and make zone 1-3 logic defensive.
+- Authentication is local `useState` (`authed` boolean) — not a context. `AdminPanel` is
+  the only consumer. No cross-component auth context is needed.
+- Data is fetched once on successful auth, then filtered client-side. No pagination fetch
+  loop needed at this scale (assessment cohorts are dozens to low hundreds of candidates).
 
 ---
 
-## Component Boundaries: SOC Flow
+## New GAS Endpoint: getAdminData
 
-### `SocRound.jsx` — Restructured Layout
+Add to `doGet` in `google-apps-script.js`:
 
-Current layout: single two-column grid (evidence left, all inputs right — classification,
-SPL textarea, explanation textarea, submit).
+```js
+if (e.parameter.action === 'getAdminData') {
+  var passcode = e.parameter.passcode || '';
+  var correct = PropertiesService.getScriptProperties().getProperty('REVIEWER_PASSCODE');
+  if (!correct || passcode !== correct) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ ok: false, error: 'Invalid passcode' })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
 
-Target layout: guided flow within the same two-column shell:
+  var ss = getSpreadsheet();
+  var sheets = ensureSheets(ss);
+
+  // Read Summary (candidates)
+  var candidates = [];
+  if (sheets.summary.getLastRow() >= 2) {
+    var summaryData = sheets.summary.getRange(2, 1, sheets.summary.getLastRow() - 1, 13).getValues();
+    for (var i = 0; i < summaryData.length; i++) {
+      var r = summaryData[i];
+      candidates.push({
+        timestamp: r[0], name: r[1], email: r[2], status: r[3],
+        score: r[4], displayScore: r[5], tier: r[6],
+        zone1: r[7], zone2: r[8], zone3: r[9],
+        proctoringViolations: r[10], socScore: r[11], finalScore: r[12],
+      });
+    }
+  }
+
+  // Read RawData (per-email classification records)
+  var rawData = [];
+  if (sheets.raw.getLastRow() >= 2) {
+    var rawRows = sheets.raw.getRange(2, 1, sheets.raw.getLastRow() - 1, 14).getValues();
+    for (var j = 0; j < rawRows.length; j++) {
+      var rr = rawRows[j];
+      rawData.push({
+        timestamp: rr[0], name: rr[1], email: rr[2], emailId: rr[3],
+        zone: rr[4], selectedL1: rr[5], selectedL2: rr[6],
+        correctL1: rr[7], correctL2: rr[8],
+        l1Correct: rr[9], l2Correct: rr[10],
+        cluesUsed: rr[11], timedOut: rr[12], points: rr[13],
+      });
+    }
+  }
+
+  // Read SOCData
+  var socData = [];
+  var soc = ss.getSheetByName('SOCData');
+  if (soc && soc.getLastRow() >= 2) {
+    var socRows = soc.getRange(2, 1, soc.getLastRow() - 1, 9).getValues();
+    for (var k = 0; k < socRows.length; k++) {
+      var sr = socRows[k];
+      socData.push({
+        timestamp: sr[0], name: sr[1], email: sr[2], questionId: sr[3],
+        score: sr[4], grade: sr[5], splText: sr[6],
+        explanation: sr[7], proctoringViolations: sr[8],
+      });
+    }
+  }
+
+  return ContentService.createTextOutput(
+    JSON.stringify({ ok: true, candidates: candidates, rawData: rawData, socData: socData })
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+```
+
+**Why a single endpoint instead of three separate calls:**
+- GAS has no parallel fetch capability from the client side when using `no-cors`.
+  However, `getAdminData` uses full CORS (same as `getSOCSubmissions`) because it's a
+  simple GET with no custom headers — GAS responds with `Access-Control-Allow-Origin: *`.
+  A single round-trip is simpler and faster than three sequential fetches.
+- If payload size becomes a concern (very large cohorts), the endpoint can be split into
+  `getSummary`, `getRawData`, `getSocData` later without changing the React hook interface
+  (just split the single `authenticate()` call into three awaited fetches internally).
+
+**Passcode reuse:** The same `REVIEWER_PASSCODE` `PropertiesService` property is reused.
+No new GAS property needs to be configured.
+
+---
+
+## Data Flow: Sheets → GAS → React Admin Views
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│  Header: SOC Investigation | Q{n} of {total} | progress dots     │
-├─────────────────────────────┬────────────────────────────────────┤
-│  LEFT PANEL                 │  RIGHT PANEL                       │
-│  ─────────────────────────  │  ─────────────────────────────     │
-│  investigation_context      │  Classification (if applicable)    │
-│  (scenario narrative)       │    Primary picker                  │
-│                             │    Secondary picker (unlocks       │
-│  Evidence cards:            │    after primary selected)         │
-│    Email card               │                                    │
-│    Proxy card               │  SPL Task Prompt                   │
-│    EDR card                 │    (splRules.tasks[n].prompt)       │
-│                             │                                    │
-│  HintPanel                  │  SPL textarea (monospace)          │
-│    (collapsible hints)      │                                    │
-│                             │  Explanation Prompt                │
-│                             │    (explanation_prompt field)      │
-│                             │                                    │
-│                             │  Explanation textarea              │
-│                             │                                    │
-│                             │  [Submit] button                   │
-└─────────────────────────────┴────────────────────────────────────┘
+Admin navigates to landing screen
+    ↓
+Clicks "Reviewer" button (bottom-right, fixed position)
+    ↓
+App.jsx: gs.setScreen(SCREENS.REVIEWER)
+    ↓
+AdminPanel.jsx renders (replaces ReviewerScreen)
+    ↓
+Passcode gate: useAdmin.authed === false
+    → Passcode input form rendered
+    → User enters passcode → clicks "Access admin"
+    ↓
+useAdmin.authenticate(passcode)
+    → GET ${LEADERBOARD_URL}?action=getAdminData&passcode=...
+    → GAS doGet reads Summary (13 cols), RawData (14 cols), SOCData (9 cols)
+    → Returns { ok: true, candidates: [...], rawData: [...], socData: [...] }
+    → setCandidates([...]), setRawData([...]), setSocData([...])
+    → setAuthed(true)
+    ↓
+AdminPanel renders authenticated view
+    ├── AdminDashboard (view === 'dashboard')
+    │     reads: useAdmin.candidates
+    │     computes: total count, avg finalScore, tier distribution, pass rate
+    │
+    ├── AdminCandidateList (view === 'candidates')
+    │     reads: useAdmin.filteredCandidates (candidates filtered by searchQuery + filterTier)
+    │     action: row click → useAdmin.selectCandidate(email+timestamp key) → view = 'detail'
+    │
+    └── AdminAnswerSheet (view === 'detail')
+          reads: useAdmin.selectedCandidate (from candidates)
+                 useAdmin.selectedRawData (rawData filtered by candidate email)
+                 useAdmin.selectedSocData (socData filtered by candidate email)
+          back button → useAdmin.clearSelection() → view = 'candidates'
 ```
 
-The right panel already scrolls independently (`maxHeight: calc(100dvh - 140px)`).
-The evidence left panel stays sticky/visible. The structural change is:
+**Client-side filtering:** After the single auth fetch, all search/filter/sort operations
+run in React with `useMemo`. No re-fetch on filter change. This is correct for the expected
+scale (dozens to low hundreds of records).
 
-1. Render `investigation_context` above the evidence cards (currently `scenario` is in the
-   header only).
-2. Render `splRules.tasks[0].prompt` as a visible section label above the SPL textarea
-   (currently the prompt field exists in data but is not rendered anywhere in the UI).
-3. Render `explanation_prompt` as a visible section label above the explanation textarea.
-4. Add `<HintPanel>` at the bottom of the left panel.
+---
 
-**Props interface remains unchanged.** `SocRound` already receives `question`, `answer`,
-`progress`, `onSetPrimary`, `onSetSecondary`, `onSetSplText`, `onSetExplanation`, `onSubmit`,
-`onViolationChange`. Add one new prop: `onRevealHint(questionIdx, hintIdx)`.
+## Export Architecture
 
-### `HintPanel.jsx` — New Sub-component
+### CSV Export (client-side, no server call)
+
+Build a CSV string in the browser from `useAdmin.candidates` + `useAdmin.socData`.
+Create a `Blob` with `type: 'text/csv'`, use `URL.createObjectURL()`, programmatically
+click a hidden `<a download="...">` link.
+
+```js
+// src/utils/exportCsv.js (new utility file)
+export function downloadCsv(rows, filename) {
+  const header = Object.keys(rows[0]).join(',');
+  const body = rows.map(r =>
+    Object.values(r).map(v => {
+      const s = String(v == null ? '' : v);
+      return (s.includes(',') || s.includes('"') || s.includes('\n'))
+        ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }).join(',')
+  ).join('\r\n');
+  const blob = new Blob([header + '\r\n' + body], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+```
+
+No new npm library needed. `papaparse` is already installed for CSV parsing but is not
+needed for generation — the above 15-line utility is sufficient.
+
+### PDF Export (window.print + print CSS)
+
+Use `window.print()` scoped to the admin panel with a `@media print` stylesheet that:
+- Hides the game background, navigation buttons, and tab bar
+- Renders the currently visible admin view (dashboard or answer sheet) as a clean document
+- Sizes the content to A4
+
+This avoids adding `jspdf` (~500 KB), `html2canvas` (~80 KB), or `puppeteer` (Node-only).
+The `window.print()` approach is zero-library, works in all browsers, and produces
+printable-to-PDF output via the browser's native print dialog.
+
+**Limitation:** The user must trigger "Save as PDF" in the browser's print dialog.
+This is acceptable given the "no new npm dependencies" constraint and the low frequency
+of report generation in an assessment tool.
+
+---
+
+## Component Boundaries
+
+### AdminPanel.jsx — Screen Shell
+
+```
+Props: onBack: func (→ gs.setScreen(SCREENS.LANDING))
+Owns: useAdmin() hook call
+State delegated to: useAdmin
+
+Render:
+  if !authed → passcode form (same visual style as current ReviewerScreen passcode gate)
+  if authed:
+    → header bar with back button + "Admin Panel" title + tab strip
+    → {view === 'dashboard'} → <AdminDashboard candidates={filteredCandidates} />
+    → {view === 'candidates'} → <AdminCandidateList .../>
+    → {view === 'detail'} → <AdminAnswerSheet .../>
+    → <AdminExportBar .../>
+```
+
+### AdminDashboard.jsx — Stats View
+
+```
+Props: candidates: array
+Computes (locally, not in hook):
+  - totalCount = candidates.length
+  - completed = candidates.filter(c => c.status === 'Completed').length
+  - avgFinal = mean(candidates.map(c => c.finalScore))
+  - tierCounts = { Foundation: N, Proficient: N, Advanced: N }
+  - passRate = (candidates.filter(c => c.finalScore >= 50).length / completed) * 100
+
+Renders:
+  - Stat cards (Total, Completed, Avg Score, Pass Rate)
+  - Grade band distribution bar chart (CSS, no charting library)
+  - Zone average scores (Zone 1 avg, Zone 2 avg, Zone 3 avg, SOC avg)
+```
+
+No charting library. Grade band bars are CSS `width` percentages on `div` elements — the
+same pattern used in `ResultsScreen.jsx` and the email template. This keeps the zero-new-
+dependencies constraint while producing readable visualizations.
+
+### AdminCandidateList.jsx — Table View
 
 ```
 Props:
-  hints:          string[]          — from question.splRules.tasks[0].hints
-  hintsRevealed:  number            — count of hints already shown (0..hints.length)
-  onRevealHint:   () => void        — increments hintsRevealed in useSocState
+  candidates: array (already filtered by useAdmin)
+  searchQuery: string
+  onSearchChange: func
+  filterTier: string
+  onFilterChange: func
+  onSelectCandidate: func
 
 Renders:
-  - Collapsed by default
-  - "Show hint {n}" button reveals next hint sequentially
-  - Already-revealed hints show as read-only cards
-  - When all hints revealed: "No more hints"
+  - Search input (free text, filters by name or email)
+  - Tier filter buttons (All / Foundation / Proficient / Advanced)
+  - Sortable table: Name, Email, Date, Zone1, Zone2, Zone3, SOC, Final, Tier
+  - Each row: click → onSelectCandidate(candidateKey)
 ```
 
-### `useSocState.js` — Hint State Addition
+Sort state (column + direction) lives as local `useState` in `AdminCandidateList` — it is
+a presentation concern, not something `useAdmin` needs to know about.
 
-New state in existing hook:
-
-```js
-// Existing state (untouched):
-const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
-const [answers, setAnswers] = useState(initialAnswers);
-const [showResults, setShowResults] = useState(false);
-
-// NEW:
-const [hintsRevealed, setHintsRevealed] = useState(
-  () => SOC_QUESTIONS.map(() => 0)    // one counter per question
-);
-
-const revealNextHint = useCallback(() => {
-  setHintsRevealed(prev => {
-    const next = [...prev];
-    const q = SOC_QUESTIONS[currentQuestionIdx];
-    const maxHints = q.splRules?.tasks?.[0]?.hints?.length ?? 0;
-    next[currentQuestionIdx] = Math.min(prev[currentQuestionIdx] + 1, maxHints);
-    return next;
-  });
-}, [currentQuestionIdx]);
-```
-
-Return addition:
-
-```js
-return {
-  // ... all existing return values unchanged ...
-  hintsRevealed: hintsRevealed[currentQuestionIdx],
-  revealNextHint,
-};
-```
-
----
-
-## Data Flow: SOC Question Lifecycle (As Restructured)
+### AdminAnswerSheet.jsx — Drill-down View
 
 ```
-Candidate enters SOC_ROUND screen
-    ↓
-SocRound renders SOC_QUESTIONS[currentQuestionIdx]
-    │
-    ├── LEFT:  investigation_context + evidence cards + HintPanel
-    └── RIGHT: classification pickers → SPL prompt → SPL textarea
-                                      → explanation prompt → explanation textarea
-    ↓
-Candidate optionally reveals hints (HintPanel → revealNextHint → hintsRevealed[idx]++)
-    ↓
-Candidate fills classification, SPL, explanation → Submit button activates
-    ↓
-useSocState.submitSocRound()
-    ├── validateSpl(answer.splText, task)           [per task in splRules.tasks]
-    ├── validateExplanation(answer.explanation, conceptKeywords)
-    ├── scoreSocRound({ primaryCorrect, secondaryRatio, splValidation, explanationValidation }, config)
-    └── setAnswers: answers[idx] = { ...answer, submitted: true, result: record }
-    ↓
-App.jsx handleSocSubmit → gs.setScreen(SCREENS.SOC_EXPLANATION)
-    ↓
-SocExplanationCard shows score breakdown, keyword hits/misses, grade band
-    ↓
-Candidate clicks "Next question" → App.jsx handleSocNext → soc.nextQuestion()
-    │
-    ├── hasMore = true  → gs.setScreen(SCREENS.SOC_ROUND)
-    │
-    └── hasMore = false →
-            scaleSocScore(soc.socTotal, sc.totalScore)
-            soc.submitFinal(consolidatedPayload)    [POST to GAS + sessionStorage fallback]
-            gs.setScreen(SCREENS.SOC_RESULTS)
-    ↓
-ResultsScreen (SOC_RESULTS) shows combined final score
+Props:
+  candidate: object (from Summary)
+  rawData: array (RawData rows for this candidate)
+  socData: array (SOCData rows for this candidate)
+  onBack: func
+
+Renders:
+  Section 1 — Candidate Header: name, email, timestamp, final score, tier
+  Section 2 — Classification (Zones 1–3):
+    Table of rawData rows grouped by zone:
+    Email ID | Zone | Selected L1 | Correct L1 | Selected L2 | Correct L2 | Points
+  Section 3 — SOC Investigation (Zone 4):
+    For each socData row (per question):
+      Question ID | Score | Grade
+      SPL Query (monospace pre block)
+      Explanation (paragraph block)
+  Section 4 — Score Summary: zone breakdowns, SOC scaled, final /100
+```
+
+### AdminExportBar.jsx — Export Controls
+
+```
+Props:
+  candidates: array (all or filtered)
+  selectedCandidate: object | null
+  selectedRawData: array
+  selectedSocData: array
+  view: string
+
+Renders:
+  - "Export all CSV" button → downloadCsv(candidates, 'flagmail_candidates.csv')
+  - "Export SOC data CSV" button → downloadCsv(socData, 'flagmail_soc.csv')
+  - "Print / PDF" button → window.print() (only visible in 'detail' view)
 ```
 
 ---
 
-## Data Flow: Email Delivery (Bug Fix Path)
+## Print / PDF CSS Strategy
 
-Current implementation in `google-apps-script.js` (lines 237–243):
+Add a `@media print` block to `src/index.css` (or a new `src/styles/print.css` imported
+only by `AdminPanel.jsx`):
 
-```js
-MailApp.sendEmail({
-  to: recipients.join(','),
-  subject: subject,
-  body: emailBody,
-  attachments: [csvBlob],
-});
+```css
+@media print {
+  /* Hide everything except admin content */
+  body > #root > div > *:not(.admin-print-target) { display: none !important; }
+  .admin-print-target { display: block !important; }
+
+  /* Remove glass backgrounds, show clean document styling */
+  .admin-print-target * {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+
+  /* Page breaks between candidates (if bulk printing) */
+  .admin-candidate-page { page-break-after: always; }
+}
 ```
 
-Known failure modes to investigate:
-
-1. **`MailApp` daily quota** — free Google accounts: 100 emails/day; Workspace: 1500/day.
-   `MailApp.getRemainingDailyQuota()` can be checked before calling.
-
-2. **`to` field format** — passing a comma-joined string with 4 addresses may be rejected
-   silently in some GAS runtime versions. Confirmed correct format for `MailApp.sendEmail`
-   is comma-delimited string.
-
-3. **Recipient domain restrictions** — Workspace admins can restrict outbound mail to
-   approved domains. `sutherlandglobal.com` recipients from a personal Google account
-   sending via GAS may be blocked server-side.
-
-4. **Blob MIME type mismatch** — `text/csv` MIME type with `.csv` extension is correct
-   but some GAS deployments reject non-standard MIME blobs.
-
-5. **`Logger.log` loss** — the `catch` block logs but the log is ephemeral. Add
-   `console.log` + check GAS execution transcripts to capture the actual error.
-
-Fix approach:
-- Add `MailApp.getRemainingDailyQuota()` guard before `sendEmail`.
-- Split `to` into multiple `sendEmail` calls (one per recipient) to isolate failures.
-- Log the full exception object, not just `mailErr.message`.
-- Consider `GmailApp.sendEmail()` as an alternative (same quota, sometimes more permissive).
-- Move recipient list to `PropertiesService` for runtime configurability.
-
----
-
-## Existing vs New File Classification
-
-### Files to Modify
-
-| File | Modification Scope | Risk |
-|------|--------------------|------|
-| `src/data/socQuestions.js` | Add `investigation_context`, `explanation_prompt`, `hints` per task | LOW — additive only; no existing field renamed or removed |
-| `src/components/SocRound.jsx` | Add left-panel narrative + hint panel; expose SPL/explanation prompts | MEDIUM — layout restructure, prop interface grows by 2 |
-| `src/hooks/useSocState.js` | Add `hintsRevealed` state + `revealNextHint` action | LOW — additive; existing actions unchanged |
-| `src/App.jsx` | Thread `hintsRevealed` and `revealNextHint` into `SocRound` props | LOW — one new prop pair |
-| `google-apps-script.js` | Debug and fix `MailApp.sendEmail`; add quota guard | MEDIUM — GAS deployment required after change |
-
-### Files That Are New
-
-| File | Type |
-|------|------|
-| `src/components/HintPanel.jsx` | New sub-component |
-
-### Files That Are Untouched
-
-All zones 1–3 components, hooks, and data files. The `validateSpl.js`, `scoreSoc.js`,
-`SocExplanationCard.jsx`, `SocIntroCard.jsx`, and `ReviewerScreen.jsx` require no changes.
+Assign `className="admin-print-target"` to the `AdminAnswerSheet` wrapper div.
 
 ---
 
 ## Suggested Build Order
 
-Dependencies listed; each step unblocks the next:
+Build order follows data → fetch → hook → components → export dependency chain:
 
-1. **`src/data/socQuestions.js` — data enrichment**
-   Add `investigation_context`, `explanation_prompt`, and `hints` arrays to all 6 questions.
-   No code changes; pure data authoring. Unblocks SocRound restructure and HintPanel.
+### Step 1: GAS endpoint (data layer)
 
-2. **`google-apps-script.js` — email delivery fix**
-   Can be worked on in parallel with UI changes. Requires GAS editor access + redeployment.
-   Test with a single-recipient `sendEmail` call before restoring multi-recipient.
+Add `getAdminData` action to `google-apps-script.js`. Deploy. Test with `curl` or browser.
+Verify all three sheets are returned correctly grouped. This unblocks all React work.
 
-3. **`src/hooks/useSocState.js` — hint state**
-   Add `hintsRevealed` and `revealNextHint`. 10–15 lines. No existing logic changes.
-   Unblocks `HintPanel` and `SocRound` prop interface.
+**Why first:** All downstream React code depends on the data shape the endpoint returns.
+Defining the response contract before writing the hook prevents shape mismatches.
 
-4. **`src/components/HintPanel.jsx` — new component**
-   Pure display component; no hook dependencies. Receives `hints`, `hintsRevealed`, and
-   `onRevealHint` as props. Can be developed and visually verified in isolation.
+### Step 2: useAdmin hook (state layer)
 
-5. **`src/components/SocRound.jsx` — layout restructure**
-   Depends on: enriched data shape (step 1), `HintPanel` (step 4), updated prop interface
-   from `useSocState` (step 3). This is the largest change. Restructure left panel to show
-   `investigation_context`, render `splRules.tasks[0].prompt` above SPL textarea, render
-   `explanation_prompt` above explanation textarea, mount `<HintPanel>`.
+Build `src/hooks/useAdmin.js` with passcode auth, single fetch, and all derived state.
+Write against the real GAS endpoint from Step 1. Verify `candidates`, `rawData`,
+`socData` are populated correctly before building any component.
 
-6. **`src/App.jsx` — wire new props**
-   Thread `soc.hintsRevealed` and `soc.revealNextHint` into `<SocRound>`. One-line prop
-   additions.
+**Why second:** Components are props-driven; they can only be built once the hook API is
+stable. Hook API is stable once the GAS response shape is confirmed.
+
+### Step 3: AdminPanel.jsx + passcode gate (screen shell)
+
+Build the authenticated shell with tab navigation and the passcode gate.
+Connect to `useAdmin`. At this point, mount empty placeholder divs for sub-views.
+Verify the screen swap in App.jsx works (`ReviewerScreen` → `AdminPanel`).
+
+**Why third:** Establishes the screen boundary and the `useAdmin` prop distribution
+pattern that all sub-components will follow.
+
+### Step 4: AdminCandidateList.jsx (core view)
+
+The candidate list is the most-used view and exercises the search/filter/sort logic.
+Build this before the dashboard so data rendering is confirmed before aggregate stats.
+
+### Step 5: AdminDashboard.jsx (aggregate stats)
+
+Dashboard reads from the same `candidates` array as the list. By Step 5, the data is
+confirmed correct. Dashboard adds derived calculations (means, distributions) on top.
+
+### Step 6: AdminAnswerSheet.jsx (drill-down)
+
+Deepest view; requires both `rawData` and `socData` joins. Build last among views so
+the data plumbing is fully trusted before the most complex rendering is attempted.
+
+### Step 7: exportCsv.js + AdminExportBar.jsx (export)
+
+Export is a feature layer on top of existing data; it does not block any other view.
+Build last. CSV is simpler and should ship before PDF.
+
+### Step 8: Print CSS for PDF (polish)
+
+Add `@media print` styles. Test in Chrome and Firefox. Ship as the final step.
 
 ---
 
-## Integration Points
+## Integration Points With Existing Architecture
 
-### Internal Boundaries
-
-| Boundary | Communication | Notes |
-|----------|--------------|-------|
-| `App.jsx` → `useSocState` | Hook call; returns state + actions | `soc.hintsRevealed` + `soc.revealNextHint` are new additions |
-| `App.jsx` → `SocRound` | Props: all answer state + action callbacks | Add `hintsRevealed` + `onRevealHint` props |
-| `SocRound` → `HintPanel` | Props: `hints`, `hintsRevealed`, `onRevealHint` | One-directional; HintPanel is display-only |
-| `useSocState.submitSocRound` → `validateSpl` / `scoreSocRound` | Direct function calls | Pure functions; no change needed |
-| `useSocState.submitFinal` → GAS | `fetch(LEADERBOARD_URL, { method: 'POST', mode: 'no-cors' })` | Existing pattern; `no-cors` means response is opaque |
-| `ReviewerScreen` → GAS | GET `?action=getSOCSubmissions&passcode=...` | Existing pattern; returns JSON with CORS headers |
-
-### External Services
-
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| Google Apps Script (submitFinal) | POST, `mode: 'no-cors'`, fire-and-forget | `sessionStorage` fallback on failure. MailApp bug on server side — fix in GAS, not client. |
-| Google Apps Script (getSOCSubmissions) | GET with query params, full JSON response | Needs GAS `doGet` returning `ContentService.createTextOutput` with JSON MIME type |
-
----
-
-## Architectural Constraints to Honour
-
-These are non-negotiable given the existing system:
-
-- No router, no context API — screen transitions via `gs.setScreen(SCREENS.X)` only.
-- No new hook dependencies between hooks — `useSocState` only couples to `gs` via the
-  `gs` parameter passed at construction; hint state stays internal to `useSocState`.
-- All validation runs client-side — `validateSpl` and `scoreSocRound` are called inside
-  `useSocState.submitSocRound`, not in the component and not on the backend.
-- The zone 1–3 flow must not be touched — `useGameState`, `useScoring`, `useBadges`,
-  `useTimer`, all existing screen components are out of scope for this milestone.
-- Static data only — `socQuestions.js` stays a plain JS export; no fetch, no async loading.
+| Boundary | How Admin Panel Integrates | Risk |
+|----------|---------------------------|------|
+| `App.jsx` → `AdminPanel` | Replace `ReviewerScreen` import and conditional render. Prop interface is identical: `onBack` function. | LOW — one-line import swap + one render replacement |
+| `SCREENS.REVIEWER` in `useGameState` | Unchanged. `REVIEWER` screen value maps to `AdminPanel` now. No new SCREENS entries needed. | NONE |
+| GAS passcode validation | `AdminPanel` uses same `REVIEWER_PASSCODE` PropertiesService property. No new GAS properties. | NONE |
+| `useLeaderboard` | Not touched. `useAdmin` is a separate hook for authenticated reads. | NONE |
+| Zone 1–3 game flow | Not touched. Admin panel is a side-path from LANDING only, same as reviewer was. | NONE |
+| `src/config.js` `LEADERBOARD_URL` | `useAdmin` uses same `LEADERBOARD_URL` for the new `getAdminData` GET. No new URL constant. | NONE |
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Adding Step State to `useGameState`
+### Anti-Pattern 1: Adding Admin Sub-Views to the SCREENS Enum
 
-**What people do:** Add a `socStep` enum (`scenario | evidence | classify | spl | explain`)
-to `useGameState` so the SOC question flow uses the main screen machine.
+**What happens:** Adds `ADMIN_DASHBOARD`, `ADMIN_CANDIDATES`, `ADMIN_DETAIL` to
+`useGameState.SCREENS` so navigation uses the main state machine.
 
-**Why it is wrong:** `useGameState` owns zone/email progression. Adding SOC sub-step state
-turns 12 SCREENS into 12+5 and makes zone 1–3 logic defensive against SOC step leakage.
+**Why it is wrong:** The main SCREENS machine governs the player game flow. Admin sub-view
+navigation is an internal concern of the admin panel only. Adding admin screens to SCREENS
+makes `useGameState` aware of admin state, forces defensive checks in game transitions
+(e.g., `advanceZone` must skip if on an admin screen), and couples two unrelated
+navigation concerns.
 
-**Do this instead:** If a guided step flow is needed within `SOC_ROUND`, manage it as local
-component state in `SocRound.jsx` or as an additional state slice in `useSocState`. It is
-a question-local UI concern, not a top-level navigation concern.
+**Do this instead:** Track `view` as local `useState('dashboard')` inside `useAdmin`.
+Admin view transitions are `setView('detail')` calls, not `gs.setScreen()` calls.
 
-### Anti-Pattern 2: Revealing All Hints at Once
+### Anti-Pattern 2: Extending useLeaderboard for Admin Reads
 
-**What people do:** Show all `hints` as an accordion that expands to reveal all items.
+**What happens:** Adds `fetchAdminData(passcode)` to the `useLeaderboard` hook.
 
-**Why it is wrong:** This defeats the pedagogical intent of progressive disclosure; candidates
-bypass hints as a learning scaffold.
+**Why it is wrong:** `useLeaderboard` is used by game flow (submit score, fetch public
+leaderboard). Admin reads are passcode-gated and return sensitive per-candidate data.
+Merging them means the public leaderboard hook holds sensitive auth state, and refactoring
+one path risks breaking the other.
 
-**Do this instead:** Reveal hints one at a time, in order, via a "Show next hint" button.
-Track `hintsRevealed` as a per-question integer index in `useSocState`.
+**Do this instead:** New `useAdmin` hook. Zero shared state with `useLeaderboard`.
 
-### Anti-Pattern 3: Putting `investigation_context` in the Header
+### Anti-Pattern 3: Multiple GAS Fetch Calls on Authentication
 
-**What people do:** Append `investigation_context` to the existing header bar where `scenario`
-already appears.
+**What happens:** `useAdmin.authenticate()` fires three separate GAS GET calls
+(one for Summary, one for RawData, one for SOCData) to avoid a large payload.
 
-**Why it is wrong:** The header is a compact nav element. Investigation context is a multi-
-sentence narrative — cramming it into the header makes the header too large and obscures
-navigation chrome.
+**Why it is wrong:** GAS web apps respond with CORS headers on simple GET requests, but
+each fetch is a separate network round-trip. Three sequential calls triple latency for
+the admin user on auth. GAS execution time also counts against quotas.
 
-**Do this instead:** Render `investigation_context` as the first card in the left evidence
-panel, above the evidence artifact cards. It acts as the "briefing" before the evidence.
+**Do this instead:** Single `getAdminData` endpoint that reads all three sheets in one
+GAS execution and returns them in one JSON payload. If the payload ever becomes too large
+(thousands of candidates), add a date-range query param to GAS and filter before returning.
 
-### Anti-Pattern 4: Fixing Email by Changing the Fetch Mode
+### Anti-Pattern 4: Server-side PDF Generation
 
-**What people do:** Change `mode: 'no-cors'` to `mode: 'cors'` on the `submitFinal` POST,
-assuming the fetch mode is what prevents email delivery.
+**What happens:** Adding a `generatePDF` GAS action or a Node backend endpoint that uses
+`puppeteer` / `wkhtmltopdf` to generate PDFs server-side.
 
-**Why it is wrong:** The email send happens entirely server-side in GAS. The fetch mode
-controls CORS headers on the response, not what GAS does with the payload. The email bug
-is in `google-apps-script.js`, not in the client fetch call.
+**Why it is wrong:** Violates the "no new backend service" constraint. GAS has no HTML
+rendering capability. Adding a separate PDF generation service is disproportionate for
+an assessment tool used by dozens of candidates.
 
-**Do this instead:** Debug by reading GAS execution logs (Apps Script editor → Executions).
-Add `Logger.log('Email error:', JSON.stringify(mailErr))` in the catch block. Check quota
-with `MailApp.getRemainingDailyQuota()`. Consider splitting multi-recipient sends.
+**Do this instead:** `window.print()` with `@media print` CSS. The admin can print to PDF
+from the browser's native print dialog. This is zero-library, always available, and
+produces acceptable report quality.
+
+### Anti-Pattern 5: Storing Passcode in React State Outside useAdmin
+
+**What happens:** The raw passcode string is stored in `App.jsx` state and passed as a
+prop to `AdminPanel` so it can be reused across re-renders.
+
+**Why it is wrong:** Passcode should not be held at the App level — it leaks beyond the
+admin boundary. The existing `ReviewerScreen` correctly scoped passcode to local component
+state. `useAdmin` is the correct home.
+
+**Do this instead:** Keep passcode in `useAdmin`. After successful authentication, the
+hook stores `authed: true` and discards or keeps the passcode string only within the hook.
+App.jsx passes only `onBack` to `AdminPanel`; it does not know whether the admin is authed.
+
+---
+
+## Scalability Note
+
+The architecture above is appropriate for cohorts of 10–300 candidates (the expected scale
+of a single assessment session). For larger scales:
+
+| Scale concern | Current approach | When to revisit |
+|---------------|-----------------|-----------------|
+| GAS payload size | All rows returned in one response | >500 candidates: add date-range param |
+| Client-side filtering | `useMemo` over `candidates` array | >1000 rows: debounce search input |
+| CSV export | In-memory Blob | >5000 rows: stream write via WritableStream |
+| GAS execution timeout | 6 sec GAS limit | >2000 rows: paginate with offset param |
+
+None of these limits are expected to be hit in v1.2. Document them here so the next
+milestone that grows the dataset knows where the boundaries are.
 
 ---
 
 ## Confidence Assessment
 
 | Area | Confidence | Basis |
-|------|-----------|-------|
-| Existing screen state machine | HIGH | Direct inspection of `useGameState.js` — SCREENS enum and advanceZone confirmed correct |
-| useSocState existing behaviour | HIGH | Full file read — answers, validation, scoring, submitFinal all working |
-| Hint engine design | HIGH | Standard progressive disclosure pattern; fits cleanly into useSocState |
-| SocRound layout restructure scope | HIGH | Full component read — layout targets are clear |
-| Data enrichment fields needed | HIGH | Derived from milestone requirements vs. current question shape |
-| Email delivery bug cause | MEDIUM | Root cause unconfirmed — GAS logs not yet inspected; multiple plausible causes identified |
-| HintPanel implementation | HIGH | Simple display component, no novel patterns |
+|------|------------|-------|
+| Existing screen state machine integration | HIGH | Direct inspection of `useGameState.js`, `App.jsx`, `SCREENS` enum — all integration points confirmed |
+| GAS sheet schemas | HIGH | Direct inspection of `google-apps-script.js` `ensureSheets` and `ensureSOCSheet` — all column positions verified |
+| `getAdminData` endpoint design | HIGH | Same pattern as existing `getSOCSubmissions`; passcode validation, JSON return, CORS handling are identical patterns |
+| `useAdmin` hook design | HIGH | Standard React `useState`/`useMemo` pattern; same shape as `useLeaderboard` + local view routing |
+| CSV export without library | HIGH | `URL.createObjectURL` + hidden anchor is a well-established browser pattern; no library needed |
+| PDF via `window.print()` | MEDIUM | `window.print()` is standard but `@media print` CSS requires testing across browsers; print layout may need iteration |
+| Component decomposition | HIGH | Sub-views map 1:1 to features listed in REQUIREMENTS.md; boundaries are clean |
 
 ---
 
-*Architecture research for: FlagMail SOC Investigation Zone 4 Restructure (v1.1)*
-*Researched: 2026-05-25*
+*Architecture research for: FlagMail v1.2 Admin Panel*
+*Researched: 2026-05-26*

@@ -1,466 +1,403 @@
-# Pitfalls Research
+# Domain Pitfalls: Admin Panel Addition to Existing React SPA
 
-**Domain:** SOC Investigation level — UX overhaul, hint engine, GAS email delivery, static data enrichment, backward-compatible Zone 4 restructure
-**Researched:** 2026-05-25
-**Confidence:** HIGH (all pitfalls derived from direct codebase inspection, milestone STATE.md, CONCERNS.md, GAS source, recent quick-task summaries, and verified GAS/CORS behavioural sources)
+**Domain:** Adding admin dashboard, CSV/PDF reports, data tables, and candidate management to an existing React 19 + Vite 7 SPA backed by Google Sheets via Google Apps Script.
+**Researched:** 2026-05-26
+**Milestone:** v1.2 Admin Panel
+**Confidence:** HIGH (derived from direct codebase inspection of existing GAS script, ReviewerScreen.jsx, App.jsx, and the specific integration patterns already in the codebase; verified against Recharts React 19 issue tracker, jsPDF Vite issue tracker, GAS quota docs)
+
+> **Note:** This file covers v1.2-specific pitfalls only. Pitfalls from v1.0/v1.1 (GAS MailApp scope re-authorization, term-stuffing, false-fail SPL scoring, CORS on reviewer GET, passcode bundle exposure, formula injection, silent submission failure, Zone 1–3 regression) are documented in the **previous version of this file** and remain valid. This file does not duplicate them but does reference them where they compound with v1.2 changes.
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: GAS MailApp Fails Silently After Adding a New Permission Scope
-
-**What goes wrong:**
-The `submitFinal` handler added `MailApp.sendEmail()` to `google-apps-script.js`. When the script is redeployed as a new GAS version, the GAS execution engine discovers a new OAuth scope (`https://www.googleapis.com/auth/script.send_mail`) that was not in the previous authorization grant. Calls to `MailApp.sendEmail()` silently fail with a permissions error that is caught by the outer `try/catch` and written only to `Logger.log('MailApp error: ...')`. Because GAS log output is invisible to the browser client and the fetch uses `mode: 'no-cors'` (opaque response), no error surfaces anywhere a developer would check. Reviewers receive no emails. No error is shown to the candidate. The Sheet writes that happen before `MailApp.sendEmail()` do commit successfully, creating a misleading appearance of success.
-
-**Why it happens:**
-GAS deployed web apps run under the authorization of the account that created the deployment. When new API scopes are added to source code, existing deployments do not automatically re-request those scopes — the authorization grant was already made without them. The developer must manually run any function in the GAS editor to trigger the OAuth re-authorization dialog, then grant the new scope, before deploying the new version. Skipping this step is the most common cause of email non-delivery after a GAS update.
-
-**How to avoid:**
-1. After updating `google-apps-script.js` with any new `MailApp` or `GmailApp` call, open the GAS editor, run a test function (e.g., a `testEmail()` stub that calls `MailApp.sendEmail()` to a known address), and complete the OAuth re-authorization dialog before deploying.
-2. Add `MailApp.getRemainingDailyQuota()` to a manual test function — if it returns a number, the scope is authorized; if it throws, re-authorization is needed.
-3. In the deployment checklist (the MANUAL REDEPLOY REQUIRED note already in the quick-260522-uez SUMMARY), explicitly add: "Step 4: Re-authorize permissions for MailApp — click Review permissions → Allow."
-4. Use `GmailApp.sendEmail()` instead of `MailApp.sendEmail()` if the GAS account is a Google Workspace account — `GmailApp` uses a different (sometimes pre-authorized) scope and has fewer delivery issues to non-Gmail recipients.
-
-**Warning signs:**
-- Candidate completes Zone 4; SOCData sheet has rows; Summary sheet cols 12-13 updated — but reviewers receive no email.
-- GAS execution logs show `MailApp error:` entries (check via Apps Script > Executions).
-- `MailApp.getRemainingDailyQuota()` throws instead of returning a number when run in the GAS editor.
-
-**Phase to address:**
-GAS deployment phase and any subsequent `google-apps-script.js` update. This is an ops step, not a code fix — it must be documented as a mandatory action whenever new GAS scopes are added.
+Mistakes that cause rewrites, data loss, or fundamental feature failure.
 
 ---
 
-### Pitfall 2: Term-Stuffing Passes Keyword Validation Without Understanding
+### Pitfall 1: Recharts ResponsiveContainer Renders with Zero Height in React 19 Production Builds
 
 **What goes wrong:**
-A candidate who knows the game is played by keyword presence can write a query like:
-`index=email_logs | stats count | search src_ip | table user_agent recipient` — a syntactically nonsensical or incomplete query that nonetheless contains all required terms. The `String.includes()` engine scores it 10/10. The reviewer sees "Strong" on SPL but the query would never run in Splunk.
+A `<BarChart>` or `<LineChart>` wrapped in `<ResponsiveContainer>` renders correctly in `npm run dev` but shows a blank space (0px height, chart invisibly rendered) in the `npm run build` production output. The dashboard renders, but all charts are empty boxes.
 
 **Why it happens:**
-Substring matching has no awareness of how terms are used — a term in a comment, a string literal, or as a fragment of a field name (`count_by_src_ip`) all satisfy a match for `count` or `src_ip`. There is no context-of-use check.
-
-**How to avoid:**
-1. Author required terms as **multi-token phrases** where possible (`| stats count by`, `| table src_ip`, `index=email_logs`) rather than single tokens (`stats`, `count`, `src_ip`). Phrase matching is much harder to satisfy by accident while still achievable with a correct query.
-2. Add 2–3 **blocked terms** per question that represent the "obvious stuffing words" a gamer would use (e.g., if the expected query uses `dedup`, block `dedup stats count` as a phrase, or block known nonsense patterns).
-3. The reviewer view displays the raw SPL — a human reviewer can spot-check term-stuffed submissions in seconds. Note this explicitly in reviewer UI as a review hint: "Check SPL is syntactically coherent, not just keyword-present."
-4. Accept this is the chosen validation fidelity. The project spec explicitly rules out query execution. Document the known limitation in `socQuestions.js` comments so future maintainers understand the trade-off.
+Recharts' `ResponsiveContainer` internally checks whether its child is a "chart" component by inspecting the child's `displayName`. In development builds React preserves `displayName` (e.g., `"CategoricalChart"`), so the check passes and both width and height are set. In Vite production builds, React 19 minifies component names — `displayName` becomes `"Component"` — which causes the `isChart` check to evaluate to false. Only width is set; height defaults to zero. This is a confirmed Recharts issue against React 19 (GitHub issue #5173, reported late 2024).
 
 **Warning signs:**
-- Test candidates who score 10/10 on SPL but whose written queries look fragmented or nonsensical in the reviewer view.
-- If multiple candidates score 10/10 with very different-looking queries, investigate whether the term list is too loose.
+- Dashboard charts look correct at `localhost:5173` but are blank after deploying to GitHub Pages.
+- Browser DevTools shows a `<svg>` element with `width=600 height=0` in the production build.
+- No console errors — the chart renders silently with zero height.
 
-**Phase to address:**
-Term-list authoring phase (when `socQuestions.js` is written or revised). The scoring engine itself does not need to change — the fix is in the data, not the code.
+**Prevention:**
+1. Always supply explicit `height` to `ResponsiveContainer` — never rely on `height="100%"` with no fixed parent height: `<ResponsiveContainer width="100%" height={280}>`. A fixed pixel height bypasses the ResponsiveContainer height calculation that breaks.
+2. Wrap the chart in a parent `<div style={{ height: 280 }}>` if percentage height is needed — the parent provides the measured height.
+3. Test charts with `npm run build && npm run preview` (Vite's local production preview) before any admin panel phase is considered done. Never accept "looks good in dev" for charts.
+4. Pin Recharts to the tested version (`recharts@^3.3.0` or later if the issue is patched). Watch the issue tracker before upgrading.
+
+**Phase to address:** Dashboard phase (Phase 1 of v1.2). The fixed-height wrapper pattern must be established on the first chart component written — retrofitting it later requires touching every chart instance.
 
 ---
 
-### Pitfall 3: False Fails from Alternate Valid SPL Syntax
+### Pitfall 2: jsPDF Vite Build Breaks Due to CommonJS/ESM Module Mismatch
 
 **What goes wrong:**
-A candidate writes a perfectly correct and idiomatic SPL query using a synonym or alternate form:
-- Expected required term: `earliest=-24h` — candidate writes `earliest=-1d` (equivalent in Splunk)
-- Expected: `| stats count by src_ip` — candidate writes `| stats dc(src_ip)` (also valid)
-- Expected: `index=proxy_logs` — candidate uses `index=web_proxy` (same index, different name convention)
-
-The engine marks these required terms as missed and the score drops even though the query is technically correct.
+Adding `jspdf` (or `jspdf` + `jspdf-autotable`) to `package.json` causes `npm run build` to fail with a cryptic error: `Could not resolve '../internals/define-window-property' from '../internals/define-window-property?commonjs-external'`. Alternatively, the build succeeds but the PDF generation throws `TypeError: Cannot read properties of undefined` at runtime in the production bundle.
 
 **Why it happens:**
-`String.includes()` is an exact-substring check. Splunk has multiple valid syntaxes for the same operation. The term list was authored with one canonical form in mind.
-
-**How to avoid:**
-1. In `validateSpl.js`, allow each required term to be either a **string** or a **`{ anyOf: string[] }`** object. If an element is `{ anyOf: ['earliest=-24h', 'earliest=-1d', 'earliest=-86400s'] }`, the check passes if any variant is found. This structure is already in the codebase (`socQuestions.js` Q1 optional terms use `anyOf`) — extend it to required terms for time-range and aggregation variants.
-2. When authoring `socQuestions.js`, brainstorm at least two equivalent forms for each time-range or aggregation term and include both as `anyOf` variants.
-3. Keep the initial release pragmatic: author required terms around the most common idiom, but plan the `anyOf` structure from day one so it is easy to extend when false fails are found in review.
+jsPDF ships a CommonJS distribution. Vite 7 defaults to native ESM for everything in the project. The Vite CommonJS interop plugin (`@vitejs/plugin-commonjs`, built into Vite) must transform jsPDF at build time. The transformation can fail with certain jsPDF versions or certain `optimizeDeps` configurations. This is a documented Vite issue (Vite issue #11496, issue #16320). The `jspdf-autotable` plugin also mutates the `jsPDF` prototype, which requires that the import order and the `doc.autoTable` call happen in the right sequence — order-sensitive module side effects are fragile under Vite's tree-shaking.
 
 **Warning signs:**
-- Reviewer sees a query that looks correct but scored 4/10.
-- Reviewer manually reads the query and cannot find the error.
-- Feedback message shows "Missing keyword: `earliest=-24h`" but the raw SPL shows `earliest=-1d`.
+- `npm run dev` works but `npm run build` outputs a warning about CommonJS modules.
+- PDF generation works locally but produces a blank document or throws in GitHub Pages deployment.
+- `jspdf-autotable` is imported but `doc.autoTable is not a function` appears at runtime.
 
-**Phase to address:**
-Both the authoring phase (`socQuestions.js` data shape) and the validation engine phase (`validateSpl.js` — the `anyOf` structure must be supported before content is authored against it).
+**Prevention:**
+1. Use dynamic import for jsPDF — load it only when the user clicks "Download PDF": `const { jsPDF } = await import('jspdf')`. This defers the CommonJS transformation to the lazy chunk and avoids polluting the main bundle. jsPDF is ~330KB minified, ~110KB gzipped — far too large for the main bundle of a game that most users never access the admin panel for.
+2. For `jspdf-autotable`: import it inside the same dynamic import block, not at the top of the file: `await import('jspdf-autotable')` after `jsPDF` is loaded. This preserves the prototype mutation order.
+3. Add `jspdf` to `vite.config.js` `optimizeDeps.include` if the dynamic import approach does not resolve the build error: `optimizeDeps: { include: ['jspdf', 'jspdf-autotable'] }`.
+4. Verify with `npm run build && npm run preview` — download the PDF from the local production build before deploying.
+
+**Phase to address:** PDF report phase. The dynamic-import pattern must be decided before writing PDF generation code — it affects how the function is structured.
 
 ---
 
-### Pitfall 4: Whitespace and Case Sensitivity Cause Silent False Fails
+### Pitfall 3: jsPDF Silently Drops Non-ASCII Characters (Names, Email Addresses, SPL Symbols)
 
 **What goes wrong:**
-A required term is authored as `index=email_logs` but the candidate writes `index = email_logs` (space around `=`), or `INDEX=email_logs` (uppercase). The `toLowerCase()` + `includes()` approach handles case but does not normalise whitespace inside multi-token terms.
+A candidate named "Léa Müller" or "Ana González" appears as "L_a M_ller" or blank in the downloaded PDF. SPL queries containing `|`, `"`, `{`, `}` may appear as question marks or be dropped entirely. The PDF renders correctly in the browser but the downloaded file has missing characters.
 
 **Why it happens:**
-`lower.includes('index=email_logs')` returns false when the candidate's text contains `index = email_logs` because the search string has no space around `=`. Whitespace normalisation is not applied before the check.
+jsPDF's default built-in fonts (Helvetica, Times, Courier) only support Latin-1 (ISO 8859-1). Any character outside that range is silently replaced with a question mark or dropped. This affects:
+- Accented characters in candidate names (`é`, `ü`, `ç`, `ñ`)
+- SPL pipe characters (`|`) — rendered as `|` in some fonts, dropped in others
+- Email addresses with `+` signs or unusual TLDs
 
-**How to avoid:**
-In `validateSpl.js`, before doing `includes()` checks, normalise the candidate text by collapsing all runs of whitespace to a single space:
+The issue is particularly silent: no exception is thrown, and the PDF appears to generate successfully. Only inspection of the downloaded file reveals the corruption.
+
+**Warning signs:**
+- PDFs downloaded by test users with non-ASCII names show garbled text.
+- SPL query text in the PDF is missing pipe characters.
+- The browser `console.log` shows no errors during PDF generation.
+
+**Prevention:**
+1. Bundle a Unicode-compatible font (e.g., NotoSans-Regular) as a base64 string or import it via `doc.addFileToVFS()` + `doc.addFont()` before writing any text. This is the only reliable fix — jsPDF cannot render Unicode without an embedded font.
+2. For the admin panel scope (candidate names, emails, SPL queries in English), the risk is primarily accented characters in names. Add a sanitisation fallback: `name.normalize('NFC')` before writing to PDF. This does not fix the font issue but reduces the character range to the most common Latin extended set.
+3. Test PDF generation with a candidate name containing at least one accented character (e.g., "José") and one SPL query containing `|` before considering the PDF feature done.
+4. If adding a full Unicode font is too costly (NotoSans adds ~500KB to the lazy PDF chunk), generate PDFs with ASCII-only content and display a visible warning if the candidate name contains non-ASCII characters.
+
+**Phase to address:** PDF report phase. Font embedding must be decided before the PDF template is authored, as retrofitting font changes requires re-authoring all text positioning.
+
+---
+
+### Pitfall 4: GAS `doGet` Returns the Entire Summary + SOCData Sheet on Every Admin Panel Load — Slow and Will Break at Scale
+
+**What goes wrong:**
+The admin panel requires data from two sheets: `Summary` (one row per candidate, classification scores) and `SOCData` (6 rows per candidate, SOC question answers). A naive implementation adds a new GAS action `getAdminData` that calls `getValues()` on both sheets and returns all rows as one JSON response. With 50 candidates this works. With 200+ candidates, the GAS script exceeds its 6-minute execution timeout or the JSON response exceeds the browser's parse capacity. The admin panel appears to hang or returns a timeout error.
+
+**Why it happens:**
+Each GAS `getValues()` call fetches an entire range synchronously. For `SOCData`, each candidate generates 6 rows — 200 candidates = 1,200 rows with 9 columns each. The in-memory join of `Summary` rows to their corresponding `SOCData` rows (by email + timestamp key) runs inside GAS's JavaScript V8 runtime, which has no JIT optimizations for this use case. The total execution time for read + join + JSON serialisation + HTTP response write can approach the 6-minute limit at a few hundred rows.
+
+**Warning signs:**
+- Admin panel load works fine during development with 5–10 test submissions but hangs in staging with 50+ real submissions.
+- GAS Executions log shows execution times increasing linearly with candidate count.
+- `fetch` in the browser resolves with a timeout error or `{"error": "Script timeout"}` response.
+
+**Prevention:**
+1. Design the GAS `getAdminData` action with pagination from the start: `?action=getAdminData&passcode=...&limit=50&offset=0`. Even if v1.2 never exceeds 50 candidates, the parameter structure avoids a breaking schema change later.
+2. Return `Summary` and `SOCData` as separate GAS actions — `getSummary` and `getSOCDetails?email=...` — so the dashboard loads the summary table first (fast, one sheet), then loads per-candidate details on demand (slow, 6 rows per candidate). This lazy-loads the expensive join.
+3. Cache the admin data in React `useState` after first fetch. Do not re-fetch on every visit to the admin panel within the same browser session. The passcode-gated panel is for synchronous review sessions, not live monitoring.
+4. Use `getRange(2, 1, lastRow - 1, numCols).getValues()` with explicit column bounds — do not call `getDataRange()`, which is slower and returns formatting metadata in addition to values.
+
+**Phase to address:** GAS backend extension phase. The API shape (single vs. split endpoints, pagination parameters) must be decided before writing the fetch layer in the React admin panel, as changing it after both sides are built requires touching both.
+
+---
+
+### Pitfall 5: Admin Panel Replaces `ReviewerScreen` in App.jsx — Stale Data and Back-Navigation Break Existing Flow
+
+**What goes wrong:**
+The existing `ReviewerScreen` is mounted at `gs.screen === SCREENS.REVIEWER` with no local state beyond the fetch result. Replacing it with a richer `AdminPanel` component introduces multi-tab navigation (Overview / Candidate Table / Answer Sheets / Reports), which requires its own internal screen state. Two problems emerge:
+1. **Stale data:** The admin panel fetches submission data on mount. If the admin navigates to the landing page and back to the admin panel, the component remounts (because `SCREENS.REVIEWER` unmounts it), losing all fetched data and triggering a second GAS fetch with a loading spinner.
+2. **State leak into game:** If the admin panel manages any state that is held in a parent hook (`useGameState`, `useSocState`), navigating back to the landing screen leaves that state populated, potentially affecting the first candidate who loads the game after the admin session.
+
+**Warning signs:**
+- Navigating from admin panel back to landing and then back to admin shows a loading spinner even though no new submissions have occurred.
+- GAS Executions log shows double fetches for admin data.
+- Console errors about reading properties of null after navigating from admin panel to Zone 1.
+
+**Prevention:**
+1. Keep all admin panel state (fetched data, active tab, search term, selected candidate) inside the `AdminPanel` component itself using `useState`, not in `useGameState` or `useSocState`. The admin panel is not part of the game flow — it must be fully isolated.
+2. Cache fetched data in `sessionStorage` or a React `useRef` after first fetch. On remount, restore from cache if the session is still valid (passcode was already entered). This prevents the double-fetch on navigation.
+3. The `passcode` state in the existing `ReviewerScreen` is local `useState` — maintain this pattern. The admin panel should re-prompt for the passcode after a hard refresh but not on in-session navigation.
+4. Use `key` on the `AdminPanel` component to explicitly control remount vs. persist: `<AdminPanel key="admin-panel" .../>` (stable key = persists state on re-render). If a fresh state is always desired on admin entry, use a timestamp key.
+5. Run `gitnexus_impact({target: "SCREENS", direction: "upstream"})` before adding any new SCREENS enum value — the existing 11 screens are already wired; an accidental key collision silently renders the wrong screen.
+
+**Phase to address:** Admin panel integration phase. The isolation pattern (all state inside `AdminPanel`, no `useGameState` pollution) must be established before any component is wired.
+
+---
+
+### Pitfall 6: Client-Side Search and Filter Loads All Submissions into Browser Memory Upfront
+
+**What goes wrong:**
+The candidate management view offers search by name/email and filter by grade band. A naive implementation fetches all submissions at login, stores them in React state, and filters/sorts in-component. With 200 candidates and 6 SOC rows per candidate, the total data is ~1,200 rows × ~9 columns. This is not technically "large" by browser standards, but the GAS fetch itself becomes slow (see Pitfall 4), and the in-browser filter+sort runs on every keystroke, potentially causing noticeable lag on lower-end devices.
+
+**Why it happens:**
+There is no server-side filtering in the GAS backend — it returns all rows. The React component re-renders on every search input character with `submissions.filter(s => s.name.includes(query))` over the full array.
+
+**Prevention:**
+1. Debounce search input with a 150–250ms delay before filtering — the user typing "smith" should only trigger one filter pass, not five. Use a `useEffect` with a `setTimeout` cleanup (no library needed — this is 8 lines of code).
+2. Use `useMemo` for filtered results: `const filtered = useMemo(() => submissions.filter(...), [submissions, query, gradeFilter])`. This memoizes the filter pass and only re-runs when the dependencies change, not on every render.
+3. For the candidate table itself, render only visible rows (virtual scrolling) if the submission count exceeds ~100 rows. At the expected scale (50–200 candidates per assessment cycle), plain `Array.map` rendering is fine — do not add `react-window` or `react-virtual` until there is a measured performance problem.
+4. Accept that pagination is not necessary for this use case (single-session reviewer with at most a few hundred rows). Document this assumption so it is not re-litigated during implementation.
+
+**Phase to address:** Candidate management / data table phase.
+
+---
+
+## Moderate Pitfalls
+
+Mistakes that cause visible defects or reviewer friction but not data loss.
+
+---
+
+### Pitfall 7: CSV Export Truncates or Corrupts SPL Query Text Containing Commas and Newlines
+
+**What goes wrong:**
+The CSV export uses a naive `array.join(',')` row builder. SPL queries frequently contain commas (e.g., `| stats count by src_ip, user`), and explanation text often contains newlines. The resulting CSV has rows that span multiple lines in spreadsheet software, with cells split at the wrong position. Excel shows garbled data; Google Sheets imports incorrectly.
+
+**Why it happens:**
+RFC 4180 CSV requires values containing commas, double-quotes, or newlines to be wrapped in double-quotes, with internal double-quotes escaped as `""`. A simple `join(',')` does none of this.
+
+**Warning signs:**
+- Downloaded CSV opened in Excel shows candidate names on row 1 but SPL query text overflowing into rows 2 and 3.
+- Cell counts per row are inconsistent in the downloaded file.
+- The existing `csvEscape()` function in `google-apps-script.js` already implements correct escaping — but the client-side CSV generation must replicate this logic independently.
+
+**Prevention:**
+The `google-apps-script.js` already has a correct `csvEscape()` function (lines 398–404). Copy this logic exactly into the client-side CSV builder:
 ```js
-const normalised = text.toLowerCase().replace(/\s+/g, ' ').trim();
+function csvEscape(val) {
+  const s = String(val == null ? '' : val);
+  if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
 ```
-Then check `normalised.includes(term.toLowerCase().replace(/\s+/g, ' '))`.
+Apply `csvEscape` to every cell, not just text fields. Test with a submission where the SPL query contains `| stats count by src_ip, user` and an explanation containing a newline.
 
-Author terms in the format most candidates will actually type — `index=email_logs` not `index = email_logs` — and normalise both sides.
-
-**Warning signs:**
-- A term like `| stats count by` fails for a candidate whose query reads `|stats count by` (no space after pipe).
-- Reviewer inspects the SPL and can visually see the required term present.
-
-**Phase to address:**
-`validateSpl.js` implementation phase. One-line fix; include it from the start rather than debugging it post-authoring.
+**Phase to address:** CSV export phase. The escape function must be present from the first working CSV export — do not add it as a patch after reviewers report corruption.
 
 ---
 
-### Pitfall 5: Enriching Evidence Data Structure Breaks SocRound Evidence Rendering
+### Pitfall 8: PDF Download Silently Fails on iOS Safari (Blob URL Handling)
 
 **What goes wrong:**
-The v1.1 overhaul adds richer investigation context to each question — structured log lines, timestamps, IP addresses, user agents. These are added as new fields to the `evidence.email`, `evidence.proxy`, and `evidence.edr` objects in `socQuestions.js`. `SocRound.jsx` currently renders evidence by calling `Object.entries(question.evidence.email).map(([key, val]) => ...)` and auto-labels keys by converting camelCase to title case. Adding new fields like `logLines: [...]` (an array) or `rawHeader: "..."` (a multi-line string) causes the renderer to display `[object Object]` or raw unwrapped array entries, breaking the evidence panel's readable layout.
+The PDF download works on Chrome and Firefox on desktop. On iPhone/iPad Safari, clicking "Download PDF" either opens a blank page, opens the PDF in the browser tab instead of downloading it, or does nothing. The reviewer uses an iPad at their desk — the feature appears broken for their primary device.
 
 **Why it happens:**
-The evidence renderer in `SocRound.jsx` (lines 136–148, 161–174, 185–199) assumes all values are flat strings. It has no type checking — `val && (...)` will render arrays and objects as their coerced string representation. This worked for v1's simple key-value evidence structure but will break when v1.1 adds richer nested or array data.
-
-**How to avoid:**
-1. Before enriching `socQuestions.js`, audit `SocRound.jsx`'s evidence renderer and add explicit type guards: if `Array.isArray(val)`, render as a list; if `typeof val === 'object'`, render as a nested block; if `typeof val === 'string'`, render inline.
-2. Define the evidence schema explicitly (e.g., a JSDoc typedef in `socQuestions.js`) so any future field additions have a documented shape contract.
-3. Alternatively, restructure evidence as an ordered array of `{ label, value, type }` display objects rather than a plain object — this separates display order and label from field names and removes the auto-labelling fragility.
-4. Add at least one manual render check per question after editing `socQuestions.js` — open the app, navigate to each SOC question, and verify the evidence panel displays correctly.
+Safari on iOS does not support `<a href="blob:..." download="filename.pdf">` in the same way desktop browsers do. `URL.createObjectURL` returns a blob URL, but iOS Safari ignores the `download` attribute on anchor elements pointing to blob URLs. Instead it navigates to the blob URL, which shows a blank page (iOS Safari cannot render PDF blobs inline in the same way desktop Chrome does).
 
 **Warning signs:**
-- Evidence panel shows `[object Object]` or a raw comma-separated list in the value column.
-- A new evidence field is added to `socQuestions.js` but the evidence panel layout looks broken or truncated on that question.
-- `console.error` from React about rendering objects as children.
+- "Download PDF" works on MacOS Chrome/Safari but shows a blank new tab on an iPhone.
+- Developer Tools network panel shows the blob URL being navigated to rather than triggering a file download.
 
-**Phase to address:**
-Any phase that modifies `socQuestions.js` evidence shape or `SocRound.jsx`'s evidence rendering block.
+**Prevention:**
+1. Use `window.open(blobUrl)` on iOS Safari, which opens the PDF inline in a new tab where the user can use the share sheet to save it. Detection: `const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)`.
+2. Alternatively, generate the PDF and offer a `<a href={dataUrl} download="report.pdf">` where `dataUrl` is a `data:application/pdf;base64,...` string — data URLs work more consistently across iOS Safari for PDF content than blob URLs.
+3. Test PDF download on at least one mobile browser before considering the feature done. The reviewer access point is a fixed-location admin task — if the reviewer uses a desktop, mobile support is lower priority. Document this explicitly.
+
+**Phase to address:** PDF report phase. iOS Safari compatibility must be tested before the feature is marked complete.
 
 ---
 
-### Pitfall 6: Client-Side Passcode Is Visible in the Built JS Bundle
+### Pitfall 9: Dashboard Statistics Are Computed in the React Component — Recalculated on Every Render
 
 **What goes wrong:**
-If the reviewer passcode is stored as `VITE_REVIEWER_PASSCODE` in `.env.local` and injected via `import.meta.env.VITE_REVIEWER_PASSCODE` at build time, Vite embeds this as a plain string literal in the built JavaScript. Anyone who downloads the page and runs `strings dist/assets/index-*.js | grep flagmail` will find the passcode in seconds.
-
-**Why it happens:**
-Vite's `import.meta.env` substitution is compile-time string replacement. The resulting JS bundle contains the literal passcode value. This is a well-known Vite/webpack characteristic — environment variables prefixed `VITE_` are intentionally exposed to the client bundle.
-
-**How to avoid:**
-1. Do not store the passcode as a `VITE_` prefixed env var. Instead, send the passcode in the fetch call to the GAS endpoint and let the server validate it via `PropertiesService.getScriptProperties()`. The client code sends the passcode to `?action=getSOCSubmissions&passcode=<input>` — the client never needs to know the correct passcode value, only the server does. This is already implemented correctly in the current `google-apps-script.js` (`PropertiesService.getScriptProperties().getProperty('REVIEWER_PASSCODE')`).
-2. Verify `ReviewerScreen.jsx` does NOT compare the entered passcode against any local constant. It must only pass it to the GAS endpoint.
-3. If any dev fallback is kept (`import.meta.env.VITE_REVIEWER_PASSCODE || 'dev-only'`), document explicitly that this fallback is a dev convenience, not the production passcode, and that the real gate is the server-side `PropertiesService` check.
-
-**Warning signs:**
-- Running `npm run build` then searching `dist/assets/index-*.js` reveals the production passcode as a plaintext string.
-- The `.env.local` file is committed to git (`.gitignore` must include `*.local`).
-- `ReviewerScreen.jsx` contains a hardcoded fallback passcode string that is the same as the production passcode.
-
-**Phase to address:**
-`SocReviewer.jsx` / `ReviewerScreen.jsx` implementation and `google-apps-script.js` extension. Both must be addressed together — the client must NOT compare the passcode; it must send it to the server.
-
----
-
-### Pitfall 7: Zone 1–3 Regression When Modifying SCREENS Enum or App.jsx Render Logic
-
-**What goes wrong:**
-The v1.1 overhaul requires changes to `App.jsx`'s screen rendering (adding or modifying SOC screens, reordering conditions, or adding new state fields). A change to the render switch-case or the `useGameState` / `useSocState` composition accidentally breaks the `advanceZone` path, the `handleSocNext` condition, or the leaderboard submit trigger for zones 1–3. Zones 1–3 are the established product — a regression here is a critical bug.
-
-**Why it happens:**
-`App.jsx` is the composition root for all hooks (`gs`, `sc`, `soc`) and all screen rendering. Any edit to the render block risks introducing a new early return, a wrong conditional branch, or a state field collision. The SOC zone was wired additively in v1 (`handleSocNext`, `SOC_RESULTS` render path), but v1.1 UI changes may require restructuring that render logic. Without a test for the zones 1–3 path, regressions are invisible until manual testing.
-
-**How to avoid:**
-1. Run a complete manual end-to-end test of zones 1–3 (all rounds, zone complete, leaderboard submit) before and after any `App.jsx` or `useGameState.js` change.
-2. Keep the `handleAdvanceZone` (zones 1–3) and `handleSocNext` (zone 4) code paths as separate, non-overlapping branches. Never combine them into a single handler.
-3. Before any `App.jsx` edit, note which screen states are rendered for zones 1–3 (`LANDING`, `TUTORIAL`, `ZONE_INTRO`, `ROUND`, `EXPLANATION`, `ZONE_COMPLETE`, `RESULTS`) and verify none of those branches are touched.
-4. Use the GitNexus impact analysis (`gitnexus_impact({target: "handleAdvanceZone", direction: "upstream"})`) before modifying any function that touches zone progression logic.
-
-**Warning signs:**
-- After an `App.jsx` edit, the "Start Game" button on `LandingScreen` does not advance to `TUTORIAL`.
-- Completing a round in zone 1 does not trigger `ExplanationCard`.
-- The leaderboard submit at `RESULTS` shows no data or throws a console error.
-- `ZONE_COMPLETE` appears for zone 4 instead of `SOC_RESULTS`.
-
-**Phase to address:**
-Any phase that touches `App.jsx`, `useGameState.js`, or the `SCREENS` enum — particularly Phase 3 (State Machine and Hook) of the current roadmap.
-
----
-
-### Pitfall 8: GAS CORS Blocks the Reviewer GET Fetch
-
-**What goes wrong:**
-The reviewer component calls `fetch(GAS_URL + '?action=getSOCSubmissions&passcode=...')` from a browser. GAS web apps deployed as "Access: Anyone" return CORS headers, but only for simple GET requests that do not trigger a preflight. If the reviewer fetch accidentally uses a `Content-Type: application/json` header or a non-simple method, the browser blocks it with a CORS error.
-
-**Why it happens:**
-The existing `submitToSheet` uses `mode: 'no-cors'` for POST submissions (which means the response is opaque and errors are silent). The reviewer GET needs to actually read the response, so `no-cors` cannot be used. If the fetch is not authored as a simple GET with no custom headers, it triggers a preflight that GAS does not handle.
-
-**How to avoid:**
-Author the reviewer fetch as a plain GET with no custom headers:
+The score overview dashboard computes average scores, grade band distribution counts, and pass/fail rates directly in the render function body:
 ```js
-fetch(`${GAS_URL}?action=getSOCSubmissions&passcode=${encodeURIComponent(passcode)}`)
-  .then(r => r.json())
-  .then(data => ...)
+const avg = submissions.reduce((s, r) => s + r.total, 0) / submissions.length;
+const bands = submissions.reduce((acc, r) => ({ ...acc, [r.grade]: (acc[r.grade]||0)+1 }), {});
 ```
-Do not add `Content-Type`, `Authorization`, or any custom header. Test in both Chrome and Firefox in dev before considering the feature done.
+With 200 submissions, these reduce calls run on every keystroke in the search box, every filter change, every Framer Motion animation tick that causes a parent re-render. The dashboard feels sluggish during interaction.
 
-**Warning signs:**
-- Console shows "CORS error" or "Access to fetch at GAS URL from origin ... has been blocked."
-- The POST submissions work but the reviewer GET fails.
-- The fetch call has a `headers` object or `method: 'POST'` where a simple GET would do.
+**Prevention:**
+Wrap all derived dashboard statistics in `useMemo` keyed to `submissions` (the source data, not the filtered view). The overview dashboard statistics should reflect all submissions, not just the filtered view — separate the "all data statistics" from the "filtered table rows":
+```js
+const stats = useMemo(() => computeDashboardStats(submissions), [submissions]);
+const filteredRows = useMemo(() => filterSubmissions(submissions, query, grade), [submissions, query, grade]);
+```
+This is a two-line change but prevents repeated quadratic work during table interactions.
 
-**Phase to address:**
-`ReviewerScreen.jsx` fetch implementation and `google-apps-script.js` `doGet` extension. Add an explicit `// no custom headers — GAS CORS requires simple GET` comment in the code.
-
----
-
-### Pitfall 9: Concept Keyword Matching Penalises Synonyms in Explanations
-
-**What goes wrong:**
-Expected concept keyword: `"lateral movement"`. Candidate writes: `"the attacker moved laterally to other systems"`. The substring check for `lateral movement` fails because the phrase is split across a sentence boundary.
-
-Or: expected concept `"credential harvesting"` — candidate writes `"credentials were harvested"` (plural/past tense). `includes('credential harvesting')` fails.
-
-**Why it happens:**
-Natural language explanations are paraphrased. Unlike SPL queries where there is a canonical syntax, explanations are free-form. Stemming and semantic equivalence are beyond plain `String.includes()`.
-
-**How to avoid:**
-1. Author concept keywords as the **shortest unambiguous root form** that still appears in natural writing: `"lateral"` instead of `"lateral movement"`, `"credential"` instead of `"credential harvesting"`. Shorter roots match more natural variants.
-2. Use the same `anyOf` mechanism as SPL terms: `{ anyOf: ['lateral movement', 'moved laterally', 'lateral spread'] }`.
-3. Keep the concept list short (3–5 per question). A 5-point score divided across 5 concepts gives 1 point per concept — tolerate one or two misses rather than trying to catch every synonym.
-4. The explanation score is 5 points (22% of total). The risk of false fails here affects the grade band less severely than SPL (10 points, 43%). Accept some imprecision in explanation scoring at v1.
-
-**Warning signs:**
-- Manual review of explanations shows correct reasoning that scores 2/5 because of synonym variation.
-- Multiple candidates score 0 on concepts that should be common knowledge.
-
-**Phase to address:**
-`socQuestions.js` authoring phase. Design the concept list with root-form keywords. The `anyOf` support in `validateSpl.js` applies equally to `validateExplanation`.
+**Phase to address:** Dashboard phase. Establish the `useMemo` pattern on the first statistics computation — do not add memoization as a performance fix after the fact.
 
 ---
 
-### Pitfall 10: SPL Submission Is Stored as Raw Text in Google Sheets — Formula Injection Risk
+### Pitfall 10: Admin Panel GAS Action Endpoint Exposes All Candidate Data to Anyone Who Knows the URL Structure
 
 **What goes wrong:**
-A candidate types `=HYPERLINK("https://evil.com","click")` as their SPL query. When this is written to the `SOCData` Google Sheet, Sheets interprets the leading `=` as a formula and executes it. At minimum this is a nuisance; at worst it can exfiltrate sheet data via `=IMPORTRANGE` or similar.
-
-**Why it happens:**
-The GAS `appendRow` call writes values directly without sanitising the first character. Google Sheets treats any cell value starting with `=`, `+`, `-`, or `@` as a formula.
-
-**How to avoid:**
-The current `google-apps-script.js` already implements `sanitiseCell()` correctly (lines 352–357) and applies it to `splText` and `explanation` in the `submitSOC` and `submitFinal` handlers. Verify this is not removed or bypassed during any v1.1 GAS edits.
+The existing `getSOCSubmissions` GAS action is passcode-gated: it checks `PropertiesService.getScriptProperties().getProperty('REVIEWER_PASSCODE')` before returning data. The new `getAdminData` action (or any new GAS action that returns candidate data) must replicate this check. If a developer adds a new action for convenience (`?action=getSummary`) and forgets to add the passcode check, the entire `Summary` sheet (with all candidate names, emails, scores) is accessible to anyone who knows the GAS URL — which is hardcoded in `src/config.js` and therefore visible in the public GitHub repository.
 
 **Warning signs:**
-- A cell in `SOCData` shows a hyperlink or a formula result instead of raw SPL text.
-- Sheet shows `#REF!` or `#ERROR!` in the SPL column.
+- A new GAS action returns data without a `passcode` parameter in its URL.
+- Any GAS action that reads from `Summary`, `RawData`, or `SOCData` does not check `PropertiesService`.
+- The GAS URL is discoverable in the public repo (`src/config.js` is committed).
 
-**Phase to address:**
-Any `google-apps-script.js` modification. Add `sanitiseCell` to the checklist for every new `appendRow` call.
+**Prevention:**
+1. Create a `checkPasscode(passcode)` helper function in `google-apps-script.js` that reads from `PropertiesService` and returns `true/false`. Call it at the top of every new `doGet` action that reads private data — before any `getValues()` call.
+2. All new admin GAS actions must follow the pattern:
+   ```js
+   if (!checkPasscode(e.parameter.passcode)) {
+     return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Unauthorized' }))
+       .setMimeType(ContentService.MimeType.JSON);
+   }
+   ```
+3. Run the `gitnexus_detect_changes()` check before committing any `google-apps-script.js` change to verify no unprotected action was accidentally added.
+
+**Phase to address:** GAS backend extension phase. The `checkPasscode` helper must be the first thing added to `google-apps-script.js` before any new admin actions are authored.
 
 ---
 
-### Pitfall 11: Silent Submission Failure Leaves Candidate Score Unrecorded
+### Pitfall 11: Recharts Bundle Added to Main Chunk Bloats Initial Load for All Players
 
 **What goes wrong:**
-The `submitFinal` in `useSocState.js` uses `mode: 'no-cors'` (opaque response), wraps all errors in `catch (_) {}`, and gives no user feedback on failure. If the GAS URL is wrong, the Apps Script has a quota error, or the network is offline, the submission silently fails and the reviewer sees nothing.
+`recharts` is added to `package.json` and imported at the top of `AdminPanel.jsx`. Vite includes Recharts in the main application bundle. All players loading FlagMail — the majority of whom are candidates who will never visit the admin panel — pay the Recharts bundle cost (~350KB minified, ~115KB gzipped) on every game load. First load time on mobile increases noticeably.
 
 **Why it happens:**
-The existing codebase has this as a documented LOW concern in `CONCERNS.md` ("Silent Email Check Failure Allows Bypass", "Silent Failure on Score Submission"). The SOC submission inherits the same fetch pattern. `mode: 'no-cors'` makes the response permanently unreadable — the browser cannot distinguish success from failure.
-
-**How to avoid:**
-1. After the fetch resolves (even with opaque response), show a "Submitted" confirmation. If the fetch rejects (network error), show "Submission failed — note your scores and contact the reviewer."
-2. Before leaving the SOC results screen, store the serialised submission in `sessionStorage` as a fallback — this is already implemented in `useSocState.submitFinal` (`sessionStorage.setItem("socSubmission", ...)`). Verify the data is actually written and recoverable.
-3. Do NOT attempt to read the GAS POST response body — `mode: 'no-cors'` makes it unreadable. The error branch is fetch rejection only.
+Vite bundles all static imports into the main chunk by default. `AdminPanel` is only mounted when `gs.screen === SCREENS.REVIEWER`, but if it is imported at the top of `App.jsx`, its dependencies (including Recharts) are included in the main bundle regardless.
 
 **Warning signs:**
-- Candidates complete Zone 4 but the reviewer's `SOCData` sheet has no rows.
-- The fetch call swallows errors silently with no UI indication.
-- `sessionStorage["socSubmission"]` is empty after zone completion (indicates the sessionStorage write is also failing).
+- `npm run build` output shows a single chunk significantly larger than before Recharts was added.
+- Lighthouse "First Contentful Paint" score drops after adding the admin panel.
+- `vite-bundle-visualizer` shows `recharts` as a large segment of the main chunk.
 
-**Phase to address:**
-`useSocState.js` implementation phase (fetch + error handling). The `sessionStorage` backup is already implemented — verify it works.
+**Prevention:**
+1. Lazy-load the entire `AdminPanel` component with `React.lazy` + `Suspense`:
+   ```jsx
+   const AdminPanel = React.lazy(() => import('./components/AdminPanel.jsx'));
+   // ...
+   {gs.screen === SCREENS.ADMIN && (
+     <Suspense fallback={<div>Loading...</div>}>
+       <AdminPanel ... />
+     </Suspense>
+   )}
+   ```
+   Vite automatically code-splits lazy-loaded components into separate chunks. Recharts and jsPDF end up in the `AdminPanel` chunk, which is only downloaded when the admin panel is first accessed.
+2. For jsPDF, use dynamic import inside the PDF generation function (see Pitfall 2 above) — this further separates jsPDF from the Recharts chunk.
+3. Verify with `npm run build` output: the main `index-[hash].js` chunk must not grow significantly after adding the admin panel import.
+
+**Phase to address:** Admin panel integration phase. The lazy-load wrapper must be the first thing written before any admin component code — retrofitting it requires refactoring the import structure.
 
 ---
 
-### Pitfall 12: Q8 Multi-Stage Flattening Creates Mismatched Scoring Weights
+### Pitfall 12: Replacing `ReviewerScreen` Breaks the Existing Passcode Flow Without a Clear Transition Plan
 
 **What goes wrong:**
-Q8 (now Q5a/Q5b in the dataset) was split into two sub-questions to handle a multi-stage investigation. The `QUESTION_SCORE_MAP` in `useSocState.js` assigns Q5a: `{ primary: 5, secondary: 3, spl: 2, explanation: 0 }` and Q5b: `{ primary: 0, secondary: 0, spl: 10, explanation: 0 }`. If the content design decision on this split is revised (e.g., Q5b gains an explanation task, or Q5a's SPL weight changes), the `QUESTION_SCORE_MAP` must also change — but there is no compile-time enforcement connecting the question data to its score weights. A mismatch silently produces wrong totals.
+`ReviewerScreen.jsx` is a self-contained component with its own passcode `useState`, fetch logic, and submission list rendering. The v1.2 admin panel replaces it entirely. A naive approach deletes `ReviewerScreen.jsx` and substitutes `AdminPanel.jsx`. This breaks any code that still imports `ReviewerScreen` and leaves the `SCREENS.REVIEWER` enum value either dangling or incorrectly pointed.
 
 **Why it happens:**
-The score weights are defined in a separate constant (`QUESTION_SCORE_MAP`) rather than co-located with the question data. When `socQuestions.js` is updated, `useSocState.js` must also be updated manually. There is no schema validation asserting the two stay in sync.
-
-**How to avoid:**
-1. Add the score weights directly to each question object in `socQuestions.js` (e.g., a `scoreConfig: { primary: 5, secondary: 3, spl: 10, explanation: 5 }` field) instead of maintaining a parallel map in `useSocState.js`. This co-locates the content decision with its scoring weight.
-2. If the parallel map must stay in `useSocState.js` for architectural reasons, add a runtime assertion at hook initialisation: verify that every `SOC_QUESTIONS[i].id` has a corresponding entry in `QUESTION_SCORE_MAP`. If not, throw a descriptive error in development.
-3. The STATE.md blocker "Q8 multi-stage flattening requires a content design decision on how to split into sequential sub-questions" is unresolved — do not close Phase 1 until this decision is finalised and the score map updated to match.
+`App.jsx` references `SCREENS.REVIEWER` and renders `<ReviewerScreen onBack=... />`. Deleting the component without updating `App.jsx` causes a build error. Renaming `SCREENS.REVIEWER` to `SCREENS.ADMIN` without a migration plan may affect existing `ROADMAP.md` references or quick-task summaries that reference `REVIEWER`.
 
 **Warning signs:**
-- `socTotal` in `useSocState` does not match the sum of displayed per-question scores.
-- Q5b scores primary/secondary even though neither is applicable (weight should be 0).
-- Adding a new question to `socQuestions.js` results in `scoreSocRound` receiving `undefined` for the score config.
+- Build error: `Cannot find module './components/ReviewerScreen.jsx'` after deleting the file.
+- `SCREENS.REVIEWER` value exists in the enum but no component renders for it.
+- The "Reviewer" button on `LandingScreen` still navigates to the old screen after replacement.
 
-**Phase to address:**
-Phase 1 (Question Dataset) and the data-design decision gate on Q5a/Q5b. Must be resolved before Phase 2 (Validation and Scoring Utilities) can be tested against the full question set.
+**Prevention:**
+1. Do not delete `ReviewerScreen.jsx` in the same commit that creates `AdminPanel.jsx`. Instead: (a) create `AdminPanel.jsx`, (b) update `App.jsx` to render `AdminPanel` for `SCREENS.REVIEWER` (or a new `SCREENS.ADMIN` value), (c) verify the app builds and the admin entry works, (d) then delete `ReviewerScreen.jsx` in a follow-up commit.
+2. Keep the `SCREENS.REVIEWER` enum value name if changing it introduces risk of missing references. The admin panel replacing the reviewer screen is a UX decision, not an enum naming decision. A reviewer/admin distinction is fine at the UI level; the enum key name is internal.
+3. Update the landing screen button label from "Reviewer" to "Admin" only after the component replacement is confirmed working.
+
+**Phase to address:** Admin panel integration phase. The transition plan (create → wire → verify → delete) must be documented in the phase plan before coding starts.
+
+---
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Dashboard charts | Recharts React 19 production height=0 bug (Pitfall 1) | Explicit pixel height on all ResponsiveContainer wrappers; test with `npm run preview` |
+| Dashboard charts | Recharts in main bundle (Pitfall 11) | `React.lazy()` on AdminPanel before first chart import |
+| Dashboard stats computation | Stats recalculated on every render (Pitfall 9) | `useMemo` for all aggregate statistics on the `submissions` array |
+| GAS backend — new admin endpoints | Unprotected GAS action exposes candidate data (Pitfall 10) | `checkPasscode` helper added to GAS before any new action is written |
+| GAS backend — fetching both sheets | GAS timeout on large submission counts (Pitfall 4) | Split `Summary` and `SOCData` fetches; add pagination parameters |
+| Candidate table — search/filter | All data in memory, expensive re-filter on every keystroke (Pitfall 6) | Debounce + `useMemo` for filtered rows |
+| CSV export | Commas in SPL queries corrupt CSV rows (Pitfall 7) | Use RFC 4180-compliant `csvEscape` on every cell |
+| PDF generation | jsPDF Vite CommonJS build failure (Pitfall 2) | Dynamic import; `optimizeDeps.include` in `vite.config.js` |
+| PDF generation | Non-ASCII characters dropped silently (Pitfall 3) | Embed a Unicode font or sanitise before writing |
+| PDF generation | iOS Safari blob URL does not trigger download (Pitfall 8) | Test on Safari mobile; use `data:` URL or `window.open` for iOS |
+| Admin panel wiring into App.jsx | Stale data on navigate-away-and-return (Pitfall 5) | Cache fetched data in `sessionStorage`; no admin state in `useGameState` |
+| ReviewerScreen replacement | Build breakage if delete-before-wire (Pitfall 12) | Create → wire → verify → delete sequence; never delete before wiring |
 
 ---
 
 ## Technical Debt Patterns
 
-Shortcuts that seem reasonable but create long-term problems.
+Shortcuts that seem reasonable but create problems specific to the v1.2 admin panel.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Single required-term string (no `anyOf`) | Simple data structure, fast to author | False fails accumulate as real candidates use alternate syntax; content must be retrofitted | Only if term list is exhaustively reviewed against multiple valid query variants before release |
-| Passcode hardcoded in component source (no env var, no server check) | Zero config needed | Passcode visible in git history and built JS bundle; anyone with the URL can read all SOC submissions | Never — always use server-side `PropertiesService` check |
-| No `sessionStorage` backup for SOC submission | Less code | If network blips during submit, candidate's score is permanently lost; no recovery path | MVP-acceptable only if candidates are supervised and can re-submit immediately |
-| Concept keywords as exact phrases (not root forms) | Easier to author | High false-fail rate on explanation score; reviewer workload increases as they manually correct scores | Never — always author concept keywords as shortest unambiguous root |
-| Copying `submitToSheet`'s silent `catch (_) {}` error handling | Consistent with existing code | SOC candidates have no feedback if their score was not saved; creates reviewer confusion | Never for SOC — at minimum show a user-visible error message |
-| Score weights in `useSocState.js` QUESTION_SCORE_MAP (not co-located with question data) | Existing pattern, easy to discover | Drift between question content and scoring weights; no compile-time enforcement | Acceptable temporarily if a runtime assertion guards the map on init |
-| Object.entries() auto-render for evidence panel in SocRound | Zero template code needed per question | Breaks on non-string values (arrays, nested objects); requires all evidence fields to remain flat strings | Only if evidence data remains simple key-value pairs with no nested arrays |
-| Hardcoded reviewer email addresses in GAS | Easy to deploy | Must edit and redeploy GAS to change recipients; email addresses exposed in version history | Never for production — move to `PropertiesService` or a config sheet |
+| `import AdminPanel from './components/AdminPanel'` at top of App.jsx (static import) | Simpler code | Recharts/jsPDF in main bundle; every candidate pays the load cost | Never — use `React.lazy()` |
+| Single `getAdminData` GAS action returning all rows from both sheets | Simple API surface | GAS timeout at scale; one slow query blocks all admin data | Only for prototype; always add pagination before first real deployment |
+| `array.join(',')` for CSV cell building | 1-line CSV generation | Breaks on SPL queries with commas; corrupts spreadsheet import | Never — always use RFC 4180-compliant escaping |
+| All admin panel state in `useGameState` via a new `adminData` field | Survives navigation | Admin data contaminates candidate game state; hard to clear cleanly | Never — all admin state must live inside AdminPanel or a dedicated `useAdminState` hook |
+| Computing dashboard statistics inline in JSX | No boilerplate | Recalculated on every render; slow with 200+ submissions | Never past the prototype stage — `useMemo` on first extraction |
+| Hardcoded `height="100%"` on Recharts ResponsiveContainer | "Responsive" label | Renders at 0px in React 19 production builds | Never — always provide a fixed fallback height |
+| Passcode checked in React component (`if passcode === 'admin123'`) | No GAS round-trip | Passcode visible in built JS bundle and git history | Never — passcode must be validated server-side via PropertiesService |
 
 ---
 
-## Integration Gotchas
+## "Looks Done But Isn't" Checklist for v1.2
 
-Common mistakes when connecting to Google Apps Script.
-
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| GAS MailApp — new scope after redeploy | Assuming new version inherits old authorization; email silently fails | Run any MailApp function in GAS editor to trigger re-authorization dialog before deploying new version |
-| GAS GET for reviewer data | Adding `Content-Type: application/json` header causes preflight; GAS returns CORS error | Plain `fetch(url)` with no headers; GAS only allows simple requests without preflight |
-| GAS POST for SOC submission | Using `mode: 'cors'` expecting to read response; GAS POST does not set CORS headers | Use `mode: 'no-cors'`; treat all POSTs as fire-and-forget; show UX confirmation regardless |
-| GAS sheet write (SPL text) | Writing raw candidate input directly to sheet | Prefix cells starting with `=`, `+`, `-`, `@` with apostrophe via `sanitiseCell()` — already implemented; do not remove |
-| GAS PropertiesService for passcode | Setting passcode in `doGet` source code | Set via `File > Project properties > Script properties` in GAS editor; read with `PropertiesService.getScriptProperties().getProperty('REVIEWER_PASSCODE')` |
-| GAS PropertiesService for recipients | Hardcoding reviewer emails in GAS source | Move to `PropertiesService` key `REVIEWER_EMAILS` (comma-separated) so ops can update without a code redeploy |
-| GAS new sheet (`SOCData`) | Assuming sheet exists after first deploy | Use the existing `ensureSOCSheet` pattern — already implemented; verify it is called before every `appendRow` |
-| GAS MailApp daily quota | Sending to 4 recipients per submission; large candidate volumes hit the 100 emails/day (consumer Gmail) or 1,500/day (Workspace) limit | Monitor quota via `MailApp.getRemainingDailyQuota()`; switch to `GmailApp.sendEmail()` for higher Workspace quota if limit is hit |
-| Evidence panel rendering | Adding array or object fields to `evidence.email` or `evidence.proxy` in `socQuestions.js` | Audit `SocRound.jsx` evidence renderer for type guards before enriching evidence structure; add explicit handling for arrays and nested objects |
-
----
-
-## Performance Traps
-
-Patterns that work at small scale but fail as usage grows.
-
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| GAS returns entire SOCData sheet on every reviewer GET | Reviewer page slow; GAS 30s timeout on large sheets | For v1 (small candidate volume) acceptable; add `?limit=&offset=` params before exceeding ~500 rows | ~500+ SOCData rows (depends on row count × column width) |
-| All 10 Lottie badge animations bundled statically in BadgeToast | Large initial JS bundle (~200–400KB for animations); slow first load on mobile | Lazy-load Lottie assets via dynamic `import()` when badge triggers; not needed for Zone 4 (no badge yet) | Noticeable on 3G/mobile; already flagged in CONCERNS.md |
-| `socQuestions.js` fully bundled at startup | All 6 questions loaded before Zone 1 even starts | For v1 acceptable (~30KB); split by zone before data exceeds ~100KB | If question count grows to 20+ with rich evidence strings |
-| `Object.entries()` auto-render over growing evidence objects | Evidence panel grows uncontrollably with new fields; layout breaks | Define a fixed display schema for evidence; only render known fields in defined order | As soon as a non-string (array, nested object) field is added |
-
----
-
-## Security Mistakes
-
-Domain-specific security issues beyond general web security.
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| `VITE_REVIEWER_PASSCODE` in built JS bundle | Anyone inspecting the bundle finds the passcode and can read all SOC submissions | Do not use `import.meta.env` for passcode comparison on the client; send passcode to server and compare there via `PropertiesService` |
-| Passcode in GET query param without HTTPS | Query params appear in GAS execution logs, browser history if bookmarked | GAS is always HTTPS; avoid `Logger.log(e.parameter.passcode)` in GAS — do not log the raw passcode |
-| Formula injection via candidate SPL or explanation text | `=IMPORTRANGE(...)` in a cell can exfiltrate sheet data to an external URL | `sanitiseCell()` in GAS before every `appendRow` write — already implemented; verify it is not removed |
-| `.env.local` committed to git | Passcode enters version history permanently | Verify `.gitignore` includes `*.local` (standard Vite template already does this; confirm before first commit) |
-| Reviewer email addresses hardcoded in GAS source | Personal/corporate email addresses in git history; must redeploy to change recipients | Move to `PropertiesService` key `REVIEWER_EMAILS` |
-| Candidate name injected into email subject line | `payload.name` appears in the subject: `'Email Abuse Assessment - "' + (payload.name || '') + '"'`; a candidate named `" onclick="alert(1)"` sends a malformed subject | For plain-text email body and standard email clients this is low risk; add basic name sanitisation (`name.replace(/[^a-zA-Z0-9 \-']/g, '')`) if names are user-controlled |
-| localStorage-based attempt blocking is trivial to bypass | Candidates can clear localStorage and retake the assessment | The server-side `checkEmail` GAS query is the real gate; localStorage check is advisory only — this is the current design and is acceptable |
-
----
-
-## UX Pitfalls
-
-Common user experience mistakes in this domain.
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Showing "Missing keyword: `earliest=-24h`" as feedback when candidate used `earliest=-1d` | Candidate who wrote a valid query feels the system is wrong; erodes trust in the assessment | Either resolve the false fail at authoring time with `anyOf`, or phrase feedback as "Query may be missing time-scoping — verify your time filter" rather than quoting the exact expected token |
-| No character count or minimum length signal on SPL textarea | Candidates submit a one-liner and miss the explanation entirely, not realising they left a field blank | Add a minimum-character hint below the textarea ("Typical queries: 50–200 characters") and disable the submit button until both fields exceed a minimum length |
-| Showing score breakdown immediately per-question during the flow | Candidate reverse-engineers the keyword list by trial-and-error between questions | Show detailed keyword feedback only on the final results screen (or after all questions are done), not inline during the question flow |
-| Reviewer view loads all submissions with no indication of loading state | On a slow GAS response (2–4 seconds), the reviewer sees a blank table and may think it is empty | Show a spinner immediately on unlock; display "Loading submissions..." text until the fetch resolves |
-| Grade band label "Not ready" shown to candidate on results screen | Demoralising without context; candidate does not know what to improve | Pair every grade band with one actionable improvement tip from the feedback list, not just the label |
-| Evidence panel auto-labels camelCase keys without context | `deliveryStatus` becomes "Delivery Status" — fine; `edr` field `networkConnection` becomes "Network Connection" — less clear without SOC context | Pre-define display labels for each field in the evidence schema, or add a `label` alongside each evidence value; do not rely on camelCase-to-title-case auto-labelling for domain-specific field names |
-| Hint system reveals keywords before candidate writes SPL | Hints reduce task validity for assessment purposes; a hint that says "look at stats count by" defeats the SPL scoring | Defer hints to v2 as currently planned; if adding hints in v1.1, show hints only after first failed submit attempt and ensure hints give directional guidance ("think about aggregation") not exact SPL fragments |
-| Secondary diagnosis picker always visible even for Q5b (no classification) | Candidate sees an empty picker or a picker with no options, causing confusion | Q5b has no classification task — the picker must be hidden entirely when `hasClassification` is false; verify `SocRound.jsx` `hasClassification` guard works correctly for Q5b |
-
----
-
-## "Looks Done But Isn't" Checklist
-
-- [ ] **GAS MailApp delivery:** Run end-to-end SOC submission in staging and verify all four recipients received the email with a `.csv` attachment — not just that no error appeared in the browser.
-- [ ] **GAS re-authorization after scope change:** Open GAS Executions log after first real deployment; confirm no `MailApp error:` entries. If present, re-authorize and redeploy.
-- [ ] **SPL validation engine:** Handles `anyOf` term variants — verify a query using `earliest=-1d` still passes when `earliest=-24h` is the required term.
-- [ ] **Whitespace normalisation:** Verify `|stats count by src_ip` (no space after pipe) still matches the required term `| stats count by src_ip`.
-- [ ] **Blocked term penalty:** Verify the score floor is 0 — blocked terms cannot make the SPL score go negative.
-- [ ] **Reviewer passcode gate:** Inspect the built `dist/assets/index-*.js` — the correct passcode must NOT appear as a plaintext string.
-- [ ] **GAS formula injection:** Open `SOCData` sheet after submitting a query starting with `=` — the cell must display the raw text, not execute a formula.
-- [ ] **Silent submission failure:** Disable network in DevTools and submit a SOC answer — the UI must show an error message or at minimum a visible "check your connection" prompt.
-- [ ] **Reviewer CORS:** Call the reviewer GET fetch in a real browser (not just Node) — must not throw a CORS error.
-- [ ] **Explanation concept keywords:** Manually grade 3 correct explanations that use synonyms — at least 2/3 must pass with root-form keywords.
-- [ ] **Grade band boundary:** Verify a score of exactly 20 shows "Strong" and exactly 19 shows "Good" (off-by-one is common in boundary conditions).
-- [ ] **Existing zones unaffected:** Complete Zone 1–3 flow end-to-end after any `App.jsx` or `useGameState.js` change — leaderboard submit must still work.
-- [ ] **Evidence panel with enriched data:** Navigate to every SOC question and verify the evidence panel shows readable text, not `[object Object]` or raw array notation.
-- [ ] **Q5b classification guard:** Navigate to Q5b in the app — the classification pickers must not render; only the SPL textarea and explanation field should be visible.
-- [ ] **QUESTION_SCORE_MAP sync:** Verify every question ID in `SOC_QUESTIONS` has a corresponding entry in `QUESTION_SCORE_MAP` in `useSocState.js` — no question should silently receive `undefined` weights.
-- [ ] **sessionStorage backup:** After completing Zone 4, open DevTools → Application → sessionStorage — `socSubmission` must contain a parseable JSON string of the full submission payload.
+- [ ] **Charts in production:** Run `npm run build && npm run preview`, open the admin panel, and verify all charts render with non-zero height.
+- [ ] **Recharts in main bundle:** Run `npm run build` and verify `recharts` does NOT appear in the main `index-[hash].js` chunk (use `npx vite-bundle-visualizer` or check build output sizes).
+- [ ] **jsPDF production build:** Run `npm run build` — zero build warnings about CommonJS modules. Download a PDF from `npm run preview` — not just `npm run dev`.
+- [ ] **PDF Unicode:** Generate a PDF for a candidate with an accented name (e.g., "José García") — the PDF must display the name correctly, not as "Jos_ Garc_a".
+- [ ] **PDF iOS Safari:** Open the admin panel on an iPhone/iPad browser — the PDF download must not open a blank page.
+- [ ] **CSV integrity:** Download the CSV export and open in Google Sheets — all rows must have the correct column count; SPL queries containing commas must be in a single cell, not spread across adjacent cells.
+- [ ] **GAS passcode gate on all new actions:** Fetch any new admin GAS action URL directly in the browser without a passcode parameter — it must return `{"ok":false,"error":"Unauthorized"}`, not candidate data.
+- [ ] **Admin panel data isolation:** Complete Zone 1 of the game as a candidate, then navigate to the admin panel, then navigate back to the landing page and start a new game — the new game must start cleanly with no admin data visible.
+- [ ] **No stale data on re-entry:** Log into the admin panel (enter passcode, data loads). Navigate back to landing. Navigate to admin panel again — must show cached data immediately, not a loading spinner, without making a second GAS fetch.
+- [ ] **Reviewer screen replacement clean:** Run `npm run build` after wiring `AdminPanel` — no `Cannot find module ReviewerScreen` error; no dangling `SCREENS.REVIEWER` reference.
+- [ ] **Candidate search debounced:** Type a 5-character search query quickly — browser DevTools "Performance" panel must not show more than 1–2 filter operations, not 5.
+- [ ] **Dashboard statistics memoized:** Open React DevTools "Profiler", interact with the search box — dashboard statistic components must not re-render on search input changes.
 
 ---
 
 ## Recovery Strategies
 
-When pitfalls occur despite prevention, how to recover.
-
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| GAS MailApp not sending (scope not re-authorized) | LOW | Open GAS editor → run `testEmail()` stub → re-authorize → redeploy as new version; existing sheet data is intact |
-| Term-stuffed submissions scored as Strong | LOW | Reviewer manually downgrades in sheet; add the stuffed phrase to the blocked list in `socQuestions.js` and redeploy static build |
-| False fails from alternate SPL syntax discovered post-launch | LOW | Add `anyOf` variant to `socQuestions.js`; redeploy static build; existing submissions in sheet are stale but can be manually corrected by reviewer |
-| Evidence panel broken by enriched data structure | LOW | Revert the `socQuestions.js` evidence field addition; add type guards to `SocRound.jsx`; re-add the field after guards are in place |
-| Passcode discovered in built bundle | HIGH | Immediately change the `PropertiesService` passcode in GAS editor; revoke the old `.env.local` value; rebuild and redeploy; old submissions are not at risk (read-only) |
-| GAS formula injection found in SOCData sheet | MEDIUM | Delete affected rows; verify `sanitiseCell` is applied; redeploy GAS (does not require client rebuild); re-collect affected submissions if possible |
-| Silent submission failure discovered for multiple candidates | HIGH | Restore from `sessionStorage` if implemented; otherwise manually re-enter candidate scores from the UI's displayed results (results screen renders from local state before submission) |
-| CORS error blocks reviewer GET | LOW | Switch to plain `fetch(url)` with no headers; no GAS changes required |
-| Zone 1–3 regression after App.jsx edit | MEDIUM | Revert the App.jsx change; re-apply only the intended edit with careful branch isolation; run manual end-to-end of zones 1–3 before merging |
-| Q5a/Q5b score weight mismatch | LOW | Update `QUESTION_SCORE_MAP` in `useSocState.js` to match the content decision in `socQuestions.js`; no GAS or sheet changes needed |
-
----
-
-## Pitfall-to-Phase Mapping
-
-How roadmap phases should address these pitfalls.
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| GAS MailApp delivery / scope re-authorization | GAS deployment (Phase 5 and every subsequent GAS redeploy) | Check GAS Executions log; verify all 4 recipients received the email with CSV attachment |
-| Term-stuffing false passes | Term-list authoring (Phase 1: socQuestions.js) | Review each term list against 3 plausible stuffing attempts; at least one blocked term per question |
-| False fails from alternate SPL syntax | Phase 2: validateSpl.js implementation + Phase 1: socQuestions.js authoring | Unit-test validateSpl with known synonym variants; confirm score matches expected |
-| Whitespace/case normalisation false fails | Phase 2: validateSpl.js implementation | Unit-test `\|stats` vs `| stats`; `INDEX=` vs `index=` |
-| Evidence panel broken by enriched data | Phase 1 (socQuestions.js) + Phase 4 (SocRound.jsx) | Navigate to every question in browser; verify evidence panel displays readable text only |
-| Zone 1–3 regression | Any phase touching App.jsx or useGameState.js | Manual end-to-end zones 1–3 run before and after each App.jsx commit |
-| Client-side passcode bundle exposure | Phase 5: SocReviewer.jsx + GAS doGet extension | `grep` built JS bundle for passcode value — must not appear |
-| GAS CORS blocking reviewer GET | Phase 5: ReviewerScreen.jsx fetch implementation | Manual browser test of reviewer GET in Chrome and Firefox |
-| Concept keyword synonym false fails | Phase 1: socQuestions.js authoring | Manually write 3 correct explanations using synonyms; score each via validateExplanation |
-| GAS formula injection | Phase 5: google-apps-script.js submitSoc action | Submit query starting with `=` and inspect SOCData sheet |
-| Silent SOC submission failure | Phase 3: useSocState.js fetch + error handling | DevTools network offline test; confirm user-visible error appears; confirm sessionStorage written |
-| Q5a/Q5b score weight mismatch | Phase 1 (content decision gate) + Phase 2 (scoring implementation) | Assert every SOC_QUESTIONS id has a QUESTION_SCORE_MAP entry; verify socTotal against manual sum |
-| GAS daily email quota exhaustion | Phase 5 deployment and ongoing ops | Monitor `MailApp.getRemainingDailyQuota()` in GAS editor if candidate volume grows |
+| Recharts zero-height in production | LOW | Add explicit `height={280}` to every `ResponsiveContainer`; redeploy static build; no GAS changes needed |
+| jsPDF Vite build failure | LOW | Switch static import to dynamic import; add to `optimizeDeps.include`; redeploy |
+| jsPDF Unicode characters dropped | MEDIUM | Embed NotoSans font via `addFileToVFS/addFont`; re-test all PDF templates; redeploy |
+| GAS data endpoint timeout at scale | MEDIUM | Add pagination to GAS action; update React fetch to paginate; no schema change to sheets |
+| CSV corruption discovered post-launch | LOW | Fix `csvEscape` function; no GAS changes; redeploy static build; advise reviewers to re-download |
+| Unprotected GAS admin action discovered | HIGH | Immediately add `checkPasscode` to the GAS action; deploy new GAS version; assess whether the URL was accessed without passcode by checking GAS execution logs |
+| Admin state polluting game state | MEDIUM | Extract admin state to isolated component or dedicated hook; clear admin data on `SCREENS.REVIEWER` exit; no GAS changes |
+| iOS PDF download blank page | LOW | Switch to `data:` URL approach for PDF download; Chrome/Firefox unaffected; redeploy |
+| ReviewerScreen deleted before AdminPanel wired | LOW | `git revert` the deletion commit; re-add `ReviewerScreen.jsx` temporarily; wire AdminPanel first |
 
 ---
 
 ## Sources
 
-- `flagmail1/.planning/PROJECT.md` — scoring model, validation spec, passcode requirement, v1.1 milestone goals (HIGH confidence, direct read)
-- `flagmail1/.planning/STATE.md` — known blockers: term-list quality, Q8 split, CORS browser test, passcode ops step (HIGH confidence, direct read)
-- `flagmail1/.planning/codebase/CONCERNS.md` — silent submission failure, no tests, GAS public endpoint concerns, evidence rendering fragility, QUESTION_SCORE_MAP (HIGH confidence, direct read)
-- `flagmail1/.planning/codebase/INTEGRATIONS.md` — GAS schema, POST/GET patterns, no-cors context, MailApp recipient list (HIGH confidence, direct source read)
-- `flagmail1/google-apps-script.js` — appendRow pattern, action dispatch, sanitiseCell implementation, MailApp.sendEmail with try/catch, Logger.log on failure (HIGH confidence, direct source read)
-- `flagmail1/src/hooks/useSocState.js` — QUESTION_SCORE_MAP, submitFinal fetch pattern, sessionStorage backup (HIGH confidence, direct source read)
-- `flagmail1/src/components/SocRound.jsx` — Object.entries evidence renderer, hasClassification guard, canSubmit logic (HIGH confidence, direct source read)
-- `flagmail1/.planning/quick/260522-uez*/SUMMARY.md` — GAS redeploy warning, MailApp scope re-authorization requirement, email non-fatal pattern (HIGH confidence, direct read)
-- Google Apps Script authorization scopes docs: adding a new scope (MailApp) requires manual re-authorization in the GAS editor before the new deployment takes effect (MEDIUM confidence — consistent with GAS authorization model and community reports)
-- Google Apps Script CORS behaviour: GAS web apps support simple GET requests without preflight; POST requires `mode: no-cors` from browser clients (MEDIUM confidence, consistent with known GAS behaviour and existing codebase pattern)
-- GAS MailApp quota: consumer Gmail accounts limited to 100 emails/day; Google Workspace accounts up to 1,500/day via `MailApp.getRemainingDailyQuota()` (MEDIUM confidence, community-confirmed quotas)
-- OWASP CSV Injection / Formula Injection: leading `=`, `+`, `-`, `@` in spreadsheet cells trigger formula execution (HIGH confidence, well-documented attack class)
-- Vite documentation: `import.meta.env` values are statically replaced in built output — any `VITE_` prefixed variable is present as a string literal in `dist/` (HIGH confidence, well-documented Vite behaviour)
+- `flagmail1/src/components/ReviewerScreen.jsx` — existing component being replaced: passcode state, fetch pattern, submission rendering (HIGH confidence, direct read)
+- `flagmail1/google-apps-script.js` — GAS `doGet` structure, `getSOCSubmissions` action, `sanitiseCell`, `csvEscape`, `PropertiesService` passcode gate (HIGH confidence, direct read)
+- `flagmail1/src/hooks/useSocState.js` — `submitFinal` no-cors fetch, sessionStorage backup (HIGH confidence, direct read)
+- `flagmail1/src/App.jsx` — SCREENS enum usage, `gs.screen === SCREENS.REVIEWER` wiring point (HIGH confidence, direct read)
+- `flagmail1/.planning/PROJECT.md` — v1.2 feature scope: dashboard, CSV, PDF, candidate management, unified admin entry (HIGH confidence, direct read)
+- Recharts GitHub issue #5173 (2024): `ComposedChart` in `ResponsiveContainer` with React 19 production build — `displayName` minification breaks `isChart` check, resulting in `height=0` (HIGH confidence, confirmed GitHub issue with root cause analysis)
+- Recharts GitHub issue #4590 (2024): "React 19. No render inside ResponsiveContainer" — related to same React 19 production build behavior (MEDIUM confidence, same root cause as #5173)
+- Vite GitHub issue #11496 and #16320: jsPDF CommonJS → ESM build failures in Vite (MEDIUM confidence, confirmed GitHub issues; fix is dynamic import or `optimizeDeps.include`)
+- jsPDF-AutoTable GitHub issues #391, #459, #580: Unicode/UTF-8 character drops in table cells; font not embedded in production (HIGH confidence, multiple confirmed issues with same root cause: default fonts only support Latin-1)
+- Google Apps Script Quotas docs (developers.google.com): execution time limit 6 minutes (standard), `getValues()` best practices (HIGH confidence, official docs)
+- Google Apps Script Best Practices (developers.google.com): batch `getValues()` vs per-cell reads (HIGH confidence, official docs)
+- Recharts bundle size: ~350KB minified (~115KB gzipped) from npm-compare.com and community benchmarks (MEDIUM confidence — not measured against this specific project; use `vite-bundle-visualizer` to confirm)
+- RFC 4180 CSV format: comma, double-quote, and newline characters in cells must be quoted and escaped (HIGH confidence, IETF standard)
+- iOS Safari blob URL download limitation: `download` attribute on anchor with `blob:` URL is ignored; workaround is `window.open` or `data:` URI (MEDIUM confidence, well-documented browser compatibility issue; MDN Web Docs compatibility table)
 
 ---
 
-*Pitfalls research for: SOC Investigation UX overhaul, hint engine considerations, GAS email delivery debugging, static data enrichment with backward-compatible Zone 4 restructure*
-*Researched: 2026-05-25*
-*Milestone: v1.1 SOC Investigation Overhaul + Email Fix*
+*Pitfalls research for: v1.2 Admin Panel — dashboard, CSV/PDF reports, data tables, Google Sheets backend, replacing ReviewerScreen*
+*Researched: 2026-05-26*
+*Supersedes: The v1.0/v1.1 PITFALLS.md content remains valid for those milestone domains. This file adds v1.2-specific pitfalls only.*

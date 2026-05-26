@@ -1,226 +1,226 @@
 # Feature Landscape
 
-**Domain:** SOC Investigation Training Level — SPL Query Writing Assessment (Zone 4 of FlagMail)
-**Researched:** 2026-05-25 (updated for v1.1 SOC Investigation Overhaul milestone)
-**Confidence:** HIGH — grounded in current SOC training platform analysis (LetsDefend, TryHackMe SOC Simulator,
-CyberDefenders, Splunk BOTS), eLearning assessment literature, and the existing socQuestions.js dataset
+**Domain:** Assessment Admin Panel — Candidate Score Management, Answer Review, and Reporting
+**Milestone:** FlagMail v1.2 Admin Panel (replaces existing passcode-gated reviewer screen)
+**Researched:** 2026-05-26
+**Confidence:** HIGH — grounded in analysis of HackerRank, TestGorilla, KnowBe4, Proofpoint SAT,
+TryHackMe instructor dashboards, education assessment dashboards (Bold BI, Utah Grade Summary),
+and direct inspection of the existing ReviewerScreen.jsx, GAS backend, and Google Sheets schema.
 
 ---
 
 ## Scope Note
 
-This document covers ONLY the Zone 4 SOC Investigation level. Zones 1–3 (email classification game),
-leaderboard, badges, and existing Google Sheets backend are built and out of scope. This version is
-updated for the v1.1 milestone whose goal is to make Zone 4 a **realistic SOC investigation simulator**
-— the v1.0 build exists but feedback says questions are "too vague."
+This document covers only the admin panel dimension of v1.2. The candidate-facing game (Zones 1-3,
+Zone 4 SOC) and the Google Sheets backend are already built. The admin panel replaces the existing
+`ReviewerScreen.jsx` (currently SOC-submissions-only, passcode-gated, expand-to-see-SPL).
 
-### What v1.0 already ships (do not rebuild)
+### What already exists (do not rebuild, extend instead)
 
-- 6 SOC question objects in `src/data/socQuestions.js` (Q1–Q4, Q5a, Q5b) — dataset exists
-- 23-point scoring model per question (Primary 5 / Secondary 3 / SPL 10 / Explanation 5)
-- Keyword validation engine (required/optional/blocked SPL terms, conceptKeywords)
-- Grade band (Strong 20–23 / Good 15–19 / Needs improvement 10–14 / Not ready below 10)
-- Google Sheets submission via Apps Script
-- Reviewer passcode-gated view
+- Passcode entry gate with GAS passcode validation
+- SOC submission list: name, email, timestamp, per-question grade badges, expand-to-SPL
+- GAS `getSOCSubmissions` action — returns grouped rows from SOCData sheet
+- GAS Summary sheet with: Timestamp, Name, Email, Status, Score, Display Score, Tier,
+  Zone 1–3 scores, Proctoring Violations, Zone 4 (SOC), Final Score /100
+- GAS SOCData sheet with: Timestamp, Name, Email, Question ID, Score, Grade, SPL Text,
+  Explanation, Proctoring Violations
+- Email notification with HTML body + CSV attachment on final submission
 
-### What v1.1 adds or fixes (this milestone's scope)
+### What v1.2 adds
 
-Structured investigation context per question, evidence artifact display upgrade, investigation
-goal/analyst focus framing, hint engine, better SPL task prompts, email delivery fix for reviewers.
+Unified admin panel that surfaces both classification (Zones 1-3, from Summary sheet) and SOC
+(Zone 4, from SOCData sheet) in a single view with dashboard stats, candidate drill-downs,
+and downloadable reports.
 
 ---
 
 ## Table Stakes
 
-Features a candidate or reviewer expects. Without these, the Zone 4 level feels like a quiz, not
-an investigation. All established SOC training platforms (LetsDefend, TryHackMe SOC Simulator,
-Splunk BOTS, CyberDefenders) share these as baseline design requirements.
+Features an assessor or hiring manager expects from any assessment management tool. Missing any
+of these and the tool fails the credibility test — reviewers will fall back to checking the raw
+Google Sheet directly.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Investigation scenario narrative | Every real SOC exercise opens with an incident narrative before presenting data — LetsDefend, BOTS, and CyberDefenders all do this; without it, the evidence panel is context-free | LOW | Already exists as `scenario` string per question; v1.1 enriches it with goal/focus framing |
-| Evidence artifact display (email / proxy / EDR) | Analysts always see structured log evidence before forming a hypothesis; the current display is a flat JSON dump that feels unfinished | LOW | Structured card component per source type (email headers, auth log summary, EDR alert summary); monospace for raw values |
-| Investigation goal statement | TryHackMe SOC Sim, BOTS, and CyberDefenders each open exercises with an explicit investigative goal ("Determine if this alert is a true positive and identify the affected user"); without it candidates don't know what success looks like | LOW | One sentence per question: "Your goal: identify the attack type and write an SPL query that surfaces affected users." Authored in dataset |
-| Analyst focus / what-to-look-for callout | OSCAR methodology (Obtain → Strategize → Collect → Analyze → Report) used in enterprise SOC training always includes a "what to look for" step; absent from v1.0 | LOW | 2–3 bullet callout per question highlighting the key indicators the analyst should pivot on; authored in dataset |
-| Expected outcome statement | CyberDefenders and TryHackMe exercises tell the analyst what a correct investigation produces (a confirmed threat actor, a list of affected hosts, a MITRE technique ID); sets grading expectations | LOW | Short list: "A valid query returns source IP, user count, and time window." Authored in dataset |
-| Question-specific SPL task prompt | v1.0 prompts are generic ("Write an SPL query to investigate"); BOTS and LetsDefend give focused prompts ("Find all authentication failures from a single source IP in a 5-minute window grouped by user") | LOW | Already in splRules.tasks[].prompt; v1.1 replaces vague prompts with scenario-tied, scoped prompts that name the log source and target field |
-| Primary classification picker (question-specific options) | Core skill; already exists; v1.1 ensures options are tight, scenario-relevant, and not over-broad | LOW | Existing `Classifier` component reuse; trim any option sets that include implausible distractors |
-| Secondary diagnosis picker | Mirrors SOC triage workflow; already exists | LOW | Same; gate on primary commit |
-| Multi-line plain-text SPL editor | The unique differentiating act of the level; already exists | LOW | No change needed for v1.1; monospace textarea |
-| Free-text explanation editor | Reasoning capture; already exists | LOW | No change needed for v1.1 |
-| Submit gate (content required) | Prevents empty submissions; already exists | LOW | Enforce non-empty SPL and explanation before enabling submit |
-| Per-question keyword validation feedback | Immediate post-submit feedback on which SPL terms were recognized and which concepts were found; already exists | MEDIUM | v1.1 improves label wording to be human-readable rather than raw keyword dumps |
-| Per-question score breakdown | Candidates need to see the 23-point split; already exists | LOW | No change needed |
-| Overall grade band | Primary outcome signal; already exists | LOW | No change needed |
-| Question progress indicator | "Question 2 of 5" orientation; already exists | LOW | No change needed |
-| GAS email fix for reviewer notifications | Managers/reviewers are not receiving submission notification emails — explicitly listed as v1.1 target fix | MEDIUM | Investigate GAS `MailApp.sendEmail` call and recipient list in Apps Script; likely a recipient address misconfiguration or Apps Script quota issue |
-| Reviewer passcode gate | Minimum protection for reviewer view; already exists | LOW | No change needed |
-| Reviewer submission list | Reviewer sees name, timestamp, scores, grade band, raw SPL; already exists | MEDIUM | No change needed |
+| Score overview dashboard | Every assessment platform (HackerRank, TestGorilla, KnowBe4, Proofpoint SAT) leads with a summary view: total submissions, average score, pass/fail rates. Assessors can't act on a raw list. | MEDIUM | Computed client-side from fetched submission data. Cards for: total submissions, average final score, pass rate (>= threshold), grade band distribution (Foundation / Proficient / Advanced). |
+| Grade band distribution display | Assessors need to see at a glance how the cohort is spread — not just individual scores. All education dashboards (Bold BI, Utah Grade Summary) lead with distribution. | LOW | Simple visual breakdown: X% Foundation, Y% Proficient, Z% Advanced. Inline bar or proportional strip — no charting library required. |
+| Candidate list with sortable columns | A flat list sorted by submission time is unusable for any cohort > 10. TestGorilla and HackerRank both allow sort by score, name, date. | MEDIUM | Sort by: name (alpha), final score, submission time. Client-side sort on fetched data. No pagination for v1.2 (Google Sheets caps at a few hundred rows before performance degrades anyway). |
+| Search / filter by candidate name or email | Assessors frequently need to find a specific candidate. All assessment platforms include this. Currently missing from ReviewerScreen.jsx. | LOW | Client-side text filter on name + email. Clears on empty. No server round-trip needed. |
+| Full answer sheet drill-down | Reviewers need to see exactly what a candidate submitted — classification picks, SPL query text, explanation text — alongside scores. Currently ReviewerScreen.jsx shows SPL text but not classification answers or explanation text. | MEDIUM | Expand panel per candidate. Show for each SOC question: question ID, primary answer selected + correct answer, secondary answer + correct, SPL text (monospace), explanation text, per-dimension score breakdown. |
+| Zone 1-3 classification data visible | Current reviewer screen shows only SOC (Zone 4). The Summary sheet already stores Zone 1-3 scores. Assessors need a complete picture. | MEDIUM | Requires a second GAS action (`getClassificationSummary`) that reads the Summary sheet. Show per-zone scores (Zone 1, 2, 3 out of 20 each) plus total classification score. |
+| Final score display with tier label | Assessors communicate results in tiers (Foundation / Proficient / Advanced), not raw numbers. The email notification already does this. The admin panel must match. | LOW | Show: Final score /100, Tier label, per-zone breakdown. Data already in Summary sheet. |
+| Proctoring violations flag | Assessors treat proctoring violations as a reliability signal. Hidden violations create fairness problems. Currently not surfaced in ReviewerScreen.jsx. | LOW | Show violations count per candidate, highlighted in amber/red if > 0. Data already in both Summary and SOCData sheets. |
+| CSV export of submission data | Industry standard for offline review, sharing with HR, or importing into spreadsheets. TestGorilla, HackerRank, and every enterprise LMS include this. | LOW | Client-side CSV generation from fetched data. Use the same `csvEscape` pattern already in GAS. No library needed — `Blob` + `URL.createObjectURL` + `<a download>` pattern. Export filtered view if filter is active. |
+| PDF report per candidate | Hiring managers and compliance teams file candidate reports as PDFs. Assessment platforms (HackerRank, Proofpoint SAT) provide printable per-candidate reports. | MEDIUM | Use jsPDF (30K stars, 2.6M weekly downloads, no server needed). One-page candidate report: name, date, final score, tier, zone breakdown, SOC question summary. Not full answer text — that's the answer sheet. |
+| Data refresh without full page reload | Assessors open the admin panel at start of a review session and may check for late submissions. A manual refresh button is the minimum. | LOW | "Refresh data" button that re-fetches from GAS. No auto-poll (respects GAS quota). |
 
 ---
 
 ## Differentiators
 
-Features that meaningfully improve candidate experience or reviewer trust. These go beyond
-what is available in keyword-validation-only platforms and are achievable within the React 19
-+ plain JS + GAS constraint set.
+Features that make the admin panel genuinely useful beyond compliance, without requiring a
+backend rewrite. Each is achievable within the React 19 + plain JS + GAS constraint set.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Hint engine (1 hint per question, post-first-submit) | Cybersecurity learning research (PMC 2022, arXiv 2511.06362) consistently shows that contextual next-step hints reduce frustration and improve performance for low-performers without reducing value for strong candidates; BOTS workshop and TryHackMe both include hints | MEDIUM | One static hint per question, authored in dataset, shown only after first submit attempt; hint is directional ("Which SPL command counts distinct users per source IP?"), not the answer; no score penalty for viewing |
-| Worked-solution reveal (post-submit, gated) | Highest single learning-value feature in assessment research; BOTS and TryHackMe both reveal correct queries and explanations post-attempt; seeing a well-formed SPL next to their own output is the clearest learning signal available without execution | MEDIUM | Reveal gated: shown only after candidate submits the question; includes brief annotation on each clause ("This `dc(user)` counts distinct affected users, which distinguishes spraying from a single targeted brute force"); authored per question in dataset |
-| Per-dimension inline feedback labels with plain-language status | Rather than a score number, labelling each validation bucket (Required terms: found / missing; Optional terms: credited; Explanation concepts: recognized) with readable status is strongly correlated with skill improvement in automated assessment (Springer 2023); TryHackMe uses per-task status badges | MEDIUM | Three feedback rows with icons; wording per question; never exposes the raw keyword list to prevent gaming |
-| SPL character / line count indicator | A passive counter nudges candidates who write a single-line query when a piped multi-stage query is expected; LetsDefend and BOTS exercises implicitly reward depth; no equivalent in current v1.0 | LOW | Passive counter below textarea; no enforcement; updates on keystroke |
-| SOC Investigation badge | Consistent with existing badge system; signals achievement to candidates and reviewers; low-cost motivation boost | LOW | New badge entry in badge dataset; same BadgeToast system; unlocks on zone complete |
-| Reviewer per-question drill-down | Reviewers can expand a submission to see raw SPL and explanation per question alongside validation results; reduces time-to-judgment for reviewers | MEDIUM | Accordion expand or modal; no additional API calls if full submission stored in Sheets on submit |
-| Print-friendly reviewer export | Enterprise security teams file assessment evidence as PDFs; a CSS `@media print` layout costs little and solves a real enterprise workflow pain | LOW | CSS-only; no PDF library |
+| Cohort comparison strip (score distribution) | Assessors making hiring decisions need to rank candidates relative to the cohort, not just against an absolute threshold. HackerRank provides percentile scores; this is a lightweight equivalent. | LOW | Horizontal bar per candidate in the list showing their score relative to min/max/median of the cohort. Pure CSS, computed client-side. No charting library. |
+| Per-dimension SOC breakdown in summary list | Seeing "SOC: 62/100" doesn't tell a reviewer whether the candidate can write SPL but cannot classify — or vice versa. Question-level grade badges already exist in ReviewerScreen.jsx. Surfacing them in the list (not just expanded view) lets reviewers scan without drilling into every candidate. | LOW | Show grade band badges per SOC question (Q1–Q6) inline in the candidate row — exactly what ReviewerScreen.jsx already renders in the expand panel, pulled up to the summary row. |
+| Filter by grade band | Assessors often want to review only "Needs Improvement" candidates or only "Strong" candidates. None of this exists today. | LOW | Dropdown filter: All / Foundation / Proficient / Advanced. Client-side. Combines with name/email search. |
+| Filter by date range | When running a multi-day assessment window, assessors want to see only "today's" submissions or a specific intake batch. | LOW | Date range picker (two `<input type="date">`) applied client-side against timestamp. |
+| Exportable filtered view | When the admin filters by grade band or date range, the CSV export should reflect the filtered set, not the full dataset. Assessors share cohort-specific exports with managers. | LOW | Derive export from the same filtered array used for rendering. No extra logic. |
+| Summary stats that update on filter | Stats (total, average, pass rate, distribution) should recompute when a filter is active so the assessor understands the filtered cohort, not the full set. | LOW | `useMemo` on filtered array. Consistent with how existing hooks compute derived state. |
+| Candidate history across multiple attempts | FlagMail prevents re-attempts via `checkEmail`, but the Summary sheet may have multiple rows for the same email if a candidate was manually allowed to retry. Showing attempt history per candidate avoids confusion. | MEDIUM | Group by email on the client side. Show most recent attempt prominently, prior attempts collapsed. Requires the GAS `getClassificationSummary` action to return all rows (not just unique emails). |
+| SPL quality signal in answer sheet | Reviewers who are not SPL experts cannot easily judge whether a query is good or poor. A visual signal (which required terms were hit, which were missed, whether any blocked terms appear) gives non-technical reviewers a defensible basis for the score. | MEDIUM | In the drill-down answer sheet, annotate the SPL text with which required terms were matched. This requires the keyword match data to be stored in Sheets or re-evaluated client-side. Re-evaluation client-side is viable: import `validateSpl.js` in the admin component and re-run it against the stored SPL text using the `socQuestions.js` rules. No additional GAS changes needed. |
 
 ---
 
 ## Anti-Features
 
-Deliberately not built in this milestone. Documented to prevent scope creep.
+Features explicitly NOT to build for a Google-Sheets-backed SPA at this scale. Documented to
+prevent scope creep and to explain why reasonable-sounding ideas were rejected.
 
-| Feature | Why Requested | Why Not Now | Alternative |
-|---------|---------------|-------------|-------------|
-| Real Splunk query execution | Candidates want to verify their SPL runs; feels most authentic | Requires a Splunk instance (licensed, containerized, or cloud), network dependency during assessment, timeout/error states, massive scope expansion; ruled out in PROJECT.md | Worked-solution reveal post-submit is the learning-equivalent at near-zero cost |
-| LLM / AI semantic grading | Handles synonyms, alternative valid approaches, feels more human | External API at grade time breaks determinism (network failure = broken assessment), adds latency and cost, sends candidate text to third parties, contradicts project constraints | Multiple accepted alternatives per term authored in the dataset (`anyOf` patterns already implemented) cover the variation that matters |
-| Reviewer user accounts / login | Per-reviewer audit trail, enterprise preference | Full auth is large on a currently auth-free app; explicitly deferred in PROJECT.md | Shared passcode; Google Sheets already timestamps submissions |
-| SPL syntax highlighting / autocomplete (CodeMirror, Monaco) | Editor ergonomics; code-editor familiarity | Non-trivial library for marginal gain on a knowledge assessment; assessment is about SPL knowledge, not editor comfort; consistency with plain-text constraint matters | Monospace font + line count indicator + worked-solution reveal together cover ergonomics adequately |
-| Timer on SOC questions | Consistent with countdown timer in Zones 1–3 | Time pressure on multi-step SPL writing tests anxiety not competence; no real SOC exercise (BOTS, CyberDefenders) times individual query questions; ruled out in PROJECT.md | No timer; the assessment is skills-focused not speed-focused |
-| Leaderboard integration for SOC scores | Competitive motivation, consistent with other zones | SOC Investigation is an assessment not a competition; publishing raw SPL scores conflates training with competition and can embarrass candidates | Grade band on Results screen is sufficient outcome signal; detailed scores go only to the reviewer |
-| Attempt limits / lockout | Prevents guessing; exam-like conditions | Training-first tool; lockout loses formative learning value; no evidence existing game uses lockout | Submit button is the natural one-attempt boundary; no explicit lockout needed |
-| Multi-stage question branching (Q8 full implementation) | Q8 in Splunk Questions.docx is a multi-stage conditional question | Branching logic significantly complicates state management in the no-router, custom state machine | Q5a/Q5b flatten Q8 into sequential sub-questions — already implemented in v1.0 |
-| Candidate self-score review / appeal workflow | Fairness; candidates may contest keyword results | Introduces a support workflow that doesn't exist; keyword validation is transparent and deterministic enough that human reviewer can override | Reviewers see raw SPL and can override grade band manually |
-| Score normalization to 100 per question | Clean percentage display | 23 points already maps to a named grade band; converting to 100 adds math without adding clarity for a 23-point rubric | Keep 23-point model; display grade band prominently |
+| Anti-Feature | Why Requested | Why Not for This Context | What to Do Instead |
+|--------------|---------------|--------------------------|-------------------|
+| Real-time auto-refresh / live updates | Assessors running a live cohort want to see submissions appear automatically | GAS `fetch` is quota-bound (~20k calls/day for free). Auto-polling every 30s with 10 admins would exhaust the quota within hours. GAS does not support WebSockets or push. | Manual "Refresh data" button with timestamp showing last fetch time. |
+| Role-based access / multiple reviewer accounts | Enterprise request: some reviewers should see only their cohort, others see all | Full auth is a separate service (OAuth, Supabase, Firebase Auth, etc.) that does not fit the GAS + no-backend constraint. Explicitly out of scope in PROJECT.md. | Single shared passcode. If cohort isolation is needed, deploy separate FlagMail instances per cohort. |
+| In-app manual score override / grading | Reviewers may want to override an automated score | Requires a PATCH endpoint in GAS (write back to Sheets), complex optimistic-update state, audit trail. GAS write-back is fragile under concurrent access. | Reviewer notes to themselves are sufficient; override in the Google Sheet directly. |
+| Bulk email / notification dispatch from admin panel | HR wants to send result emails to all candidates from the admin view | MailApp quota is already used for submission notifications. A blast-send tool would exhaust the quota. Adding a second MailApp caller doubles the risk. | The existing per-submission email notification on submitFinal is the delivery mechanism. |
+| Inline question editing / assessment authoring | Admin wants to add or change SOC questions from the panel | Question data is static in `socQuestions.js`. Hot-editing questions would require a CMS, versioned dataset, and migration path for scores — none of which exist. | Edit `socQuestions.js` directly and redeploy. |
+| Custom grade thresholds UI | Assessors want to set their own pass/fail cutoff per cohort | Threshold logic is baked into `scoreSoc.js`. A settings UI without persisting the threshold to Sheets creates inconsistency between what the candidate sees and what the admin sees. | Expose threshold as a constant in `src/config/game.js`. Change by code + redeploy. |
+| Leaderboard integration in admin panel | Competitive ranking visible to admins | SOC zone is assessment-not-competition. Leaderboard mixes classification scores with SOC scores in incompatible ways. | Show ranked list in admin panel by final score. That is sufficient for comparative review. |
+| XLSX / Excel export | Some managers prefer XLSX with multiple sheets | Adds a ~170KB library (SheetJS) for marginal gain over CSV. CSV opens in Excel natively. Excel is explicitly excluded in PROJECT.md. | CSV export. Assessors can open CSV in Excel with no data loss. |
+| Candidate self-service portal (view own results) | Candidates want to see their score after submission | Candidates already see a full Results screen at the end of the game. An additional authenticated portal requires user accounts. | The existing Results screen + per-submission email is the candidate-facing result delivery. |
+| Pagination of candidate list | Handles very large datasets gracefully | The Google Sheets backend becomes unreliable beyond ~500 rows before GAS script timeout (6-minute limit). Pagination beyond 200 candidates is premature optimization for a tool used in discrete cohort-sized batches. | Client-side rendering of all fetched rows is fine for expected cohort sizes (< 100 per intake). |
+| Analytics over time (trend charts, cohort comparison over months) | CISO-level reporting | Requires time-series data storage, chart libraries (Chart.js, D3), and a data model not in Sheets today. Out of scope for a hiring-cycle assessment tool. | Export CSV for each cohort; compare in Excel or Sheets natively. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-Investigation Context Block (goal + analyst focus + expected outcome)
-    └──required-before──> Evidence Artifact Display
-                              └──required-before──> Primary Classification Picker
-                                                        └──required-before──> Secondary Diagnosis Picker
-                                                                                  └──required-before──> SPL Editor
-                                                                                                            └──required-before──> Explanation Editor
-                                                                                                                                      └──required-before──> Submit
+GAS getClassificationSummary action (NEW)
+    └──required-by──> Zone 1-3 score display in admin panel
+    └──required-by──> Candidate history across attempts (grouped by email)
+    └──required-by──> Final score + tier from Summary sheet
+    └──required-by──> Proctoring violations from Summary sheet
 
-Submit
-    └──triggers──> Keyword Validation Engine
-                      └──produces──> Per-Question Score + Dimension Feedback Card
-                                        └──unlocks──> Hint (if authored; shown on request)
-                                        └──unlocks──> Worked Solution (if authored; shown on request)
-                                        └──aggregates-into──> Overall Grade Band
+GAS getSOCSubmissions action (EXISTING — already works)
+    └──required-by──> SOC answer sheet drill-down
+    └──required-by──> Per-question grade badges
+    └──required-by──> SPL quality signal (re-validate client-side)
+    └──required-by──> SOC per-question breakdown in summary list
 
-Overall Grade Band
-    └──triggers──> Google Sheets Push (GAS action)
-    └──triggers──> SOC Badge Unlock (if badge differentiator built)
+Both GAS actions fetched on passcode unlock
+    └──merged-into──> Unified candidate record (join on email + timestamp)
+                          └──feeds──> Score overview dashboard (computed stats)
+                          └──feeds──> Candidate list with sort/filter
+                          └──feeds──> CSV export
+                          └──feeds──> PDF per-candidate report
 
-Google Sheets Push
-    └──triggers──> Reviewer Email Notification (GAS MailApp — the fix target)
-    └──read-by──> Reviewer Passcode Gate
-                      └──renders──> Reviewer Submission List
-                                       └──expands-into──> Per-Question Drill-Down (differentiator)
+socQuestions.js (static import in admin component)
+    └──required-by──> SPL quality signal (re-run validateSpl client-side)
+    └──no-server-needed──> Annotate stored SPL text against known rules
+
+jsPDF (new dependency, ~100KB gzipped)
+    └──required-by──> PDF per-candidate report
+    └──load-on-demand──> Import only when admin triggers PDF export (code split)
 ```
 
 ### Key Dependency Notes
 
-- **Investigation context must precede evidence display.** Goal framing before data prevents candidates from pattern-matching on keywords before understanding what the investigation requires.
-- **Analyst focus callout anchors the SPL task prompt.** The "what to look for" bullets should use the same field names that appear in the SPL task prompt — this is the coherence that v1.0 lacks.
-- **Hint requires first submit.** Showing a hint before any attempt removes the productive struggle that makes hints pedagogically valuable (PMC 2022, contextual factors affecting hint utility).
-- **Worked solution requires submit.** Pre-reveal destroys the learning value of genuine engagement.
-- **GAS email fix is a prerequisite for reviewer usability.** If manager notifications don't arrive, the reviewer view is only reachable by those who know to poll the Sheets URL — the passcode gate becomes useless in practice.
-- **Evidence display does not require multi-source data.** Q1, Q3, Q4 have email-only evidence; Q2 has proxy-only (auth log); Q5a/Q5b have all three. Evidence component must gracefully handle `null` source types.
-- **SPL editor has no dependency on timer.** The existing `useTimer` hook must NOT be wired to SOC questions — this is an architectural guard, not just a feature toggle.
+- **A new GAS action is required.** The existing `getSOCSubmissions` reads only SOCData.
+  `getClassificationSummary` must read the Summary sheet and return all rows (not just the
+  most recent per email) to support attempt history. This is the only backend change for v1.2.
+
+- **Join happens client-side.** Classification data (Summary sheet) and SOC data (SOCData sheet)
+  are joined by email address + timestamp proximity in the browser. This avoids a server-side join
+  and keeps GAS logic simple.
+
+- **validateSpl re-runs client-side.** The SOCData sheet stores only the final SPL text and
+  keyword-match scores as numbers. To show which keywords were hit/missed in the answer sheet,
+  the admin component imports `validateSpl.js` and `socQuestions.js` directly and re-evaluates.
+  This is pure JS — no new API calls.
+
+- **jsPDF must be lazy-loaded.** It is ~100KB gzipped. Loading it eagerly adds to the main
+  bundle for a feature used rarely. Dynamic `import('jspdf')` triggered only when "Download PDF"
+  is clicked avoids this cost.
+
+- **CSV export has zero new dependencies.** It uses the existing `csvEscape` pattern and the
+  browser's native `Blob` + `URL.createObjectURL`. No library.
+
+- **Filter and sort are stateless UI operations.** They operate on the already-fetched data
+  array in component state. No new GAS calls on filter change.
 
 ---
 
 ## MVP Definition
 
-### v1.1 Launch (this milestone)
+### v1.2 Launch (this milestone) — Must Have
 
-The minimum to upgrade Zone 4 from "quiz" to "realistic SOC investigation simulator."
+All table stakes features. The admin panel must replace the existing reviewer screen and
+be strictly better in every way the reviewer screen currently works, while adding the
+cross-zone view that assessors actually need.
 
-- [ ] Investigation context block per question: goal statement, analyst focus bullets, expected outcome — authored in dataset
-- [ ] Evidence artifact display: structured card per source type (email headers, auth summary, EDR alert) rather than raw field dump
-- [ ] Improved SPL task prompts: scenario-tied, log-source-specific, scoped to a concrete investigative question
-- [ ] Analyst focus callout uses same field names as SPL task prompt (coherence fix)
-- [ ] GAS email delivery fix for reviewer notifications
-- [ ] Hint engine: one static hint per question, post-first-submit, authored in dataset
-- [ ] Worked-solution reveal: model SPL with clause annotations, post-submit, authored in dataset
-- [ ] Per-dimension feedback labels: human-readable, not raw keyword lists
+- [ ] Score overview dashboard: total submissions, average final score, pass rate, grade band distribution
+- [ ] Candidate list with sort (name, score, date) and search (name/email)
+- [ ] Full answer sheet drill-down: classification picks vs correct, SPL text, explanation text, per-dimension scores
+- [ ] Zone 1-3 scores visible per candidate (requires new GAS action)
+- [ ] Final score + tier label per candidate
+- [ ] Proctoring violations surfaced per candidate
+- [ ] CSV export (full dataset + filtered view)
+- [ ] PDF per-candidate report (jsPDF, lazy-loaded)
+- [ ] Manual data refresh button with last-fetched timestamp
+- [ ] Filter by grade band and date range
 
-### After Validation (v1.x)
+### After Validation (v1.2.x) — Should Have
 
-- [ ] Reviewer per-question drill-down accordion
-- [ ] SOC Investigation badge unlock
-- [ ] SPL character / line count indicator
-- [ ] Print-friendly reviewer export (CSS only)
+- [ ] Cohort comparison strip in candidate list
+- [ ] Summary stats update dynamically when filter is active
+- [ ] SPL quality signal (keyword hit/miss annotation in answer sheet)
+- [ ] Candidate history across attempts (grouped by email)
 
-### Future Consideration (v2+)
+### Future (v2+) — Could Have
 
-- [ ] Additional SPL question bank beyond the 6 existing questions
-- [ ] Multi-stage branching for truly conditional investigation paths
-- [ ] Fold `Sample questions(1).xlsx` email bank into classification zones
-- [ ] Reviewer filter/sort by date, grade band, candidate name
-
----
-
-## Feature Prioritization Matrix
-
-| Feature | User Value | Implementation Cost | v1.1 Priority |
-|---------|------------|---------------------|--------------|
-| Investigation context block (goal / focus / outcome) | HIGH | LOW | P1 — dataset addition + render |
-| Evidence artifact display (structured cards) | HIGH | LOW | P1 — component update |
-| Improved SPL task prompts | HIGH | LOW | P1 — dataset edit |
-| GAS email delivery fix | HIGH | MEDIUM | P1 — ops correctness |
-| Hint engine | MEDIUM | MEDIUM | P1 — core learning feature for this milestone |
-| Worked-solution reveal | HIGH | MEDIUM | P1 — core learning feature for this milestone |
-| Per-dimension feedback human-readable labels | HIGH | LOW | P1 — polish existing feature |
-| SPL character / line count indicator | LOW | LOW | P2 |
-| SOC Investigation badge | MEDIUM | LOW | P2 |
-| Reviewer per-question drill-down | MEDIUM | MEDIUM | P2 |
-| Print-friendly reviewer export | LOW | LOW | P3 |
+- [ ] Exportable comparison report across multiple cohorts
+- [ ] Per-question analytics (which question trips up candidates most)
+- [ ] Configurable pass/fail threshold without code change
 
 ---
 
-## Competitor / Reference Platform Analysis
+## Reference Platform Analysis
 
-| Feature | TryHackMe SOC Sim | Splunk BOTS Workshop | LetsDefend | CyberDefenders | FlagMail Zone 4 v1.0 | FlagMail Zone 4 v1.1 target |
-|---------|-------------------|---------------------|-----------|----------------|----------------------|------------------------------|
-| Investigation goal statement | Yes — per alert | Yes — scenario brief | Yes — per case | Yes — per challenge | No | Yes — authored per question |
-| Analyst focus / what-to-look-for | Yes — playbook steps | Yes — BOTS workshop guide | Yes — playbook | Yes — challenge hints | No | Yes — 2–3 bullet callout |
-| Expected outcome statement | Yes — "confirm true positive" | Yes — forensic answer format | Yes — closure criteria | Yes — artifact list | No | Yes — scoped per question |
-| Structured evidence display | Yes — SIEM UI | Yes — live Splunk | Yes — SIEM + EDR panels | Yes — PCAP / log viewer | Partial (flat fields) | Yes — typed cards per source |
-| Free-text query writing | No (fill-in-blank or MCQ) | Yes — open search bar | No | No | Yes | Yes |
-| Hints | Yes — "View Hint" | Yes — sample searches | Yes — step reveal | Yes — structured hints | No | Yes — 1 per question post-submit |
-| Worked solution reveal | Yes — after correct | Yes — open-sourced | Yes — after complete | Yes — after submit | No | Yes — post-submit with annotations |
-| Partial credit scoring | No — binary pass/fail | Binary | No | No | Yes — 4-dimension weighted | Yes (unchanged) |
-| Reviewer / admin view | Instructor dashboard (paid) | Self-hosted scoring app | Team dashboard (paid) | Not applicable | Passcode-gated in-app | Passcode-gated in-app (unchanged) |
+| Feature | HackerRank | TestGorilla | KnowBe4 SAT | Proofpoint SAT | FlagMail v1.1 Reviewer | FlagMail v1.2 Target |
+|---------|------------|-------------|-------------|----------------|------------------------|----------------------|
+| Score overview dashboard | Yes | Yes | Yes | Yes | No (list only) | Yes |
+| Grade band distribution | Yes | Percentile | RAG distribution | Risk score distribution | No | Yes (Foundation/Proficient/Advanced) |
+| Candidate search/filter | Yes | Yes | Yes | Yes | No | Yes |
+| Sort by score/name/date | Yes | Yes | Yes | Yes | No | Yes |
+| Answer sheet drill-down | Code review UI | Question-by-question | Not applicable | Not applicable | SPL text only | Full: classification + SPL + explanation |
+| Cross-zone score view | N/A (single assessment) | N/A | Training modules | Campaign modules | SOC only | Zones 1-3 + Zone 4 |
+| Proctoring flags | Yes (anti-cheat flags) | Yes (anti-cheat) | No | No | No | Yes |
+| CSV export | Yes | Yes | Yes | Yes | No | Yes |
+| PDF per-candidate | Yes | Yes | Yes | Yes | No (CSS print only in v1.1) | Yes (jsPDF) |
+| Cohort comparison | Percentile rank | Percentile rank | Benchmarking | Industry benchmark | No | Lightweight (relative bar) |
+| Role-based access | Yes | Yes | Yes | Yes | Shared passcode | Shared passcode (unchanged) |
+| Real-time updates | Yes | Yes | Yes | Yes | No | No (manual refresh) |
 
 ---
 
 ## Sources
 
-- TryHackMe SOC Simulator launch and structure: https://tryhackme.com/resources/blog/soc-simulator-launch
-- TryHackMe SOC L1 Alert Triage room walkthrough (exercise component structure): https://tryhackme.com/room/socl1alerttriage
-- Splunk BOTS Investigation Workshop — context, goal, evidence design: https://www.splunk.com/en_us/blog/security/boss-of-the-soc-bots-investigation-workshop-for-splunk.html
-- BOTS dataset and scoring open-sourced: https://www.splunk.com/en_us/blog/security/boss-of-the-soc-scoring-server-questions-and-answers-and-dataset-open-sourced-and-ready-for-download.html
-- LetsDefend SOC Analyst Learning Path — exercise structure and evidence artifacts: https://app.letsdefend.io/path/soc-analyst-learning-path
-- CyberDefenders Blue Team CTF Challenges — investigation structure: https://cyberdefenders.org/blueteam-ctf-challenges/
-- OSCAR investigative methodology (Obtain → Strategize → Collect → Analyze → Report): https://www.dropzone.ai/blog/why-socs-rely-on-oscar-a-proven-investigative-framework
-- Understanding Student Interaction with AI-Powered Next-Step Hints (arXiv 2511.06362): https://arxiv.org/pdf/2511.06362
-- Contextual factors affecting hint utility (PMC, PMC6310403): https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6310403/
-- Student assessment in cybersecurity training automated by pattern mining (PMC 2022): https://pmc.ncbi.nlm.nih.gov/articles/PMC8964927/
-- Automated feedback for cybersecurity training (Springer 2023): https://link.springer.com/article/10.1007/s10639-023-12265-8
-- SOC analyst investigation methodology — TCM Security: https://tcm-sec.com/basics-of-soc-analyst-methodology/
-- SIEMXPERT SOC scenario-based interview questions — field-name patterns: https://www.siemxpert.com/blog/top-25-soc-analyst-scenario-based-interview-questions-in-2026/
-- PROJECT.md, REQUIREMENTS.md, PLAN.md — project source of truth (internal)
-- socQuestions.js — existing dataset (internal)
-- Splunk.md — scoring model (internal)
+- HackerRank admin dashboard and answer review features: https://www.hackerrank.com/writing/hackerrank-vs-testgorilla-technical-screening-2025-pricing-features
+- TestGorilla dashboard and filter features: https://www.testgorilla.com/blog/testgorilla-vs-hackerrank/
+- KnowBe4 SAT Console Reporting Overview: https://support.knowbe4.com/hc/en-us/articles/360033951614-Security-Awareness-Training-Console-Reporting-Overview
+- Proofpoint CISO Dashboard reporting: https://www.proofpoint.com/us/products/security-awareness-training/security-awareness-reporting
+- Assessment platform features for candidate screening: https://www.canditech.io/blog/assessment-platform-features-for-candidate-screening/
+- TopScore Technologies dashboard (assessment centre design patterns): https://www.topscoretech.com/product-blog-dashboard-feauture/
+- Bold BI student performance dashboard patterns: https://www.boldbi.com/dashboard-examples/education/student-performance-dashboard/
+- Grade distribution dashboard (Utah): https://data.utah.edu/data-dashboard/course-grade-summary/
+- jsPDF library (client-side PDF, 30K stars, 2.6M weekly DLs): https://npm-compare.com/@react-pdf/renderer,jspdf,pdfmake,react-pdf
+- Client-side PDF generation comparison: https://joyfill.io/blog/how-to-generate-pdfs-in-the-browser-with-javascript-no-server-needed
+- Google Apps Script export patterns: https://spreadsheet.dev/comprehensive-guide-export-google-sheets-to-pdf-excel-csv-apps-script
+- PROJECT.md, ReviewerScreen.jsx, google-apps-script.js — project source of truth (internal)
 
 ---
-*Feature research for: FlagMail Zone 4 SOC Investigation — v1.1 Overhaul*
-*Updated: 2026-05-25*
+*Feature research for: FlagMail v1.2 Admin Panel*
+*Researched: 2026-05-26*
