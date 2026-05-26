@@ -1,12 +1,12 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: SOC Investigation Overhaul + Email Fix
+milestone: v1.2
+milestone_name: Admin Panel
 status: planning
-last_updated: "2026-05-25T00:00:00.000Z"
-last_activity: 2026-05-25
+last_updated: "2026-05-26T06:12:21.499Z"
+last_activity: 2026-05-26
 progress:
-  total_phases: 4
+  total_phases: 0
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,16 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-25)
 
 **Core value:** A candidate can complete a realistic SOC investigation — classify the threat, write a working SPL query, and explain their reasoning — and get an automatic, defensible score plus feedback that a reviewer can trust.
-**Current focus:** Phase 6 — Data Enrichment
+**Current focus:** Phase 9 — SOC Round Overhaul (Complete)
 
 ## Current Position
 
-Phase: 6 — Data Enrichment
+Phase: Not started (defining requirements)
 Plan: —
-Status: Roadmap defined; ready to plan Phase 6
-Last activity: 2026-05-25 — Milestone v1.1 roadmap created (Phases 6–9)
-
-Progress: [----------] 0% (0/4 phases complete)
+Status: Defining requirements
+Last activity: 2026-05-26 — Milestone v1.2 started
 
 ## Performance Metrics
 
@@ -43,10 +41,10 @@ Progress: [----------] 0% (0/4 phases complete)
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 6. Data Enrichment | - | - | - |
-| 7. GAS Email Fix | - | - | - |
-| 8. Hint Engine | - | - | - |
-| 9. SOC Round Overhaul | - | - | - |
+| 6. Data Enrichment | 1 | Immediate | - |
+| 7. GAS Email Fix | 1 | Immediate | - |
+| 8. Hint Engine | 1 | Immediate | - |
+| 9. SOC Round Overhaul | 1 | Immediate | - |
 
 **Recent Trend:**
 
@@ -78,13 +76,11 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Inspect GAS Executions log to confirm root cause of email delivery failure before starting Phase 7 plan
+- None — milestone v1.1 complete
 
 ### Blockers/Concerns
 
-- Phase 7: GAS email root cause unconfirmed — Executions log must be inspected before the fix can be designed (research flag from SUMMARY.md)
-- Phase 6: Q5a/Q5b score weight decision must be resolved — unresolved blocker carried from v1.0 STATE.md; confirm which question numbering (Q1–Q4 + Q8 per Splunk Questions.docx) is now canonical
-- Phase 9: Zone 1–3 backward compatibility — mandatory manual E2E test before and after every App.jsx edit per research PITFALLS
+- None — milestone v1.1 complete
 
 ### Quick Tasks Completed
 
@@ -92,6 +88,7 @@ Recent decisions affecting current work:
 |---|-------------|------|--------|-----------|
 | 260522-5to | Add detect-and-flag proctoring (tab/window switch detection) to timed game rounds | 2026-05-21 | 86c5535 | [260522-5to-add-detect-and-flag-proctoring-tab-windo](./quick/260522-5to-add-detect-and-flag-proctoring-tab-windo/) |
 | 260522-uez | Finalize zone 4 SOC integration: /100 scoring, email results with CSV, fix Sheets | 2026-05-22 | 6b0012a | [260522-uez-finalize-zone-4-soc-integration-100-scor](./quick/260522-uez-finalize-zone-4-soc-integration-100-scor/) |
+| 260525-sfa | Build HTML email template replicating ResultsScreen layout | 2026-05-25 | pending | [260525-sfa-build-html-email-template-in-google-apps](./quick/260525-sfa-build-html-email-template-in-google-apps/) |
 
 ## Deferred Items
 
@@ -109,5 +106,4 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-05-25
-Stopped at: Milestone v1.1 roadmap created; Phases 6–9 defined; 12/12 v1.1 requirements mapped; ready to plan Phase 6
-Resume file: None
+Stopped at: Milestone v1.1 complete — all 4 phases done. Phase 9: SocRound.jsx has investigation context, task prompt, human-readable per-dimension feedback. Ready for milestone completion audit.

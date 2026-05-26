@@ -1,61 +1,64 @@
-# FlagMail — SOC Investigation Level
+# FlagMail — SOC Assessment Platform
 
 ## What This Is
 
-FlagMail (flagmail1) is a browser-based security-awareness training game where players
-classify suspicious emails — phishing, BEC, spam, malware — across three escalating zones,
-using progressive clues, a countdown timer, badges, and a leaderboard. This milestone adds
-a **fourth zone: a SOC Investigation level** where candidates go beyond classification to
-write **Splunk SPL queries** and explanations against log evidence, scored automatically and
-surfaced to a reviewer. It turns FlagMail from a classification quiz into an entry-level
-SOC-analyst assessment tool.
+FlagMail (flagmail1) is a browser-based security-awareness training and assessment tool where
+candidates classify suspicious emails across three escalating zones, then complete a SOC
+Investigation level writing Splunk SPL queries and explanations against log evidence. An
+admin panel gives assessors a unified dashboard with score overviews, candidate management,
+answer sheet drill-downs, and downloadable CSV/PDF reports across all zones.
 
 ## Core Value
 
 A candidate can complete a realistic SOC investigation — classify the threat, write a
 working SPL query, and explain their reasoning — and get an automatic, defensible score
-plus feedback that a reviewer can trust.
+plus feedback that an admin/reviewer can trust and act on from a unified panel.
 
 ## Requirements
 
 ### Validated
 
-<!-- Inferred from existing flagmail1 codebase (see .planning/codebase/). -->
-
-- ✓ Email classification game with L1 (primary) and L2 (secondary) category pickers — existing
+- ✓ Email classification game with L1/L2 category pickers — existing
 - ✓ Three escalating zones with intro cards, rounds, and zone-complete summaries — existing
 - ✓ Progressive clue reveal system per email — existing
 - ✓ Countdown timer per round — existing
-- ✓ Badge unlock system with toasts and a badge collection view — existing
+- ✓ Badge unlock system with toasts and badge collection view — existing
 - ✓ Scoring engine with per-email records and category accuracy — existing
-- ✓ Leaderboard backed by a Google Apps Script + Google Sheets web app — existing
+- ✓ Leaderboard backed by Google Apps Script + Google Sheets — existing
 - ✓ Player registration (name/email) with duplicate-attempt check — existing
 - ✓ Results screen with competency summary and rank — existing
+- ✓ SOC Investigation zone (Zone 4) with 6 questions, SPL query input, explanation input — v1.0
+- ✓ SPL keyword validation (required/optional/blocked terms with anyOf) — v1.0
+- ✓ 23-point scoring model (Primary 5 / Secondary 3 / SPL 10 / Explanation 5) — v1.0
+- ✓ SOC submissions pushed to Google Sheets (SOCData sheet) — v1.0
+- ✓ Passcode-gated reviewer view reading from Google Sheets — v1.0
+- ✓ Investigation context per SOC question (goal, analyst focus, expected outcomes) — v1.1
+- ✓ Scenario-specific SPL task prompts — v1.1
+- ✓ Progressive hint engine (post-first-submit, per-question) — v1.1
+- ✓ Human-readable per-dimension feedback (classification, SPL, explanation) — v1.1
+- ✓ GAS email notifications with quota-aware error handling — v1.1
 
 ### Active
 
-<!-- This milestone: the SOC Investigation level. -->
+<!-- This milestone: Admin Panel (v1.2) -->
 
-- [ ] A new fourth zone ("SOC Investigation") appears after the existing three zones, leaving the existing game flow unchanged
-- [ ] The level ships with ~5 investigation questions sourced from `Splunk Questions.docx` (Q1–Q4 and the multi-stage Q8)
-- [ ] Each question presents a scenario plus log evidence (email / proxy / EDR details)
-- [ ] Candidate picks a primary classification and a secondary diagnosis from question-specific option sets
-- [ ] Candidate writes a Splunk SPL query in a plain multi-line text editor
-- [ ] Candidate writes a free-text explanation of their reasoning
-- [ ] The SPL query is validated by keyword matching — required terms present, optional terms credited, blocked terms penalized — with no query execution
-- [ ] The explanation is validated against expected concept keywords
-- [ ] Each question is scored on a 23-point model: Primary 5, Secondary 3, SPL 10, Explanation 5
-- [ ] The candidate sees a per-question pass/fail result with feedback and an overall grade band (Strong 20–23 / Good 15–19 / Needs improvement 10–14 / Not ready below 10)
-- [ ] SOC Investigation submissions (answers, SPL text, scores, feedback) are pushed to Google Sheets via the existing Apps Script backend
-- [ ] A passcode-gated reviewer view (separate in-app route) lists submissions with scores and feedback, read from the Google Sheet
+- [ ] Admin panel replaces the existing reviewer screen as a unified assessment management view
+- [ ] Score overview dashboard showing total submissions, average scores, grade band distribution, and pass/fail rates across all zones
+- [ ] Full answer sheet view displaying each candidate's exact classification picks, SPL query text, explanation text, and per-dimension scores
+- [ ] CSV export of submission data for offline review
+- [ ] PDF report generation per candidate or summary
+- [ ] Candidate management with search/filter and individual history across attempts
+- [ ] Admin panel shows data from both classification zones (1-3) and SOC Investigation (Zone 4)
 
 ### Out of Scope
 
-- Folding `Sample questions(1).xlsx` emails into the existing classification zones — separate effort, deferred to v2
-- Reviewer login / user accounts — a shared passcode is sufficient for v1; full auth is a large addition to a currently auth-free app
+- Folding `Sample questions(1).xlsx` emails into the existing classification zones — separate effort, deferred
+- User accounts / identity provider — shared passcode is sufficient; full auth is too large for the current app
 - Real Splunk query execution against a live or mock backend — keyword validation is the chosen fidelity level
-- LLM / AI semantic grading of SPL or explanations — keyword and concept matching only for v1
-- Rewriting the existing three zones — the SOC level is purely additive
+- LLM / AI semantic grading of SPL or explanations — keyword and concept matching only
+- Rewriting the existing three zones — purely additive changes only
+- Real-time collaboration / live admin notifications — static data refresh is sufficient for v1.2
+- Excel (XLSX) export — CSV and PDF cover reporting needs
 
 ## Context
 
@@ -90,22 +93,25 @@ plus feedback that a reviewer can trust.
 | SOC content is a new 4th zone, not a redesign | Preserves the working classification game; layers the harder skill on top | — Pending |
 | SPL entered as plain text, validated by keyword matching | Deterministic, no backend execution, matches the docx's stated validation approach | — Pending |
 | 23-point scoring model per SOC question | Specified directly in `Splunk.md` (Primary 5 / Secondary 3 / SPL 10 / Explanation 5) | — Pending |
-| Reviewer view is a passcode-gated in-app route reading from Google Sheets | App has no auth; passcode is the lightest way to gate reviewer-only data | — Pending |
-| SOC questions stored as a new static dataset | Matches existing `emails.js` pattern; no API dependency during play | — Pending |
-| xlsx email bank deferred to v2 | Keeps this milestone focused on the SOC level | — Pending |
+| Reviewer view is a passcode-gated in-app route reading from Google Sheets | App has no auth; passcode is the lightest way to gate reviewer-only data | ✓ Good |
+| SOC questions stored as a new static dataset | Matches existing `emails.js` pattern; no API dependency during play | ✓ Good |
+| xlsx email bank deferred to v2 | Keeps this milestone focused on the SOC level | ✓ Good |
+| Admin panel replaces reviewer screen | One unified entry point; no need for separate reviewer and admin flows | — Pending |
+| Same shared passcode for admin access | Consistent with existing auth model; no new auth infrastructure needed | — Pending |
+| CSV + PDF for report downloads | Covers spreadsheet and printable use cases without requiring XLSX library | — Pending |
+| Implementation with OpenCode + claude-sonnet-4-6 | Best coding model for complex implementation; Opus for planning | — Pending |
 
-## Current Milestone: v1.1 SOC Investigation Overhaul + Email Fix
+## Current Milestone: v1.2 Admin Panel
 
-**Goal:** Make Zone 4 a realistic SOC investigation simulator with structured scenarios, evidence, and investigation context per question — and fix manager email delivery.
+**Goal:** Replace the reviewer screen with a full admin panel that gives assessors a unified view of all candidate submissions across all zones, with dashboards, reports, answer sheets, and candidate management.
 
 **Target features:**
-- Each SOC question presents a full investigation scenario with evidence artifacts
-- Classification task with question-specific primary/secondary option sets
-- SPL task with clear investigation prompt and investigation context
-- Hint engine for learning assistance
-- Validation uses required/optional/blocked terms logic (not exact string matching)
-- Per-component scoring feedback (classification, SPL, explanation)
-- Fix GAS email notification delivery to managers/reviewers
+- Score overview dashboard with summary stats, grade band distribution, pass/fail rates
+- Full answer sheet view showing candidate's exact answers (classification, SPL, explanation)
+- CSV and PDF report downloads for offline review or sharing
+- Candidate management with search/filter and individual history
+- Unified admin entry point replacing the existing reviewer screen
+- Data from both Zones 1-3 (classification) and Zone 4 (SOC Investigation)
 
 ## Evolution
 
@@ -125,4 +131,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2025-05-25 after milestone v1.1 initialization*
+*Last updated: 2026-05-26 after milestone v1.2 initialization*
