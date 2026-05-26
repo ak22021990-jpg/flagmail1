@@ -12,7 +12,7 @@ const ZONES = [
   {
     zone: 1,
     title: 'The Inbox',
-    subtitle: 'Section 1 of 3',
+    subtitle: 'Section 1 of 4',
     emails: 5,
     difficulty: 'Foundation',
     accent: '#0A84FF',
@@ -37,7 +37,7 @@ const ZONES = [
   {
     zone: 2,
     title: 'The Queue',
-    subtitle: 'Section 2 of 3',
+    subtitle: 'Section 2 of 4',
     emails: 5,
     difficulty: 'Intermediate',
     accent: '#30B0C7',
@@ -62,7 +62,7 @@ const ZONES = [
   {
     zone: 3,
     title: 'The Escalation',
-    subtitle: 'Section 3 of 3',
+    subtitle: 'Section 3 of 4',
     emails: 5,
     difficulty: 'Advanced',
     accent: '#FF7A1A',
@@ -83,6 +83,18 @@ const ZONES = [
         detail: 'A single overlooked inconsistency usually decides the classification.',
       },
     ],
+  },
+  {
+    zone: 4,
+    title: 'SOC Desk',
+    subtitle: 'Section 4 of 4',
+    emails: 6,
+    difficulty: 'Assessment',
+    accent: '#7B2D8E',
+    endColor: '#5A1D6E',
+    mission: 'Classify the threat, write a Splunk SPL query, and explain your reasoning against real log evidence.',
+    contextCopy: 'No timer, no clues.',
+    signals: [],
   },
 ];
 
@@ -513,7 +525,7 @@ export default function ZoneIntroCard({ zone, onStart, earlyUnlocked }) {
                       color: '#111827',
                     }}
                   >
-                    Step {meta.zone} of 3
+                    Step {meta.zone} of 4
                   </div>
                 </div>
                 <DifficultyBadge difficulty={meta.difficulty} accent={meta.accent} />

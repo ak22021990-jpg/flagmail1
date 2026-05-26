@@ -19,7 +19,7 @@ const sectionLabel = {
 export default function SocRound({
   question, answer, progress,
   onSetPrimary, onSetSecondary,
-  onSetSplText, onSetExplanation,
+  onSetSplText,
   onSubmit,
   onViolationChange,
 }) {
@@ -30,7 +30,7 @@ export default function SocRound({
     onViolationChange(violations);
   }, [violations, onViolationChange]);
 
-  const canSubmit = !!answer.splText?.trim() && !!answer.explanation?.trim() && !answer.submitted;
+  const canSubmit = !!answer.splText?.trim() && !answer.submitted;
   const hasClassification = !!question.classification;
 
   const primaryOptions = hasClassification ? question.classification.options.primary : [];
@@ -121,6 +121,57 @@ export default function SocRound({
             ...surface, borderRadius: 30, padding: 16,
             display: "flex", flexDirection: "column", gap: 14,
           }}>
+            {question.investigation_context && (
+              <div style={{
+                borderRadius: 22, padding: 14,
+                background: "rgba(123,45,142,0.05)", border: "1px solid rgba(123,45,142,0.12)",
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#7B2D8E", marginBottom: 8 }}>
+                  Investigation Goal
+                </div>
+                <div style={{ fontSize: 13, lineHeight: 1.55, color: "#111827" }}>
+                  {question.investigation_context.goal}
+                </div>
+                {question.investigation_context.analyst_focus && question.investigation_context.analyst_focus.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#7B2D8E", marginBottom: 6 }}>
+                      Analyst Focus
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {question.investigation_context.analyst_focus.map((item, i) => (
+                        <span key={i} style={{
+                          padding: "3px 10px", borderRadius: 999,
+                          background: "rgba(123,45,142,0.08)",
+                          border: "1px solid rgba(123,45,142,0.16)",
+                          color: "#7B2D8E", fontSize: 12, fontWeight: 600,
+                        }}>
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {question.investigation_context.expected_outcome && question.investigation_context.expected_outcome.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#7B2D8E", marginBottom: 6 }}>
+                      Expected Outcomes
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {question.investigation_context.expected_outcome.map((item, i) => (
+                        <span key={i} style={{
+                          padding: "3px 10px", borderRadius: 999,
+                          background: "rgba(52,199,89,0.08)",
+                          border: "1px solid rgba(52,199,89,0.16)",
+                          color: "#34C759", fontSize: 12, fontWeight: 600,
+                        }}>
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <div style={sectionLabel}>Evidence</div>
 
             {question.evidence.email && (
@@ -274,6 +325,20 @@ export default function SocRound({
               </div>
             )}
 
+            {question.task_prompt && (
+              <div style={{
+                padding: "10px 14px", borderRadius: 14,
+                background: "rgba(123,45,142,0.06)", border: "1px solid rgba(123,45,142,0.12)",
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#7B2D8E", marginBottom: 4 }}>
+                  SPL Task
+                </div>
+                <div style={{ fontSize: 12.5, lineHeight: 1.5, color: "rgba(17,24,39,0.75)", fontWeight: 500 }}>
+                  {question.task_prompt}
+                </div>
+              </div>
+            )}
+
             <div style={{ display: "grid", gap: 8 }}>
               <div style={sectionLabel}>SPL query</div>
               <textarea
@@ -284,24 +349,6 @@ export default function SocRound({
                 style={{
                   width: "100%", padding: 12, borderRadius: 14,
                   fontSize: 13, fontFamily: 'ui-monospace, "SF Mono", monospace',
-                  border: "1px solid rgba(13,26,51,0.12)",
-                  background: "rgba(249,250,252,0.88)",
-                  color: "#111827", resize: "vertical",
-                  lineHeight: 1.5,
-                }}
-              />
-            </div>
-
-            <div style={{ display: "grid", gap: 8 }}>
-              <div style={sectionLabel}>Explanation</div>
-              <textarea
-                value={answer.explanation}
-                onChange={e => onSetExplanation(e.target.value)}
-                placeholder="Explain your reasoning..."
-                rows={3}
-                style={{
-                  width: "100%", padding: 12, borderRadius: 14,
-                  fontSize: 13, fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
                   border: "1px solid rgba(13,26,51,0.12)",
                   background: "rgba(249,250,252,0.88)",
                   color: "#111827", resize: "vertical",
@@ -355,6 +402,12 @@ SocRound.propTypes = {
         ]),
       }),
     }),
+    investigation_context: PropTypes.shape({
+      goal: PropTypes.string,
+      analyst_focus: PropTypes.arrayOf(PropTypes.string),
+      expected_outcome: PropTypes.arrayOf(PropTypes.string),
+    }),
+    task_prompt: PropTypes.string,
   }).isRequired,
   answer: PropTypes.shape({
     primary: PropTypes.string,
@@ -363,7 +416,6 @@ SocRound.propTypes = {
       PropTypes.arrayOf(PropTypes.string),
     ]),
     splText: PropTypes.string,
-    explanation: PropTypes.string,
     submitted: PropTypes.bool,
   }).isRequired,
   progress: PropTypes.shape({
@@ -373,7 +425,6 @@ SocRound.propTypes = {
   onSetPrimary: PropTypes.func.isRequired,
   onSetSecondary: PropTypes.func.isRequired,
   onSetSplText: PropTypes.func.isRequired,
-  onSetExplanation: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
   onViolationChange: PropTypes.func,
 };

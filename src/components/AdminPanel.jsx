@@ -5,6 +5,7 @@ import { glass } from "../styles/tokens.js";
 import { useAdmin } from "../hooks/useAdmin.js";
 import CandidateList from "./CandidateList.jsx";
 import AnswerSheet from "./AnswerSheet.jsx";
+import { downloadCsv } from "../utils/exportCsv.js";
 
 const localGlass = { ...glass, backdropFilter: "blur(30px) saturate(165%)", WebkitBackdropFilter: "blur(30px) saturate(165%)", border: "1px solid rgba(255,255,255,0.84)" };
 
@@ -147,6 +148,23 @@ export default function AdminPanel({ onBack }) {
   const rawData = data?.rawData || [];
   const socData = data?.socData || [];
 
+  function handleCsvDownload() {
+    const rows = candidates.map((c) => ({
+      Name: c.name || "",
+      Email: c.email || "",
+      Status: c.status || "",
+      "Total Score": c.totalScore ?? "",
+      "Grade Band": c.gradeBand || "",
+      "Zone 1 Score": c.zone1Score ?? "",
+      "Zone 2 Score": c.zone2Score ?? "",
+      "Zone 3 Score": c.zone3Score ?? "",
+      "Zone 4 SOC Score": c.zone4SocScore ?? "",
+      "Tab Switches": c.tabSwitches ?? 0,
+      "Submission Date": c.submissionDate || "",
+    }));
+    downloadCsv(rows, "flagmail-submissions.csv");
+  }
+
   if (selectedCandidate) {
     return (
       <AnswerSheet
@@ -169,6 +187,19 @@ export default function AdminPanel({ onBack }) {
             Admin Panel
           </h1>
           <div style={{ display: "flex", gap: 8 }}>
+            <motion.button
+              onClick={handleCsvDownload}
+              disabled={loading}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              style={{
+                padding: "10px 18px", borderRadius: 14, fontSize: 13, fontWeight: 600,
+                border: "1px solid rgba(52,199,89,0.30)", background: "rgba(52,199,89,0.08)",
+                color: "#34C759", cursor: loading ? "default" : "pointer", opacity: loading ? 0.6 : 1,
+              }}
+            >
+              Download CSV
+            </motion.button>
             <motion.button
               onClick={refresh}
               disabled={loading}

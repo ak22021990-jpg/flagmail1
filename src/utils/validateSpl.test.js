@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateSpl, validateExplanation } from "./validateSpl.js";
+import { validateSpl } from "./validateSpl.js";
 
 describe("validateSpl", () => {
   const rules = {
@@ -64,28 +64,3 @@ describe("validateSpl", () => {
   });
 });
 
-describe("validateExplanation", () => {
-  const concepts = {
-    required: ["credential", "phishing"],
-    optional: ["harvesting", "urgency"],
-  };
-
-  it("hits required and optional when present", () => {
-    const result = validateExplanation("The phishing attack targets credential harvesting using urgency", concepts);
-    expect(result.required.hits).toHaveLength(2);
-    expect(result.optional.hits).toHaveLength(2);
-  });
-
-  it("reports misses for missing concepts", () => {
-    const result = validateExplanation("It was a spam email", concepts);
-    expect(result.required.hits).toHaveLength(0);
-    expect(result.required.misses).toHaveLength(2);
-    expect(result.optional.hits).toHaveLength(0);
-  });
-
-  it("matches concept keywords case-insensitively", () => {
-    const result = validateExplanation("CREDENTIAL PHISHING HARVESTING", concepts);
-    expect(result.required.hits).toHaveLength(2);
-    expect(result.optional.hits).toHaveLength(1);
-  });
-});

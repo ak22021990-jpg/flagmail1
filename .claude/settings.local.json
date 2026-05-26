@@ -20,7 +20,10 @@
       "Bash(gh pr *)",
       "Bash(gh run *)",
       "Bash(git commit --amend -m 'fix\\(soc\\): repair SOC Google Sheet integration' -m '- config.js: point LEADERBOARD_URL at the current Apps Script deployment *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Skill(gsd-new-milestone)",
+      "mcp__gitnexus__detect_changes",
+      "Bash(npx gsd-sdk *)"
     ]
   }
 }

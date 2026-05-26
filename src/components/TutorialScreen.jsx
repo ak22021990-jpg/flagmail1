@@ -107,7 +107,7 @@ export default function TutorialScreen({ onSkip }) {
               letterSpacing: '0.02em',
             }}
           >
-            15 emails &middot; 3 zones + SOC investigation &middot; 120s per round
+            15 emails &middot; 4 zones (including SOC) &middot; 120s per round
           </div>
         </div>
 

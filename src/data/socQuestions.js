@@ -47,16 +47,32 @@ export const SOC_QUESTIONS = [
         },
       ],
     },
-    conceptKeywords: {
-      required: ["credential", "phishing", "urgency", "password reset"],
-      optional: ["landing page", "harvesting", "spoofed domain"],
-    },
     feedback: {
       primaryCorrect: "Correct. The sender domain and credential-harvesting URL are clear phishing indicators.",
       primaryIncorrect: "Look at the sender domain and URL — they impersonate Microsoft but are not microsoft.com.",
       secondaryCorrect: "Correct. The HTML attachment and fake login page target credential harvesting.",
       secondaryIncorrect: "Consider whether the attacker is trying to steal credentials via a fake login page.",
     },
+    investigation_context: {
+      goal: "Identify phishing emails using password expiration themes",
+      analyst_focus: [
+        "Suspicious sender domains",
+        "Credential harvesting URLs",
+        "Impacted recipients",
+        "Phishing campaign scope",
+      ],
+      expected_outcome: [
+        "Identify affected users",
+        "Block phishing URL",
+        "Remove malicious emails",
+        "Reset compromised credentials",
+      ],
+    },
+    task_prompt: "Write an SPL query to find similar phishing emails and identify impacted recipients.",
+    hints: [
+      "Look at the sender domain and embedded URL — they impersonate Microsoft but are not microsoft.com. The HTML attachment is designed to capture credentials.",
+      "Use stats with values() to collect recipients by sender and URL — this reveals the campaign scope across all affected users.",
+    ],
   },
   {
     id: "Q2",
@@ -103,16 +119,31 @@ export const SOC_QUESTIONS = [
         },
       ],
     },
-    conceptKeywords: {
-      required: ["password spraying", "brute force", "credential access", "multiple users", "external IP"],
-      optional: ["authentication failure", "targeted", "reconnaissance"],
-    },
     feedback: {
       primaryCorrect: "Correct. The high volume of failures across many users from a single IP is classic password spraying.",
       primaryIncorrect: "This is a password-spraying pattern — many users, few passwords, single source IP, all failures.",
       secondaryCorrect: "Correct. The attacker is attempting to gain credential access through password spraying.",
       secondaryIncorrect: "Consider what the attacker gains from enumerating valid credentials across multiple accounts.",
     },
+    investigation_context: {
+      goal: "Detect password spraying activity targeting multiple users",
+      analyst_focus: [
+        "Failed login spikes",
+        "Single source IP",
+        "Multiple targeted accounts",
+        "Authentication anomalies",
+      ],
+      expected_outcome: [
+        "Block attacker IP",
+        "Enable MFA",
+        "Investigate compromised accounts",
+      ],
+    },
+    task_prompt: "Write an SPL query to identify password spraying attempts from external IP addresses.",
+    hints: [
+      "Focus on the single external IP and the number of distinct users targeted — password spraying hits many accounts with few passwords to avoid lockouts.",
+      "Use stats with dc(user) to count distinct users by source IP, then apply a threshold to separate malicious spraying from normal failed logins.",
+    ],
   },
   {
     id: "Q3",
@@ -160,16 +191,31 @@ export const SOC_QUESTIONS = [
         },
       ],
     },
-    conceptKeywords: {
-      required: ["malware", "ISO", "attachment", "initial access", "invoice lure"],
-      optional: ["executable", "delivery", "payload"],
-    },
     feedback: {
       primaryCorrect: "Correct. ISO attachments are commonly used to deliver malware because they bypass attachment filters.",
       primaryIncorrect: "ISO attachments are a known malware delivery vector — they contain disk images that can mount and execute payloads.",
       secondaryCorrect: "Correct. The attacker is using the malware attachment to gain initial access to the environment.",
       secondaryIncorrect: "This technique is about gaining a foothold. What stage of the attack chain does that represent?",
     },
+    investigation_context: {
+      goal: "Identify malware delivery attempts using ISO attachments",
+      analyst_focus: [
+        "Suspicious attachments",
+        "External senders",
+        "Impacted recipients",
+        "Malware delivery patterns",
+      ],
+      expected_outcome: [
+        "Quarantine malicious emails",
+        "Scan endpoints for execution",
+        "Block sender domains",
+      ],
+    },
+    task_prompt: "Write an SPL query to identify emails delivering suspicious ISO attachments.",
+    hints: [
+      "ISO files are often used to bypass email attachment filters — the file extension is the key indicator that distinguishes this from a legitimate invoice.",
+      "Use stats to group emails by sender and attachment name — this identifies the delivery campaign and impacted recipients.",
+    ],
   },
   {
     id: "Q4",
@@ -228,16 +274,31 @@ export const SOC_QUESTIONS = [
         },
       ],
     },
-    conceptKeywords: {
-      required: ["BEC", "executive impersonation", "wire transfer", "urgency", "financial fraud", "social engineering"],
-      optional: ["CEO fraud", "payment fraud", "vendor payment"],
-    },
     feedback: {
       primaryCorrect: "Correct. The spoofed CEO domain, urgency, request for secrecy, and wire transfer amount are classic BEC indicators.",
       primaryIncorrect: "Consider whether the sender domain matches the CEO's real corporate domain, and examine the urgency and payment request.",
       secondaryCorrect: "Correct. The attacker is targeting a financial payout, making this financial fraud.",
       secondaryIncorrect: "This attack has a direct financial objective. What category of fraud involves urgent wire transfers?",
     },
+    investigation_context: {
+      goal: "Detect executive impersonation and wire fraud attempts",
+      analyst_focus: [
+        "Lookalike domains",
+        "Urgent payment requests",
+        "Executive impersonation",
+        "External senders",
+      ],
+      expected_outcome: [
+        "Prevent wire fraud",
+        "Warn finance teams",
+        "Block impersonation domains",
+      ],
+    },
+    task_prompt: "Write an SPL query to identify executive impersonation attempts and financial fraud emails.",
+    hints: [
+      "Compare the sender domain with the company's real corporate domain — lookalike domains with subtle typos are the main BEC indicator.",
+      "Use eval with match() to tag senders as internal or external, then filter for display names matching executive roles like CEO or Finance.",
+    ],
   },
   {
     id: "Q5a",
@@ -296,16 +357,32 @@ export const SOC_QUESTIONS = [
         },
       ],
     },
-    conceptKeywords: {
-      required: ["correlation", "email proxy EDR", "process injection", "compromise", "kill chain"],
-      optional: ["multi-stage", "lateral movement", "C2", "payload execution"],
-    },
     feedback: {
       primaryCorrect: "Correct. The phishing email, proxy access, file download, and EDR injection alert confirm a malware infection.",
       primaryIncorrect: "Look at the full chain: phishing email → URL click → ZIP download → process injection. That is an infection.",
       secondaryCorrect: "Correct. The attacker used the email to gain initial access, then executed malware on the endpoint.",
       secondaryIncorrect: "Two stages are involved: how the attacker got in, and what happened after. Both need to be identified.",
     },
+    investigation_context: {
+      goal: "Correlate multi-stage attack activity across email, proxy, and EDR logs",
+      analyst_focus: [
+        "Phishing delivery",
+        "Malicious URL access",
+        "Payload download",
+        "Process execution",
+        "Outbound connections",
+      ],
+      expected_outcome: [
+        "Confirm endpoint compromise",
+        "Isolate infected host",
+        "Contain malware spread",
+      ],
+    },
+    task_prompt: "Write an SPL query to correlate email, proxy, and EDR logs for the affected user to confirm the full attack chain.",
+    hints: [
+      "This investigation spans three log sources — email delivery, proxy access, and EDR alerts. You need all three to see the complete attack chain.",
+      "Use stats with values() to collect evidence fields from multiple indexes into a single view grouped by user and host.",
+    ],
   },
   {
     id: "Q5b",
@@ -342,15 +419,31 @@ export const SOC_QUESTIONS = [
         },
       ],
     },
-    conceptKeywords: {
-      required: ["kill chain", "execution", "C2", "outbound connection", "compromise"],
-      optional: ["full chain", "indicators of compromise", "IOC"],
-    },
     feedback: {
       primaryCorrect: null,
       primaryIncorrect: null,
       secondaryCorrect: null,
       secondaryIncorrect: null,
     },
+    investigation_context: {
+      goal: "Correlate multi-stage attack activity across email, proxy, and EDR logs",
+      analyst_focus: [
+        "Phishing delivery",
+        "Malicious URL access",
+        "Payload download",
+        "Process execution",
+        "Outbound connections",
+      ],
+      expected_outcome: [
+        "Confirm endpoint compromise",
+        "Isolate infected host",
+        "Contain malware spread",
+      ],
+    },
+    task_prompt: "Write an advanced SPL query to trace the full kill chain and find all users who progressed from phishing email to malware execution.",
+    hints: [
+      "Focus on the final execution stage — the process name update.exe is the key indicator that separates compromised hosts from those that only received the email.",
+      "Start with a query that correlates all three log sources, then use search to filter specifically for the executed process name.",
+    ],
   },
 ];

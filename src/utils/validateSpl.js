@@ -32,20 +32,3 @@ export function validateSpl(splText, rules) {
   return { required, optional, blocked };
 }
 
-export function validateExplanation(text, conceptRules) {
-  const norm = normalize(text);
-  const required = { hits: [], misses: [] };
-  const optional = { hits: [], misses: [] };
-
-  for (const term of conceptRules.required || []) {
-    if (matches(term, norm)) required.hits.push(term);
-    else required.misses.push(term);
-  }
-
-  for (const term of conceptRules.optional || []) {
-    if (matches(term, norm)) optional.hits.push(term);
-    else optional.misses.push(term);
-  }
-
-  return { required, optional };
-}

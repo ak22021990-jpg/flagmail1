@@ -79,14 +79,14 @@ function highlightSpl(splText, questionId) {
       : segments.map((seg, idx) => {
           if (seg.type === "required") {
             return (
-              <span key={idx} style={{ background: "rgba(52,199,89,0.18)", borderRadius: 3, padding: "0 2px" }}>
+              <span key={idx} className="spl-required" style={{ background: "rgba(52,199,89,0.18)", borderRadius: 3, padding: "0 2px" }}>
                 {seg.text}
               </span>
             );
           }
           if (seg.type === "optional") {
             return (
-              <span key={idx} style={{ background: "rgba(10,132,255,0.12)", borderRadius: 3, padding: "0 2px" }}>
+              <span key={idx} className="spl-optional" style={{ background: "rgba(10,132,255,0.12)", borderRadius: 3, padding: "0 2px" }}>
                 {seg.text}
               </span>
             );
@@ -131,6 +131,7 @@ export default function AnswerSheet({ candidate, rawData, socData, onBack }) {
 
   return (
     <div
+      className="print-target"
       style={{
         minHeight: "100dvh",
         padding: "clamp(18px, 3vw, 30px)",
@@ -138,25 +139,44 @@ export default function AnswerSheet({ candidate, rawData, socData, onBack }) {
       }}
     >
       <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gap: 16 }}>
-        {/* ── Back button ── */}
-        <motion.button
-          onClick={onBack}
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.99 }}
-          style={{
-            padding: "10px 18px",
-            borderRadius: 14,
-            fontSize: 13,
-            fontWeight: 600,
-            border: "1px solid rgba(13,26,51,0.10)",
-            background: "rgba(249,250,252,0.88)",
-            color: "#111827",
-            cursor: "pointer",
-            justifySelf: "start",
-          }}
-        >
-          {"\u2190"} Back to Candidates
-        </motion.button>
+        {/* ── Back + Print buttons ── */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <motion.button
+            onClick={onBack}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            style={{
+              padding: "10px 18px",
+              borderRadius: 14,
+              fontSize: 13,
+              fontWeight: 600,
+              border: "1px solid rgba(13,26,51,0.10)",
+              background: "rgba(249,250,252,0.88)",
+              color: "#111827",
+              cursor: "pointer",
+            }}
+          >
+            {"\u2190"} Back to Candidates
+          </motion.button>
+          <motion.button
+            onClick={() => window.print()}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            className="no-print"
+            style={{
+              padding: "10px 18px",
+              borderRadius: 14,
+              fontSize: 13,
+              fontWeight: 600,
+              border: "1px solid rgba(10,132,255,0.24)",
+              background: "rgba(10,132,255,0.08)",
+              color: "#0A84FF",
+              cursor: "pointer",
+            }}
+          >
+            Print Report
+          </motion.button>
+        </div>
 
         {/* ── Candidate Header Card ── */}
         <div style={{ ...localGlass, borderRadius: 22, padding: 22, display: "grid", gap: 10 }}>

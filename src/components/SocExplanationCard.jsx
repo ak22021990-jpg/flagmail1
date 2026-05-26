@@ -1,6 +1,7 @@
 import PropTypes from "prop-types";
 import { motion } from "framer-motion";
 import { glass } from "../styles/tokens.js";
+import HintPanel from "./HintPanel.jsx";
 
 // SocExplanationCard uses softer blur and border
 const localGlass = { ...glass, backdropFilter: "blur(24px) saturate(155%)", WebkitBackdropFilter: "blur(24px) saturate(155%)", border: "1px solid rgba(255,255,255,0.82)", boxShadow: "0 24px 80px rgba(32, 52, 89, 0.10), 0 8px 24px rgba(32, 52, 89, 0.05)" };
@@ -42,26 +43,24 @@ function KeywordList({ label, items, pass }) {
   );
 }
 
-export default function SocExplanationCard({ result, question, hasMore, onNext }) {
-  const { score, splValidation, explanationValidation, primaryCorrect, secondaryRatio } = result;
+export default function SocExplanationCard({ result, question, hasMore, onNext, hintIndex, onRevealHint }) {
+  const { score, splValidation, primaryCorrect, secondaryRatio } = result;
   const { breakdown, total, grade } = score;
 
-  // Per-question max points vary (Q1-Q4 = 23, Q5a / Q5b = 10).
   const SCORE_MAXES = {
-    Q1: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
-    Q2: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
-    Q3: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
-    Q4: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
-    Q5a: { primary: 5, secondary: 3, spl: 2, explanation: 0 },
-    Q5b: { primary: 0, secondary: 0, spl: 10, explanation: 0 },
+    Q1: { primary: 5, secondary: 3, spl: 10 },
+    Q2: { primary: 5, secondary: 3, spl: 10 },
+    Q3: { primary: 5, secondary: 3, spl: 10 },
+    Q4: { primary: 5, secondary: 3, spl: 10 },
+    Q5a: { primary: 5, secondary: 3, spl: 2 },
+    Q5b: { primary: 0, secondary: 0, spl: 10 },
   };
   const maxes = SCORE_MAXES[result.questionId] || SCORE_MAXES.Q1;
-  const questionMax = maxes.primary + maxes.secondary + maxes.spl + maxes.explanation;
+  const questionMax = maxes.primary + maxes.secondary + maxes.spl;
 
   const gradeColor = grade === "Strong" ? "#34C759" : grade === "Good" ? "#0A84FF" : grade === "Needs improvement" ? "#FF9500" : "#FF3B30";
 
   const splPass = splValidation.required.misses.length === 0 && splValidation.blocked.hits.length === 0;
-  const expPass = explanationValidation.required.misses.length === 0;
 
   return (
     <div style={{
@@ -119,7 +118,6 @@ export default function SocExplanationCard({ result, question, hasMore, onNext }
                 { label: "Primary", pts: breakdown.primary, max: maxes.primary },
                 { label: "Secondary", pts: breakdown.secondary, max: maxes.secondary },
                 { label: "SPL query", pts: breakdown.spl, max: maxes.spl },
-                { label: "Explanation", pts: breakdown.explanation, max: maxes.explanation },
               ].filter(row => row.max > 0).map(row => (
                 <div key={row.label} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 13 }}>
                   <span style={{ color: "rgba(17,24,39,0.58)" }}>{row.label}</span>
@@ -158,17 +156,6 @@ export default function SocExplanationCard({ result, question, hasMore, onNext }
               )}
             </div>
 
-            <div style={sectionLabel}>Explanation Validation</div>
-            <div style={{ display: "grid", gap: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <FeedbackLabel label="Concept keywords" pass={expPass} />
-                <span style={{ fontSize: 12, color: "rgba(17,24,39,0.50)" }}>
-                  {explanationValidation.required.hits.length} hit, {explanationValidation.required.misses.length} miss
-                </span>
-              </div>
-              <KeywordList label="Concepts found" items={explanationValidation.required.hits} pass />
-              <KeywordList label="Concepts missed" items={explanationValidation.required.misses} pass={false} />
-            </div>
           </motion.div>
 
           <motion.div
@@ -207,20 +194,24 @@ export default function SocExplanationCard({ result, question, hasMore, onNext }
                 Classification
               </div>
               {question.classification && (
-                <div style={{ display: "grid", gap: 6 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                    <span style={{ color: "rgba(17,24,39,0.46)" }}>Primary</span>
-                    <span style={{ fontWeight: 700, color: primaryCorrect ? "#34C759" : "#FF3B30" }}>
-                      {primaryCorrect ? "Correct" : "Incorrect"}
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                    <span style={{ color: "rgba(17,24,39,0.58)" }}>Primary & Secondary</span>
+                    <span style={{ fontWeight: 700, color: "#111827" }}>
+                      {Math.round(breakdown.primary + breakdown.secondary)} / {maxes.primary + maxes.secondary}
                     </span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                    <span style={{ color: "rgba(17,24,39,0.46)" }}>Secondary</span>
-                    <span style={{ fontWeight: 700, color: secondaryRatio >= 1 ? "#34C759" : secondaryRatio > 0 ? "#FF9500" : "#FF3B30" }}>
-                      {secondaryRatio >= 1 ? "Correct" : secondaryRatio > 0 ? `${Math.round(secondaryRatio * 100)}%` : "Incorrect"}
-                    </span>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.55, color: "rgba(17,24,39,0.65)" }}>
+                    {primaryCorrect
+                      ? (question.feedback?.primaryCorrect || "Primary classification correct.")
+                      : (question.feedback?.primaryIncorrect || "Primary classification incorrect.")}
                   </div>
-                </div>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.55, color: "rgba(17,24,39,0.65)" }}>
+                    {secondaryRatio >= 1
+                      ? (question.feedback?.secondaryCorrect || "Secondary diagnosis correct.")
+                      : (question.feedback?.secondaryIncorrect || "Secondary diagnosis needs review.")}
+                  </div>
+                </>
               )}
               {!question.classification && (
                 <div style={{ fontSize: 13, color: "rgba(17,24,39,0.54)" }}>
@@ -228,6 +219,43 @@ export default function SocExplanationCard({ result, question, hasMore, onNext }
                 </div>
               )}
             </div>
+
+            <div style={{
+              borderRadius: 22, padding: 16,
+              background: "rgba(249,250,252,0.84)", border: "1px solid rgba(13,26,51,0.06)",
+              display: "grid", gap: 10,
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(17,24,39,0.48)" }}>
+                SPL Query
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span style={{ color: "rgba(17,24,39,0.58)" }}>Score</span>
+                <span style={{ fontWeight: 700, color: "#111827" }}>
+                  {Math.round(breakdown.spl)} / {maxes.spl}
+                </span>
+              </div>
+              <div style={{ fontSize: 12.5, lineHeight: 1.55, color: "rgba(17,24,39,0.65)" }}>
+                {splValidation.required.misses.length === 0 && splValidation.blocked.hits.length === 0
+                  ? "All required SPL terms matched. Query syntax is clean."
+                  : [
+                      splValidation.required.misses.length > 0
+                        ? `Missed ${splValidation.required.misses.length} required term${splValidation.required.misses.length > 1 ? "s" : ""}: ${splValidation.required.misses.join(", ")}`
+                        : null,
+                      splValidation.blocked.hits.length > 0
+                        ? `Blocked term${splValidation.blocked.hits.length > 1 ? "s" : ""} detected: ${splValidation.blocked.hits.join(", ")}`
+                        : null,
+                    ].filter(Boolean).join(". ")
+                }
+              </div>
+            </div>
+
+            {question.hints && question.hints.length > 0 && (
+              <HintPanel
+                hints={question.hints}
+                revealedCount={hintIndex}
+                onReveal={onRevealHint}
+              />
+            )}
 
             <motion.button
               onClick={onNext}
@@ -257,7 +285,6 @@ SocExplanationCard.propTypes = {
         primary: PropTypes.number.isRequired,
         secondary: PropTypes.number.isRequired,
         spl: PropTypes.number.isRequired,
-        explanation: PropTypes.number.isRequired,
       }).isRequired,
       total: PropTypes.number.isRequired,
       grade: PropTypes.string.isRequired,
@@ -271,12 +298,6 @@ SocExplanationCard.propTypes = {
         hits: PropTypes.arrayOf(PropTypes.string).isRequired,
       }).isRequired,
     }).isRequired,
-    explanationValidation: PropTypes.shape({
-      required: PropTypes.shape({
-        hits: PropTypes.arrayOf(PropTypes.string).isRequired,
-        misses: PropTypes.arrayOf(PropTypes.string).isRequired,
-      }).isRequired,
-    }).isRequired,
     primaryCorrect: PropTypes.bool.isRequired,
     secondaryRatio: PropTypes.number.isRequired,
     questionId: PropTypes.string,
@@ -286,9 +307,18 @@ SocExplanationCard.propTypes = {
     classification: PropTypes.shape({
       options: PropTypes.object,
     }),
+    feedback: PropTypes.shape({
+      primaryCorrect: PropTypes.string,
+      primaryIncorrect: PropTypes.string,
+      secondaryCorrect: PropTypes.string,
+      secondaryIncorrect: PropTypes.string,
+    }),
+    hints: PropTypes.arrayOf(PropTypes.string),
   }).isRequired,
   hasMore: PropTypes.bool.isRequired,
   onNext: PropTypes.func.isRequired,
+  hintIndex: PropTypes.number,
+  onRevealHint: PropTypes.func,
 };
 
 const sectionLabel = {

@@ -13,11 +13,12 @@ const ZONE_CARDS = [
   { zone: 1, title: 'Inbox',      detail: 'Spot the loud red flags fast and build your rhythm.',               accent: '#0A84FF' },
   { zone: 2, title: 'Queue',      detail: 'The copy gets cleaner here. Trust the details, not the polish.',   accent: '#30B0C7' },
   { zone: 3, title: 'Escalation', detail: 'One subtle inconsistency is usually the whole story.',             accent: '#FF7A1A' },
+  { zone: 4, title: 'SOC Desk',   detail: 'Classify the threat, write a Splunk SPL query, and explain your reasoning.', accent: '#7B2D8E' },
 ];
 
 const STATS = [
   { value: '15', label: 'emails' },
-  { value: '3', label: 'zones' },
+  { value: '4', label: 'zones' },
   { value: '120s', label: 'per round' },
 ];
 
@@ -131,6 +132,7 @@ export default function LandingScreen({ onStart }) {
             'radial-gradient(circle at 16% 20%, rgba(10,132,255,0.14), transparent 28%)',
             'radial-gradient(circle at 84% 16%, rgba(255,122,26,0.13), transparent 24%)',
             'radial-gradient(circle at 50% 80%, rgba(48,176,199,0.10), transparent 32%)',
+            'radial-gradient(circle at 20% 80%, rgba(123,45,142,0.10), transparent 30%)',
           ].join(','),
         }}
       />
@@ -245,7 +247,7 @@ export default function LandingScreen({ onStart }) {
                     maxWidth: 620,
                   }}
                 >
-                  15 timed scenarios across 3 escalating zones. Each decision is scored, reviewed, and translated into a competency tier.
+                  15 timed scenarios and 1 SOC investigation across 4 escalating zones. Each decision is scored, reviewed, and translated into a competency tier.
                 </p>
               </div>
 
@@ -312,7 +314,7 @@ export default function LandingScreen({ onStart }) {
                 className="landing-zones"
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
                   gap: 12,
                 }}
               >

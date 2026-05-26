@@ -1,16 +1,16 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { SOC_QUESTIONS } from "../data/socQuestions.js";
-import { validateSpl, validateExplanation } from "../utils/validateSpl.js";
+import { validateSpl } from "../utils/validateSpl.js";
 import { scoreSocRound } from "../utils/scoreSoc.js";
 import { LEADERBOARD_URL } from "../config.js";
 
 const QUESTION_SCORE_MAP = {
-  Q1: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
-  Q2: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
-  Q3: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
-  Q4: { primary: 5, secondary: 3, spl: 10, explanation: 5 },
-  Q5a: { primary: 5, secondary: 3, spl: 2, explanation: 0 },
-  Q5b: { primary: 0, secondary: 0, spl: 10, explanation: 0 },
+  Q1: { primary: 5, secondary: 3, spl: 10 },
+  Q2: { primary: 5, secondary: 3, spl: 10 },
+  Q3: { primary: 5, secondary: 3, spl: 10 },
+  Q4: { primary: 5, secondary: 3, spl: 10 },
+  Q5a: { primary: 5, secondary: 3, spl: 2 },
+  Q5b: { primary: 0, secondary: 0, spl: 10 },
 };
 
 function initialAnswers() {
@@ -18,7 +18,6 @@ function initialAnswers() {
     primary: null,
     secondary: null,
     splText: "",
-    explanation: "",
     submitted: false,
     result: null,
   }));
@@ -28,6 +27,11 @@ export function useSocState(gs) {
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [answers, setAnswers] = useState(initialAnswers);
   const [showResults, setShowResults] = useState(false);
+  const [hintIndex, setHintIndex] = useState(0);
+
+  useEffect(() => {
+    setHintIndex(0);
+  }, [currentQuestionIdx]);
 
   const totalQuestions = SOC_QUESTIONS.length;
   const currentQuestion = SOC_QUESTIONS[currentQuestionIdx];
@@ -71,14 +75,6 @@ export function useSocState(gs) {
     });
   }, [currentQuestionIdx]);
 
-  const setExplanation = useCallback((text) => {
-    setAnswers(prev => {
-      const next = [...prev];
-      next[currentQuestionIdx] = { ...next[currentQuestionIdx], explanation: text };
-      return next;
-    });
-  }, [currentQuestionIdx]);
-
   const submitSocRound = useCallback(() => {
     const q = currentQuestion;
     const a = answers[currentQuestionIdx];
@@ -101,7 +97,6 @@ export function useSocState(gs) {
     }
 
     const splResult = { required: { hits: [], misses: [] }, optional: { hits: [], misses: [] }, blocked: { hits: [] } };
-    let explanationResult = { required: { hits: [], misses: [] }, optional: { hits: [], misses: [] } };
 
     if (q.splRules && q.splRules.tasks && q.splRules.tasks.length > 0) {
       for (const task of q.splRules.tasks) {
@@ -114,16 +109,11 @@ export function useSocState(gs) {
       }
     }
 
-    if (q.conceptKeywords) {
-      explanationResult = validateExplanation(a.explanation, q.conceptKeywords);
-    }
-
     const scoreConfig = QUESTION_SCORE_MAP[q.id];
     const scoreResult = scoreSocRound({
       primaryCorrect,
       secondaryRatio,
       splValidation: splResult,
-      explanationValidation: explanationResult,
     }, scoreConfig);
 
     const record = {
@@ -131,7 +121,6 @@ export function useSocState(gs) {
       primaryCorrect,
       secondaryRatio,
       splValidation: splResult,
-      explanationValidation: explanationResult,
       score: scoreResult,
     };
 
@@ -152,6 +141,10 @@ export function useSocState(gs) {
       return true;
     }
   }, [currentQuestionIdx, totalQuestions]);
+
+  const revealHint = useCallback(() => {
+    setHintIndex(prev => Math.min(prev + 1, currentQuestion.hints?.length || 0));
+  }, [currentQuestion]);
 
   const hasMoreQuestions = currentQuestionIdx < totalQuestions - 1;
 
@@ -196,9 +189,10 @@ export function useSocState(gs) {
     setPrimary,
     setSecondary,
     setSplText,
-    setExplanation,
     submitSocRound,
     submitFinal,
     nextQuestion,
+    hintIndex,
+    revealHint,
   };
 }
