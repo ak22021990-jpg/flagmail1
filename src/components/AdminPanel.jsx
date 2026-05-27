@@ -222,6 +222,10 @@ export default function AdminPanel({ onBack }) {
             <div style={{ fontSize: 28, fontWeight: 700, color: "#791F1F" }}>{foundationCount}</div>
             <div style={{ fontSize: 12, color: "#791F1F", marginTop: 2 }}>Foundation</div>
           </div>
+          <div style={{ borderRadius: 16, padding: "16px 18px", textAlign: "center", background: totalViolations > 0 ? "#FFF3E0" : card.background, border: totalViolations > 0 ? "0.5px solid #FFB74D" : "1px solid rgba(255,255,255,0.84)" }}>
+            <div style={{ fontSize: 28, fontWeight: 700, color: totalViolations > 0 ? "#E65100" : "#111827" }}>{totalViolations}</div>
+            <div style={{ fontSize: 12, color: totalViolations > 0 ? "#E65100" : "rgba(17,24,39,0.48)", marginTop: 2 }}>Violations ({flaggedCount} flagged)</div>
+          </div>
         </div>
 
         {/* Candidate list */}
