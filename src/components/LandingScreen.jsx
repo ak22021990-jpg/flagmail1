@@ -24,7 +24,7 @@ const STATS = [
 
 const ATTEMPT_KEY = 'flagmail_attempted';
 
-export default function LandingScreen({ onStart }) {
+export default function LandingScreen({ onStart, onReviewer }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -452,6 +452,20 @@ export default function LandingScreen({ onStart }) {
                 </div>
               ))}
             </div>
+
+            {onReviewer && (
+              <button
+                onClick={onReviewer}
+                style={{
+                  background: "none", border: "none", padding: "8px 0",
+                  fontSize: 13, color: "rgba(17,24,39,0.40)",
+                  cursor: "pointer", textAlign: "center",
+                  fontFamily: "inherit",
+                }}
+              >
+                Reviewer access {"→"}
+              </button>
+            )}
           </motion.div>
         </div>
       </motion.div>
@@ -461,4 +475,5 @@ export default function LandingScreen({ onStart }) {
 
 LandingScreen.propTypes = {
   onStart: PropTypes.func.isRequired,
+  onReviewer: PropTypes.func,
 };

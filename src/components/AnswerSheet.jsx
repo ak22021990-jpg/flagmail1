@@ -1,21 +1,34 @@
 import { useMemo } from "react";
 import PropTypes from "prop-types";
 import { motion } from "framer-motion";
-import { glass } from "../styles/tokens.js";
 import { EMAIL_POOL } from "../data/emails.js";
 import { SOC_QUESTIONS } from "../data/socQuestions.js";
 import { validateSpl } from "../utils/validateSpl.js";
 
-const localGlass = { ...glass, backdropFilter: "blur(30px) saturate(165%)", WebkitBackdropFilter: "blur(30px) saturate(165%)", border: "1px solid rgba(255,255,255,0.84)" };
-
 const sectionHead = { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "rgba(17,24,39,0.48)", marginBottom: 10 };
+
+const sectionCard = {
+  background: "rgba(255,255,255,0.92)",
+  backdropFilter: "blur(30px) saturate(165%)",
+  WebkitBackdropFilter: "blur(30px) saturate(165%)",
+  border: "0.5px solid rgba(13,26,51,0.08)",
+  borderRadius: 16, padding: 22,
+};
+
+function verdictBand(score) {
+  const n = Number(score);
+  if (isNaN(n)) return { label: "—", bg: "rgba(17,24,39,0.04)", color: "rgba(17,24,39,0.40)", border: "rgba(17,24,39,0.08)" };
+  if (n >= 80) return { label: "PASS", bg: "#EAF3DE", color: "#27500A", border: "#C0DD97" };
+  if (n >= 60) return { label: "BORDERLINE", bg: "#FAEEDA", color: "#633806", border: "#FAC775" };
+  return { label: "FAIL", bg: "#FCEBEB", color: "#791F1F", border: "#F7C1C1" };
+}
 
 function gradeColor(grade) {
   const g = (grade || "").toLowerCase();
-  if (g === "strong") return { bg: "rgba(52,199,89,0.12)", color: "#34C759" };
+  if (g === "strong") return { bg: "#EAF3DE", color: "#27500A" };
   if (g === "good") return { bg: "rgba(10,132,255,0.12)", color: "#0A84FF" };
-  if (g === "needs improvement") return { bg: "rgba(255,149,0,0.12)", color: "#FF9500" };
-  return { bg: "rgba(255,59,48,0.10)", color: "#FF3B30" };
+  if (g === "needs improvement") return { bg: "#FAEEDA", color: "#633806" };
+  return { bg: "#FCEBEB", color: "#791F1F" };
 }
 
 function highlightSpl(splText, questionId) {
@@ -55,7 +68,6 @@ function highlightSpl(splText, questionId) {
   const lower = splText.toLowerCase();
 
   for (let i = 0; i < lower.length; i++) {
-    let found = false;
     for (const { term, type } of allTerms) {
       if (lower.startsWith(term, i)) {
         if (i > lastIdx) {
@@ -64,7 +76,6 @@ function highlightSpl(splText, questionId) {
         segments.push({ text: splText.slice(i, i + term.length), type });
         i += term.length - 1;
         lastIdx = i + 1;
-        found = true;
         break;
       }
     }
@@ -126,8 +137,8 @@ export default function AnswerSheet({ candidate, rawData, socData, onBack }) {
 
   const tabSwitches =
     candidate.tabSwitches !== undefined ? Number(candidate.tabSwitches) : 0;
-  const grade = (candidate.gradeBand || "").toLowerCase();
-  const gradeStyle = gradeColor(grade);
+  const totalScore = candidate.totalScore ?? candidate[6] ?? null;
+  const verdict = verdictBand(totalScore);
 
   return (
     <div
@@ -139,24 +150,19 @@ export default function AnswerSheet({ candidate, rawData, socData, onBack }) {
       }}
     >
       <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gap: 16 }}>
-        {/* ── Back + Print buttons ── */}
+        {/* Nav buttons */}
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <motion.button
             onClick={onBack}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
             style={{
-              padding: "10px 18px",
-              borderRadius: 14,
-              fontSize: 13,
-              fontWeight: 600,
-              border: "1px solid rgba(13,26,51,0.10)",
-              background: "rgba(249,250,252,0.88)",
-              color: "#111827",
-              cursor: "pointer",
+              padding: "10px 18px", borderRadius: 14, fontSize: 13, fontWeight: 600,
+              border: "0.5px solid rgba(13,26,51,0.10)",
+              background: "rgba(249,250,252,0.88)", color: "#111827", cursor: "pointer",
             }}
           >
-            {"\u2190"} Back to Candidates
+            {"←"} Back to Candidates
           </motion.button>
           <motion.button
             onClick={() => window.print()}
@@ -164,60 +170,57 @@ export default function AnswerSheet({ candidate, rawData, socData, onBack }) {
             whileTap={{ scale: 0.99 }}
             className="no-print"
             style={{
-              padding: "10px 18px",
-              borderRadius: 14,
-              fontSize: 13,
-              fontWeight: 600,
-              border: "1px solid rgba(10,132,255,0.24)",
-              background: "rgba(10,132,255,0.08)",
-              color: "#0A84FF",
-              cursor: "pointer",
+              padding: "10px 18px", borderRadius: 14, fontSize: 13, fontWeight: 600,
+              border: "0.5px solid rgba(13,26,51,0.12)",
+              background: "rgba(249,250,252,0.88)", color: "#111827", cursor: "pointer",
             }}
           >
             Print Report
           </motion.button>
         </div>
 
-        {/* ── Candidate Header Card ── */}
-        <div style={{ ...localGlass, borderRadius: 22, padding: 22, display: "grid", gap: 10 }}>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: "-0.04em", color: "#111827" }}>
-            {candidate.name || "Unknown Candidate"}
-          </h2>
-          <div style={{ fontSize: 14, color: "rgba(17,24,39,0.54)" }}>
-            {candidate.email || ""}
-          </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <span
-              style={{
-                padding: "4px 12px",
-                borderRadius: 10,
-                fontSize: 12,
-                fontWeight: 700,
-                ...gradeStyle,
-              }}
-            >
-              {candidate.gradeBand || "-"}
-            </span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>
-              Score: {candidate.totalScore ?? "-"}/100
-            </span>
-            <span style={{ fontSize: 12, color: "rgba(17,24,39,0.48)" }}>
-              Submitted: {candidate.submissionDate || "-"}
-            </span>
+        {/* Verdict banner */}
+        <div style={{
+          borderRadius: 16, padding: "18px 22px",
+          background: verdict.bg, border: `0.5px solid ${verdict.border}`,
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
+        }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em", color: "#111827" }}>
+              {candidate.name || "Unknown Candidate"}
+            </h2>
+            <div style={{ fontSize: 13, color: "rgba(17,24,39,0.54)", marginTop: 2 }}>
+              {candidate.email || ""}
+              {candidate.submissionDate ? ` · ${candidate.submissionDate}` : ""}
+            </div>
             {tabSwitches > 0 && (
-              <span style={{ fontSize: 12, color: "#FF3B30", fontWeight: 700 }}>
-                {"\u26A0"} Proctoring: {tabSwitches} tab switch{tabSwitches !== 1 ? "es" : ""}
-              </span>
+              <div style={{ fontSize: 12, color: "#791F1F", fontWeight: 700, marginTop: 6 }}>
+                {"⚠"} Proctoring: {tabSwitches} tab switch{tabSwitches !== 1 ? "es" : ""}
+              </div>
             )}
+          </div>
+          <div style={{ textAlign: "center", flexShrink: 0 }}>
+            <div style={{ fontSize: 32, fontWeight: 700, color: "#111827", lineHeight: 1 }}>
+              {totalScore ?? "—"}
+            </div>
+            <div style={{ fontSize: 11, color: "rgba(17,24,39,0.48)", marginTop: 2 }}>out of 100</div>
+            <div style={{
+              marginTop: 6, padding: "4px 14px", borderRadius: 20,
+              fontSize: 12, fontWeight: 600,
+              background: verdict.color, color: "#fff",
+              display: "inline-block",
+            }}>
+              {verdict.label}
+            </div>
           </div>
         </div>
 
-        {/* ── Zone 1-3 Classification Answers ── */}
-        <div style={{ ...localGlass, borderRadius: 22, padding: 22 }}>
-          <div style={sectionHead}>Zone 1-3 Classification Answers ({candidateRaw.length})</div>
+        {/* Zone 1-3 Classification Answers */}
+        <div style={sectionCard}>
+          <div style={sectionHead}>Zone 1-3 Classifications ({candidateRaw.length})</div>
           {candidateRaw.length === 0 ? (
             <div style={{ fontSize: 13, color: "rgba(17,24,39,0.46)", padding: "8px 0" }}>
-              No Zone 1-3 classification data for this candidate.
+              No classification data for this candidate.
             </div>
           ) : (
             <div style={{ display: "grid", gap: 10 }}>
@@ -230,11 +233,8 @@ export default function AnswerSheet({ candidate, rawData, socData, onBack }) {
                   <div
                     key={i}
                     style={{
-                      border: "1px solid rgba(13,26,51,0.06)",
-                      borderRadius: 14,
-                      padding: 14,
-                      display: "grid",
-                      gap: 6,
+                      border: "0.5px solid rgba(13,26,51,0.06)",
+                      borderRadius: 12, padding: 14, display: "grid", gap: 6,
                     }}
                   >
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>
@@ -244,15 +244,11 @@ export default function AnswerSheet({ candidate, rawData, socData, onBack }) {
                       <div>
                         <div style={{ color: "rgba(17,24,39,0.48)", fontSize: 11, marginBottom: 2 }}>Level 1</div>
                         <div>
-                          Candidate:{" "}
-                          <span style={{ fontWeight: 600 }}>
-                            {row.selectedL1 || "-"}
-                          </span>{" "}
-                          {l1Correct ? (
-                            <span style={{ color: "#34C759" }}>{"\u2713"}</span>
-                          ) : (
-                            <span style={{ color: "#FF3B30" }}>{"\u2717"}</span>
-                          )}
+                          <span style={{ fontWeight: 600 }}>{row.selectedL1 || "-"}</span>{" "}
+                          {l1Correct
+                            ? <span style={{ color: "#27500A" }}>{"✓"}</span>
+                            : <span style={{ color: "#791F1F" }}>{"✗"}</span>
+                          }
                         </div>
                         <div style={{ color: "rgba(17,24,39,0.54)", fontSize: 12 }}>
                           Correct: {row.correctL1 || "-"}
@@ -261,15 +257,11 @@ export default function AnswerSheet({ candidate, rawData, socData, onBack }) {
                       <div>
                         <div style={{ color: "rgba(17,24,39,0.48)", fontSize: 11, marginBottom: 2 }}>Level 2</div>
                         <div>
-                          Candidate:{" "}
-                          <span style={{ fontWeight: 600 }}>
-                            {row.selectedL2 || "-"}
-                          </span>{" "}
-                          {l2Correct ? (
-                            <span style={{ color: "#34C759" }}>{"\u2713"}</span>
-                          ) : (
-                            <span style={{ color: "#FF3B30" }}>{"\u2717"}</span>
-                          )}
+                          <span style={{ fontWeight: 600 }}>{row.selectedL2 || "-"}</span>{" "}
+                          {l2Correct
+                            ? <span style={{ color: "#27500A" }}>{"✓"}</span>
+                            : <span style={{ color: "#791F1F" }}>{"✗"}</span>
+                          }
                         </div>
                         <div style={{ color: "rgba(17,24,39,0.54)", fontSize: 12 }}>
                           Correct: {row.correctL2 || "-"}
@@ -281,7 +273,7 @@ export default function AnswerSheet({ candidate, rawData, socData, onBack }) {
                         Points: {row.points !== undefined ? Number(row.points) : "-"}
                       </span>
                       <span style={{ color: "rgba(17,24,39,0.54)" }}>
-                        Clues used: {row.cluesUsed !== undefined ? Number(row.cluesUsed) : 0}
+                        Clues: {row.cluesUsed !== undefined ? Number(row.cluesUsed) : 0}
                       </span>
                       <span style={{ color: "rgba(17,24,39,0.54)" }}>
                         Zone: {row.zone !== undefined ? row.zone : "-"}
@@ -294,12 +286,12 @@ export default function AnswerSheet({ candidate, rawData, socData, onBack }) {
           )}
         </div>
 
-        {/* ── Zone 4 SOC Investigation Answers ── */}
-        <div style={{ ...localGlass, borderRadius: 22, padding: 22 }}>
-          <div style={sectionHead}>Zone 4 SOC Investigation Answers ({candidateSoc.length})</div>
+        {/* Zone 4 SOC Investigation Answers */}
+        <div style={sectionCard}>
+          <div style={sectionHead}>Zone 4 SOC Investigation ({candidateSoc.length})</div>
           {candidateSoc.length === 0 ? (
             <div style={{ fontSize: 13, color: "rgba(17,24,39,0.46)", padding: "8px 0" }}>
-              No SOC Investigation data for this candidate.
+              No SOC data for this candidate.
             </div>
           ) : (
             <div style={{ display: "grid", gap: 12 }}>
@@ -321,17 +313,14 @@ export default function AnswerSheet({ candidate, rawData, socData, onBack }) {
                   <div
                     key={i}
                     style={{
-                      border: "1px solid rgba(13,26,51,0.06)",
-                      borderRadius: 14,
-                      padding: 14,
-                      display: "grid",
-                      gap: 10,
+                      border: "0.5px solid rgba(13,26,51,0.06)",
+                      borderRadius: 12, padding: 14, display: "grid", gap: 10,
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
                         <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>
-                          {qId || "Unknown Question"}
+                          {qId || "Unknown"}
                         </span>
                         {question && (
                           <span style={{ fontSize: 12, color: "rgba(17,24,39,0.48)", marginLeft: 8 }}>
@@ -342,18 +331,13 @@ export default function AnswerSheet({ candidate, rawData, socData, onBack }) {
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         {score !== null && (
                           <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                            Score: {score}
+                            {score}
                           </span>
                         )}
-                        <span
-                          style={{
-                            padding: "3px 8px",
-                            borderRadius: 8,
-                            fontSize: 11,
-                            fontWeight: 700,
-                            ...rowGradeStyle,
-                          }}
-                        >
+                        <span style={{
+                          padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+                          background: rowGradeStyle.bg, color: rowGradeStyle.color,
+                        }}>
                           {rowGrade}
                         </span>
                       </div>
@@ -362,89 +346,63 @@ export default function AnswerSheet({ candidate, rawData, socData, onBack }) {
                     {question && question.classification && question.classification.correct && (
                       <div style={{ display: "flex", gap: 16, fontSize: 12 }}>
                         <span style={{ color: "rgba(17,24,39,0.54)" }}>
-                          Correct primary:{" "}
-                          <span style={{ fontWeight: 600, color: "#111827" }}>
-                            {question.classification.correct.primary}
-                          </span>
+                          Correct primary: <span style={{ fontWeight: 600, color: "#111827" }}>{question.classification.correct.primary}</span>
                         </span>
                         <span style={{ color: "rgba(17,24,39,0.54)" }}>
-                          Correct secondary:{" "}
-                          <span style={{ fontWeight: 600, color: "#111827" }}>
-                            {question.classification.correct.secondary}
-                          </span>
+                          Correct secondary: <span style={{ fontWeight: 600, color: "#111827" }}>{question.classification.correct.secondary}</span>
                         </span>
                       </div>
                     )}
 
-                    {/* SPL Query with highlighting */}
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "rgba(17,24,39,0.48)", marginBottom: 4 }}>
                         SPL Query
                       </div>
-                      <pre
-                        style={{
-                          margin: 0,
-                          padding: "10px 12px",
-                          borderRadius: 10,
-                          background: "rgba(13,26,51,0.03)",
-                          fontSize: 12,
-                          fontFamily: 'ui-monospace, "SF Mono", monospace',
-                          whiteSpace: "pre-wrap",
-                          wordBreak: "break-word",
-                          color: "#111827",
-                          lineHeight: 1.5,
-                        }}
-                      >
+                      <pre style={{
+                        margin: 0, padding: "10px 12px", borderRadius: 10,
+                        background: "rgba(13,26,51,0.03)", fontSize: 12,
+                        fontFamily: 'ui-monospace, "SF Mono", monospace',
+                        whiteSpace: "pre-wrap", wordBreak: "break-word",
+                        color: "#111827", lineHeight: 1.5,
+                      }}>
                         {splHighlight.elements}
                       </pre>
-
                       {splHighlight.missedRequired.length > 0 && (
-                        <div style={{ marginTop: 6, fontSize: 12, color: "#FF3B30" }}>
-                          Missing required terms: {splHighlight.missedRequired.join(", ")}
+                        <div style={{ marginTop: 6, fontSize: 12, color: "#791F1F" }}>
+                          Missing required: {splHighlight.missedRequired.join(", ")}
                         </div>
                       )}
                       {splHighlight.blockedHits.length > 0 && (
-                        <div style={{ marginTop: 4, fontSize: 12, color: "#FF9500" }}>
-                          Blocked terms found: {splHighlight.blockedHits.join(", ")}
+                        <div style={{ marginTop: 4, fontSize: 12, color: "#633806" }}>
+                          Blocked terms: {splHighlight.blockedHits.join(", ")}
                         </div>
                       )}
                     </div>
 
-                    {/* Explanation */}
                     {explanation && (
                       <div>
                         <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "rgba(17,24,39,0.48)", marginBottom: 4 }}>
                           Explanation
                         </div>
-                        <pre
-                          style={{
-                            margin: 0,
-                            padding: "10px 12px",
-                            borderRadius: 10,
-                            background: "rgba(13,26,51,0.03)",
-                            fontSize: 12,
-                            fontFamily: 'ui-monospace, "SF Mono", monospace',
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                            color: "#111827",
-                            lineHeight: 1.5,
-                          }}
-                        >
+                        <pre style={{
+                          margin: 0, padding: "10px 12px", borderRadius: 10,
+                          background: "rgba(13,26,51,0.03)", fontSize: 12,
+                          fontFamily: 'ui-monospace, "SF Mono", monospace',
+                          whiteSpace: "pre-wrap", wordBreak: "break-word",
+                          color: "#111827", lineHeight: 1.5,
+                        }}>
                           {explanation}
                         </pre>
                       </div>
                     )}
 
-                    {/* SPL Highlight Legend */}
                     {splText && qId && (
                       <div style={{ display: "flex", gap: 12, fontSize: 11 }}>
                         <span>
-                          <span style={{ background: "rgba(52,199,89,0.18)", borderRadius: 3, padding: "0 4px" }}>Required</span>{" "}
-                          matched
+                          <span style={{ background: "rgba(52,199,89,0.18)", borderRadius: 3, padding: "0 4px" }}>Required</span> matched
                         </span>
                         <span>
-                          <span style={{ background: "rgba(10,132,255,0.12)", borderRadius: 3, padding: "0 4px" }}>Optional</span>{" "}
-                          matched
+                          <span style={{ background: "rgba(10,132,255,0.12)", borderRadius: 3, padding: "0 4px" }}>Optional</span> matched
                         </span>
                       </div>
                     )}

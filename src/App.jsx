@@ -137,27 +137,14 @@ export default function App() {
       position: 'relative',
     }}>
       {gs.screen === SCREENS.LANDING && (
-        <div style={{ position: 'relative' }}>
-          <LandingScreen onStart={(name, email) => {
+        <LandingScreen
+          onStart={(name, email) => {
             gs.submitToSheet({ action: 'register', name, email });
             badges.resetBadges();
             gs.startGame(name, email);
-          }} />
-          <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 100 }}>
-            <button
-              onClick={() => gs.setScreen(SCREENS.ADMIN)}
-              style={{
-                padding: '10px 16px', borderRadius: 12, fontSize: 12, fontWeight: 600,
-                border: '1px solid rgba(13,26,51,0.10)',
-                background: 'rgba(255,255,255,0.88)',
-                color: 'rgba(17,24,39,0.50)',
-                cursor: 'pointer', backdropFilter: 'blur(12px)',
-              }}
-            >
-              Admin
-            </button>
-          </div>
-        </div>
+          }}
+          onReviewer={() => gs.setScreen(SCREENS.ADMIN)}
+        />
       )}
 
       {gs.screen === SCREENS.TUTORIAL && (
@@ -262,7 +249,7 @@ export default function App() {
       )}
 
       {gs.screen === SCREENS.ADMIN && (
-        <Suspense fallback={<div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif', fontSize: 15, color: 'rgba(17,24,39,0.54)' }}>Loading admin panel...</div>}>
+        <Suspense fallback={<div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif', fontSize: 15, color: 'rgba(17,24,39,0.54)' }}>Loading reviewer panel...</div>}>
           <AdminPanel onBack={() => gs.setScreen(SCREENS.LANDING)} />
         </Suspense>
       )}
