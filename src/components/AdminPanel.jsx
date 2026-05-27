@@ -115,6 +115,8 @@ export default function AdminPanel({ onBack }) {
     return s >= 50 && s < 80;
   }).length;
   const foundationCount = candidates.length - advancedCount - proficientCount;
+  const totalViolations = candidates.reduce((sum, c) => sum + Number(c.tabSwitches ?? c[8] ?? 0), 0);
+  const flaggedCount = candidates.filter(c => Number(c.tabSwitches ?? c[8] ?? 0) > 0).length;
 
   function handleCsvDownload() {
     const rows = candidates.map((c) => {
