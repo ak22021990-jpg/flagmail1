@@ -454,17 +454,26 @@ export default function LandingScreen({ onStart, onReviewer }) {
             </div>
 
             {onReviewer && (
-              <button
+              <motion.button
                 onClick={onReviewer}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
                 style={{
-                  background: "none", border: "none", padding: "8px 0",
-                  fontSize: 13, color: "rgba(17,24,39,0.40)",
-                  cursor: "pointer", textAlign: "center",
+                  padding: "12px 18px",
+                  borderRadius: 14,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  border: "1px solid rgba(13,26,51,0.10)",
+                  background: "rgba(249,250,252,0.88)",
+                  color: "#111827",
+                  cursor: "pointer",
+                  textAlign: "center",
                   fontFamily: "inherit",
+                  width: "100%",
                 }}
               >
                 Reviewer access {"→"}
-              </button>
+              </motion.button>
             )}
           </motion.div>
         </div>

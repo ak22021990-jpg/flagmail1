@@ -18,9 +18,9 @@ const sectionCard = {
 function verdictBand(score) {
   const n = Number(score);
   if (isNaN(n)) return { label: "—", bg: "rgba(17,24,39,0.04)", color: "rgba(17,24,39,0.40)", border: "rgba(17,24,39,0.08)" };
-  if (n >= 80) return { label: "PASS", bg: "#EAF3DE", color: "#27500A", border: "#C0DD97" };
-  if (n >= 60) return { label: "BORDERLINE", bg: "#FAEEDA", color: "#633806", border: "#FAC775" };
-  return { label: "FAIL", bg: "#FCEBEB", color: "#791F1F", border: "#F7C1C1" };
+  if (n >= 80) return { label: "Advanced", bg: "#EAF3DE", color: "#27500A", border: "#C0DD97" };
+  if (n >= 50) return { label: "Proficient", bg: "#FAEEDA", color: "#633806", border: "#FAC775" };
+  return { label: "Foundation", bg: "#FCEBEB", color: "#791F1F", border: "#F7C1C1" };
 }
 
 function gradeColor(grade) {

@@ -6,15 +6,12 @@ import CandidateList from "./CandidateList.jsx";
 import AnswerSheet from "./AnswerSheet.jsx";
 import { downloadCsv } from "../utils/exportCsv.js";
 
-const PASS_THRESHOLD = 80;
-const BORDERLINE_THRESHOLD = 60;
-
 function verdictBand(score) {
   const n = Number(score);
   if (isNaN(n)) return { label: "—", bg: "rgba(17,24,39,0.04)", color: "rgba(17,24,39,0.40)", border: "rgba(17,24,39,0.08)" };
-  if (n >= PASS_THRESHOLD) return { label: "PASS", bg: "#EAF3DE", color: "#27500A", border: "#C0DD97" };
-  if (n >= BORDERLINE_THRESHOLD) return { label: "BORDERLINE", bg: "#FAEEDA", color: "#633806", border: "#FAC775" };
-  return { label: "FAIL", bg: "#FCEBEB", color: "#791F1F", border: "#F7C1C1" };
+  if (n >= 80) return { label: "Advanced", bg: "#EAF3DE", color: "#27500A", border: "#C0DD97" };
+  if (n >= 50) return { label: "Proficient", bg: "#FAEEDA", color: "#633806", border: "#FAC775" };
+  return { label: "Foundation", bg: "#FCEBEB", color: "#791F1F", border: "#F7C1C1" };
 }
 
 const card = {
@@ -112,12 +109,12 @@ export default function AdminPanel({ onBack }) {
   const rawData = data?.rawData || [];
   const socData = data?.socData || [];
 
-  const passCount = candidates.filter(c => Number(c.totalScore ?? c[6] ?? 0) >= PASS_THRESHOLD).length;
-  const borderlineCount = candidates.filter(c => {
+  const advancedCount = candidates.filter(c => Number(c.totalScore ?? c[6] ?? 0) >= 80).length;
+  const proficientCount = candidates.filter(c => {
     const s = Number(c.totalScore ?? c[6] ?? 0);
-    return s >= BORDERLINE_THRESHOLD && s < PASS_THRESHOLD;
+    return s >= 50 && s < 80;
   }).length;
-  const failCount = candidates.length - passCount - borderlineCount;
+  const foundationCount = candidates.length - advancedCount - proficientCount;
 
   function handleCsvDownload() {
     const rows = candidates.map((c) => {
@@ -127,7 +124,7 @@ export default function AdminPanel({ onBack }) {
         Name: c.name || c[0] || "",
         Email: c.email || c[1] || "",
         Score: score,
-        Verdict: v.label,
+        Tier: v.label,
         "Tab Switches": c.tabSwitches ?? c[8] ?? 0,
         "Submission Date": c.submissionDate ?? c[2] ?? "",
       };
@@ -212,16 +209,16 @@ export default function AdminPanel({ onBack }) {
             <div style={{ fontSize: 12, color: "rgba(17,24,39,0.48)", marginTop: 2 }}>Total</div>
           </div>
           <div style={{ borderRadius: 16, padding: "16px 18px", textAlign: "center", background: "#EAF3DE", border: "0.5px solid #C0DD97" }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: "#27500A" }}>{passCount}</div>
-            <div style={{ fontSize: 12, color: "#27500A", marginTop: 2 }}>Pass</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: "#27500A" }}>{advancedCount}</div>
+            <div style={{ fontSize: 12, color: "#27500A", marginTop: 2 }}>Advanced</div>
           </div>
           <div style={{ borderRadius: 16, padding: "16px 18px", textAlign: "center", background: "#FAEEDA", border: "0.5px solid #FAC775" }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: "#633806" }}>{borderlineCount}</div>
-            <div style={{ fontSize: 12, color: "#633806", marginTop: 2 }}>Borderline</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: "#633806" }}>{proficientCount}</div>
+            <div style={{ fontSize: 12, color: "#633806", marginTop: 2 }}>Proficient</div>
           </div>
           <div style={{ borderRadius: 16, padding: "16px 18px", textAlign: "center", background: "#FCEBEB", border: "0.5px solid #F7C1C1" }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: "#791F1F" }}>{failCount}</div>
-            <div style={{ fontSize: 12, color: "#791F1F", marginTop: 2 }}>Fail</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: "#791F1F" }}>{foundationCount}</div>
+            <div style={{ fontSize: 12, color: "#791F1F", marginTop: 2 }}>Foundation</div>
           </div>
         </div>
 

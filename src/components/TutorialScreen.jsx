@@ -171,6 +171,22 @@ export default function TutorialScreen({ onSkip }) {
           Accuracy first. Hints second. Speed third.
         </div>
 
+        <div
+          style={{
+            padding: '12px 16px',
+            borderRadius: 16,
+            background: 'rgba(255,59,48,0.06)',
+            border: '1px solid rgba(255,59,48,0.16)',
+            textAlign: 'center',
+            fontSize: 13,
+            fontWeight: 600,
+            color: '#791F1F',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Do not move out of the screen, once the test is started as proctoring is enabled.
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <button
             onClick={onSkip}

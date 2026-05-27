@@ -4,9 +4,9 @@ import { motion } from "framer-motion";
 
 const FILTERS = [
   { value: "all", label: "All" },
-  { value: "pass", label: "Pass" },
-  { value: "borderline", label: "Borderline" },
-  { value: "fail", label: "Fail" },
+  { value: "advanced", label: "Advanced" },
+  { value: "proficient", label: "Proficient" },
+  { value: "foundation", label: "Foundation" },
 ];
 
 function safeName(c) { return c.name || c[0] || c.candidateName || "—"; }
@@ -23,10 +23,10 @@ function safeTabSwitches(c) {
 
 function verdictKey(score) {
   const n = Number(score);
-  if (isNaN(n)) return "fail";
-  if (n >= 80) return "pass";
-  if (n >= 60) return "borderline";
-  return "fail";
+  if (isNaN(n)) return "foundation";
+  if (n >= 80) return "advanced";
+  if (n >= 50) return "proficient";
+  return "foundation";
 }
 
 export default function CandidateList({ candidates, onSelectCandidate, verdictBand }) {
