@@ -147,12 +147,15 @@ export default function CandidateList({ candidates, onSelectCandidate, verdictBa
                   {safeDate(c)}
                 </div>
 
-                {/* Proctoring flag */}
-                {sw > 0 && (
-                  <div style={{ fontSize: 11, color: "#791F1F", fontWeight: 700, flexShrink: 0 }}>
-                    {"⚠"} {sw}
-                  </div>
-                )}
+                {/* Proctoring violations */}
+                <div style={{
+                  fontSize: 11, fontWeight: 600, flexShrink: 0, minWidth: 44, textAlign: "center",
+                  padding: "3px 8px", borderRadius: 10,
+                  color: sw > 0 ? "#E65100" : "rgba(17,24,39,0.36)",
+                  background: sw > 0 ? "#FFF3E0" : "transparent",
+                }}>
+                  {sw > 0 ? `⚠ ${sw}` : "0"}
+                </div>
 
                 {/* Score */}
                 <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", flexShrink: 0, minWidth: 40, textAlign: "right" }}>

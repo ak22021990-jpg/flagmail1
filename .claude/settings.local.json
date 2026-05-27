@@ -24,7 +24,8 @@
       "Skill(gsd-new-milestone)",
       "mcp__gitnexus__detect_changes",
       "Bash(npx gsd-sdk *)",
-      "PowerShell(npx vite build --logLevel error 2>&1 | Select-Object -Last 10)"
+      "PowerShell(npx vite build --logLevel error 2>&1 | Select-Object -Last 10)",
+      "PowerShell(npx vite build --logLevel error 2>&1 | Select-Object -Last 5)"
     ]
   }
 }
