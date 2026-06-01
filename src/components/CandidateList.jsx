@@ -2,11 +2,16 @@ import { useState, useMemo } from "react";
 import PropTypes from "prop-types";
 import { motion } from "framer-motion";
 
-const FILTERS = [
+const TIER_FILTERS = [
   { value: "all", label: "All" },
   { value: "advanced", label: "Advanced" },
   { value: "proficient", label: "Proficient" },
   { value: "foundation", label: "Foundation" },
+];
+
+const PROCTOR_FILTERS = [
+  { value: "flagged", label: "Flagged" },
+  { value: "clean", label: "Clean" },
 ];
 
 function safeName(c) { return c.name || c[0] || c.candidateName || "—"; }
@@ -31,7 +36,9 @@ function verdictKey(score) {
 
 export default function CandidateList({ candidates, onSelectCandidate, verdictBand }) {
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [tierFilter, setTierFilter] = useState("all");
+  const [proctorFilter, setProctorFilter] = useState("all");
+  const [sortField, setSortField] = useState("date");
   const [sortDir, setSortDir] = useState("desc");
 
   const filtered = useMemo(() => {
@@ -40,14 +47,26 @@ export default function CandidateList({ candidates, onSelectCandidate, verdictBa
       const q = search.toLowerCase();
       list = list.filter(c => safeName(c).toLowerCase().includes(q) || safeEmail(c).toLowerCase().includes(q));
     }
-    if (filter !== "all") {
-      list = list.filter(c => verdictKey(safeScore(c)) === filter);
+    if (tierFilter !== "all") {
+      list = list.filter(c => verdictKey(safeScore(c)) === tierFilter);
+    }
+    if (proctorFilter === "flagged") {
+      list = list.filter(c => safeTabSwitches(c) > 0);
+    } else if (proctorFilter === "clean") {
+      list = list.filter(c => safeTabSwitches(c) === 0);
     }
     return [...list].sort((a, b) => {
+      if (sortField === "date") {
+        const da = safeDate(a);
+        const db = safeDate(b);
+        const ta = da !== "—" ? new Date(da).getTime() || 0 : 0;
+        const tb = db !== "—" ? new Date(db).getTime() || 0 : 0;
+        return sortDir === "desc" ? tb - ta : ta - tb;
+      }
       const diff = (safeScore(a) ?? 0) - (safeScore(b) ?? 0);
       return sortDir === "desc" ? -diff : diff;
     });
-  }, [candidates, search, filter, sortDir]);
+  }, [candidates, search, tierFilter, proctorFilter, sortField, sortDir]);
 
   return (
     <div>
@@ -66,12 +85,12 @@ export default function CandidateList({ candidates, onSelectCandidate, verdictBa
           }}
         />
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-          {FILTERS.map(f => {
-            const active = filter === f.value;
+          {TIER_FILTERS.map(f => {
+            const active = tierFilter === f.value;
             return (
               <button
                 key={f.value}
-                onClick={() => setFilter(filter === f.value && f.value !== "all" ? "all" : f.value)}
+                onClick={() => setTierFilter(tierFilter === f.value && f.value !== "all" ? "all" : f.value)}
                 style={{
                   padding: "5px 13px", borderRadius: 20, fontSize: 12, fontWeight: active ? 600 : 400,
                   border: active ? "0.5px solid #185FA5" : "0.5px solid rgba(13,26,51,0.10)",
@@ -84,7 +103,40 @@ export default function CandidateList({ candidates, onSelectCandidate, verdictBa
               </button>
             );
           })}
-          <span style={{ marginLeft: "auto" }}>
+
+          <div style={{ width: 1, height: 18, background: "rgba(13,26,51,0.10)", margin: "0 4px" }} />
+
+          {PROCTOR_FILTERS.map(f => {
+            const active = proctorFilter === f.value;
+            return (
+              <button
+                key={f.value}
+                onClick={() => setProctorFilter(proctorFilter === f.value ? "all" : f.value)}
+                style={{
+                  padding: "5px 13px", borderRadius: 20, fontSize: 12, fontWeight: active ? 600 : 400,
+                  border: active ? "0.5px solid #E65100" : "0.5px solid rgba(13,26,51,0.10)",
+                  background: active ? "#FFF3E0" : "rgba(249,250,252,0.88)",
+                  color: active ? "#E65100" : "rgba(17,24,39,0.54)",
+                  cursor: "pointer", transition: "all 0.12s",
+                }}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+
+          <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+            <button
+              onClick={() => setSortField(f => f === "date" ? "score" : "date")}
+              style={{
+                padding: "5px 13px", borderRadius: 20, fontSize: 12,
+                border: "0.5px solid rgba(13,26,51,0.10)",
+                background: "rgba(249,250,252,0.88)",
+                color: "rgba(17,24,39,0.54)", cursor: "pointer",
+              }}
+            >
+              Sort: {sortField === "date" ? "Date" : "Score"}
+            </button>
             <button
               onClick={() => setSortDir(d => d === "desc" ? "asc" : "desc")}
               style={{
@@ -94,7 +146,7 @@ export default function CandidateList({ candidates, onSelectCandidate, verdictBa
                 color: "rgba(17,24,39,0.54)", cursor: "pointer",
               }}
             >
-              Score {sortDir === "desc" ? "▼" : "▲"}
+              {sortDir === "desc" ? "▼" : "▲"}
             </button>
           </span>
         </div>
