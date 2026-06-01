@@ -1,4 +1,4 @@
-import { useCallback, useState, lazy, Suspense } from 'react';
+import { useCallback, useState, useEffect, lazy, Suspense } from 'react';
 import { scaleSocScore } from './utils/scoreSoc.js';
 import { SOC_QUESTIONS } from './data/socQuestions.js';
 import './styles/animations.css';
@@ -31,13 +31,21 @@ export default function App() {
   const [gameViolations, setGameViolations] = useState(0);
   const [socViolations, setSocViolations] = useState(0);
   const [socScaledResult, setSocScaledResult] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!submitting) return;
+    const handler = (e) => { e.preventDefault(); };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [submitting]);
 
   const handleSocSubmit = useCallback(() => {
     soc.submitSocRound();
     gs.setScreen(SCREENS.SOC_EXPLANATION);
   }, [soc, gs]);
 
-  const handleSocNext = useCallback(() => {
+  const handleSocNext = useCallback(async () => {
     const hasMore = soc.nextQuestion();
     if (hasMore) {
       gs.setScreen(SCREENS.SOC_ROUND);
@@ -82,7 +90,9 @@ export default function App() {
         socAnswers,
       };
 
-      soc.submitFinal(consolidatedPayload);
+      setSubmitting(true);
+      await soc.submitFinal(consolidatedPayload);
+      setSubmitting(false);
       gs.setScreen(SCREENS.SOC_RESULTS);
     }
   }, [soc, gs, sc, socViolations, gameViolations]);
@@ -107,9 +117,10 @@ export default function App() {
   }, [gs]);
 
   // ── Advance zone / end game ──────────────────────────────────────────────
-  const handleAdvanceZone = useCallback(() => {
+  const handleAdvanceZone = useCallback(async () => {
     if (gs.zone === 3) {
-      gs.submitToSheet({
+      setSubmitting(true);
+      await gs.submitToSheet({
         action: 'submit',
         name: gs.player.name,
         email: gs.player.email,
@@ -122,6 +133,7 @@ export default function App() {
         perEmail: sc.perEmail,
         proctoring_violations: gameViolations,
       });
+      setSubmitting(false);
     }
     gs.advanceZone();
   }, [gs, sc, gameViolations]);
@@ -252,6 +264,24 @@ export default function App() {
         <Suspense fallback={<div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif', fontSize: 15, color: 'rgba(17,24,39,0.54)' }}>Loading reviewer panel...</div>}>
           <AdminPanel onBack={() => gs.setScreen(SCREENS.LANDING)} />
         </Suspense>
+      )}
+
+      {submitting && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
+        }}>
+          <div style={{
+            width: 40, height: 40, border: '3.5px solid rgba(255,255,255,0.25)',
+            borderTopColor: '#fff', borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+          }} />
+          <p style={{ color: '#fff', fontSize: 15, fontWeight: 500, margin: 0 }}>
+            Saving your results — please don&#39;t close this page
+          </p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+        </div>
       )}
     </div>
     </ErrorBoundary>

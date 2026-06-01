@@ -165,15 +165,24 @@ export function useSocState(gs) {
       sessionStorage.setItem("socSubmission", JSON.stringify(consolidatedPayload));
     } catch (_) {}
 
-    try {
-      if (!LEADERBOARD_URL || LEADERBOARD_URL === "YOUR_APPS_SCRIPT_URL") return;
-      if (!consolidatedPayload) return;
-      await fetch(LEADERBOARD_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "submitFinal", ...consolidatedPayload }),
-        mode: "no-cors",
-      });
-    } catch (_) {}
+    if (!LEADERBOARD_URL || LEADERBOARD_URL === "YOUR_APPS_SCRIPT_URL") return true;
+    if (!consolidatedPayload) return true;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch(LEADERBOARD_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "submitFinal", ...consolidatedPayload }),
+        });
+        const data = await res.json();
+        if (data.ok) return true;
+        console.warn(`SOC submit attempt ${attempt + 1}: server returned`, data);
+      } catch (err) {
+        console.warn(`SOC submit attempt ${attempt + 1} failed:`, err);
+      }
+      if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
+    }
+    return false;
   }, []);
 
   return {
