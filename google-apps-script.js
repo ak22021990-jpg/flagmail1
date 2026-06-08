@@ -157,6 +157,8 @@ function doPost(e) {
       if (row > 0) {
         // Update Tier (col 7) with combined-score tier
         sheets.summary.getRange(row, 7, 1, 1).setValue(tierVal);
+        // Update Score (col 5) and Display Score (col 6)
+        sheets.summary.getRange(row, 5, 1, 2).setValues([[finalScore, finalScore]]);
         // Write Zone 4 (SOC) in col 12 and Final Score /100 in col 13
         sheets.summary.getRange(row, 12, 1, 2).setValues([[socScaled, finalScore]]);
       } else {
@@ -165,8 +167,8 @@ function doPost(e) {
           ts,
           payload.name || '', payload.email || '',
           'Completed',
-          (payload.zone1Score || 0) + (payload.zone2Score || 0) + (payload.zone3Score || 0),
-          '',
+          finalScore,
+          finalScore,
           tierVal,
           payload.zone1Score || 0,
           payload.zone2Score || 0,

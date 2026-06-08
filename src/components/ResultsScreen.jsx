@@ -36,11 +36,11 @@ export default function ResultsScreen({
 }) {
   const safePlayer = player ?? { name: 'Analyst' };
   const safePerEmail = Array.isArray(perEmail) ? perEmail : [];
-  const normalized = displayScore ?? Math.round((finalScore / MAX_SCORE) * 100);
+  const finalScore100 = socScaled != null ? finalScore + socScaled : null;
+  const normalized = finalScore100 != null ? finalScore100 : (displayScore ?? Math.round((finalScore / MAX_SCORE) * 100));
   const title = getProgressTitle(normalized);
   const perfect = normalized >= 100;
   const tone = titleTone(normalized);
-  const finalScore100 = socScaled != null ? finalScore + socScaled : null;
 
   const zoneAcc = (zone) => {
     const emails = safePerEmail.filter((record) => record.zone === zone);
