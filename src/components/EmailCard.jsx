@@ -16,7 +16,7 @@ function avatarColor(str) {
   return colors[Math.abs(hash) % colors.length];
 }
 
-function formatAppleTime() {
+function formatEmailTime() {
   const now = new Date();
   return now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
@@ -106,7 +106,7 @@ export default function EmailCard({ email, giveawayHighlight = false }) {
               background: color,
               boxShadow: `0 0 0 4px ${color}20`,
             }} />
-            Today at {formatAppleTime()}
+            Today at {formatEmailTime()}
           </div>
         </div>
 

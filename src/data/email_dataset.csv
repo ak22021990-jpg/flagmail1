@@ -11,29 +11,29 @@ Next billing date: April 14, 2026
 You can review billing details or update your payment method at netflix.com/account.
 
 - The Netflix Team",You can review billing details or update your payment method at netflix.com/account.,Legitimate,Subscription Billing,What is the strongest reason this should be tagged Legitimate?,The sender and account link both stay on netflix.com,The message mentions the next billing date,The email is short and easy to read,The plan name includes 1080p,0,"The sender, reply-to, and visible brand all match netflix.com","It references a normal subscription renewal and a realistic billing amount","No urgency, threats, or request to send information by email","The call to action stays on netflix.com/account"
-E001,1,Apple Support,security-alert@apple-id-support.net,security-alert@apple-id-support.net,unlock@apple-id-support.net,Your Apple ID has been LOCKED - verify in 24 HOURS,Fail,Fail,Fail,185.220.101.42 (RU),,"Dear Apple User,
+E001,1,Orange Support,security-alert@orange-id-support.net,security-alert@orange-id-support.net,unlock@orange-id-support.net,Your Orange ID has been LOCKED - verify in 24 HOURS,Fail,Fail,Fail,185.220.101.42 (RU),,"Dear Orange User,
 
-We found unusual sign in attempts on your Apple ID and have LOCKED your account for safety.
+We found unusual sign in attempts on your Orange ID and have LOCKED your account for safety.
 
 If you do not confirm your identity in 24 HOURS, your account will be closed and all photos, purchases, and backups may be removed forever.
 
 Click below now to unlock:
-[ UNLOCK MY APPLE ID ]
-apple-id-support.net/unlock
+[ UNLOCK MY ORANGE ID ]
+orange-id-support.net/unlock
 
-Apple Security Department",your account will be closed and all photos, purchases, and backups may be removed forever,Phishing & Spoofing,Email Phishing,What is the single clearest phishing signal here?,The sender domain is apple-id-support.net instead of apple.com,The email mentions unusual sign-in attempts,The message says the account is locked,The email asks you to click a button,0,apple-id-support.net is not Apple's real apple.com domain,The email uses all-caps urgency like LOCKED and HOURS,It threatens permanent loss of photos and purchases to create panic,Apple does not ask users to unlock accounts through a third-party domain
-E004,1,Best Buy Deals,promo@bestbuy-superclearance.com,promo@bestbuy-superclearance.com,deals@bestbuy-superclearance.com,Flash sale: 90% off TVs, iPhones, and MacBooks today,Fail,Fail,Fail,91.109.4.28 (NL),,"Hi Shopper,
+Orange Security Department",your account will be closed and all photos, purchases, and backups may be removed forever,Phishing & Spoofing,Email Phishing,What is the single clearest phishing signal here?,The sender domain is orange-id-support.net instead of orange.com,The email mentions unusual sign-in attempts,The message says the account is locked,The email asks you to click a button,0,orange-id-support.net is not Orange's real orange.com domain,The email uses all-caps urgency like LOCKED and HOURS,It threatens permanent loss of photos and purchases to create panic,Orange does not ask users to unlock accounts through a third-party domain
+E004,1,Best Buy Deals,promo@bestbuy-superclearance.com,promo@bestbuy-superclearance.com,deals@bestbuy-superclearance.com,Flash sale: 90% off TVs, Android phones, and Windows PCs today,Fail,Fail,Fail,91.109.4.28 (NL),,"Hi Shopper,
 
 For the next 6 hours only, every top brand product is 90% OFF.
 
-iPhone 15 Pro - now $119
-MacBook Pro 16 - now $249
+Android phone Pro - now $119
+Windows PC Pro 16 - now $249
 Samsung 65 inch TV - now $89
 
 Shop now before stock is gone forever:
 bestbuy-superclearance.com/today
 
-Unsubscribe: bestbuy-superclearance.com/unsubscribe",iPhone 15 Pro - now $119,Spam & Junk,Bulk Marketing Spam,Why does this belong in Spam & Junk rather than Legitimate promotions?,It uses impossible pricing and a fake retail domain,It contains an unsubscribe link,It lists several products in one email,It says the sale lasts 6 hours,0,The discounts are unrealistic for current electronics,The domain is not bestbuy.com,The 6-hour countdown is meant to stop careful thinking,Even the unsubscribe path stays on the fake domain
+Unsubscribe: bestbuy-superclearance.com/unsubscribe",Android phone Pro - now $119,Spam & Junk,Bulk Marketing Spam,Why does this belong in Spam & Junk rather than Legitimate promotions?,It uses impossible pricing and a fake retail domain,It contains an unsubscribe link,It lists several products in one email,It says the sale lasts 6 hours,0,The discounts are unrealistic for current electronics,The domain is not bestbuy.com,The 6-hour countdown is meant to stop careful thinking,Even the unsubscribe path stays on the fake domain
 E017,1,Chase Rewards,bonus@chase-bonus-center.com,bonus@chase-bonus-center.com,claims@chase-bonus-center.com,Chase Sapphire bonus: claim your $500 reward now,Fail,Fail,Fail,103.75.190.12 (CN),,"Dear Cardmember,
 
 Congratulations. Your Chase Sapphire account has been selected for a $500 loyalty reward.
@@ -54,7 +54,7 @@ To release the funds today, send a processing fee of $49.99 and reply with your 
 Failure to respond within 48 hours means the prize will be given to another person.
 
 Prize Desk",send a processing fee of $49.99,High-Risk Fraud,Advance Fee Fraud,Why is this tagged High-Risk Fraud instead of simple spam?,It asks the victim to pay money and share bank details to get the prize,It uses all caps and exclamation marks,It says the prize expires in 48 hours,It mentions an international cash draw,0,Legitimate prizes do not require a processing fee,It asks for bank details and identity information in the same message,The .xyz sender domain is not tied to a real recognisable company,The message pressures the user with a short expiry window
-E031,2,Apple,noreply@apple.com,noreply@apple.com,noreply@apple.com,Your receipt from the App Store,Pass,Pass,Pass,17.58.36.14 (US),You recently bought a VPN app from the App Store.,"Dear Customer,
+E031,2,Orange,noreply@orange.com,noreply@orange.com,noreply@orange.com,Your receipt from the Orange Store,Pass,Pass,Pass,17.58.36.14 (US),You recently bought a VPN app from the Orange Store.,"Dear Customer,
 
 Thank you for your purchase.
 
@@ -64,9 +64,9 @@ Amount: $4.99
 Order ID: MG4B2K9R7X
 Date: March 14, 2026
 
-If you did not authorize this purchase, you can report a problem at reportaproblem.apple.com.
+If you did not authorize this purchase, you can report a problem at reportaproblem.orange.com.
 
-Apple",report a problem at reportaproblem.apple.com,Legitimate,Subscription Billing,What makes this a legitimate billing email?,The purchase details and support path both stay on apple.com,The total charge is small,The email says thank you for your purchase,It includes an order ID,0,The sender and support path both use official apple.com domains,The email includes a plausible order ID and normal store receipt details,It does not ask for passwords card numbers or verification uploads,reportaproblem.apple.com is Apple's real purchase-support flow
+Orange",report a problem at reportaproblem.orange.com,Legitimate,Subscription Billing,What makes this a legitimate billing email?,The purchase details and support path both stay on orange.com,The total charge is small,The email says thank you for your purchase,It includes an order ID,0,The sender and support path both use official orange.com domains,The email includes a plausible order ID and normal store receipt details,It does not ask for passwords card numbers or verification uploads,reportaproblem.orange.com is Orange's real purchase-support flow
 E032,2,Wells Fargo Alerts,alerts@wellsfargo.com,alerts@wellsfargo.com,alerts@wellsfargo.com,Unusual activity detected on your Wells Fargo account,Pass,Pass,Pass,18.211.142.72 (US),You had three failed PIN attempts on your debit card this morning.,"We noticed unusual activity and temporarily placed a hold on outgoing transactions as a precaution.
 
 Account: Checking (...7291)
@@ -106,17 +106,17 @@ Contract_Terms_Updated_March2026.docm
 This document contains macros required to display the redlines correctly. If prompted, click ""Enable Content"" after opening.
 
 Thanks","If prompted, click ""Enable Content"" after opening.",Malicious Content,Macro-Embedded Attachment,What makes this clearly malicious?,It asks the recipient to open a .docm file and enable macros,It mentions contract edits,It asks for the file to be reviewed before Friday,It comes from a generic sharing mailbox,0,The attachment is a .docm file which supports executable macros,The email explicitly instructs the user to enable content,Macro-enabled attachments are a common malware delivery pattern,The context says a document was expected but not one requiring macros
-E046,3,Apple,security@apple.com,security@apple.com,security@apple.com,Your Apple ID was used to sign in to iCloud on a new browser,Pass,Pass,Pass,17.253.144.10 (US),You signed in to iCloud from a Windows laptop while traveling earlier today.,"Your Apple ID was used to sign in to iCloud.com.
+E046,3,Orange,security@orange.com,security@orange.com,security@orange.com,Your Orange ID was used to sign in to Orange Cloud on a new browser,Pass,Pass,Pass,17.253.144.10 (US),You signed in to Orange Cloud from a Windows laptop while traveling earlier today.,"Your Orange ID was used to sign in to orangecloud.com.
 
 Browser: Chrome
 Operating system: Windows 11
 Location: Austin, TX, USA
 Date and time: March 14, 2026 at 9:02 AM CST
 
-If you do not recognize this sign-in, reset your password at iforgot.apple.com.
+If you do not recognize this sign-in, reset your password at iforgot.orange.com.
 If this sign-in looks familiar, you can disregard this message.
 
-Apple","If this sign-in looks familiar, you can disregard this message.",Legitimate,Security Notification,What is the strongest reason this is legitimate?,The Apple domain recovery link and contextual sign-in details all align,The browser listed is Chrome,The message is brief,It mentions Windows 11,0,The sender is the expected apple.com security mailbox,The notification includes specific device OS location and time details,iforgot.apple.com is an official Apple recovery domain,The user context supports the sign-in as expected activity
+Orange","If this sign-in looks familiar, you can disregard this message.",Legitimate,Security Notification,What is the strongest reason this is legitimate?,The Orange domain recovery link and contextual sign-in details all align,The browser listed is Chrome,The message is brief,It mentions Windows 11,0,The sender is the expected orange.com security mailbox,The notification includes specific device OS location and time details,iforgot.orange.com is an official Orange recovery domain,The user context supports the sign-in as expected activity
 E047,3,Chase Alerts,alerts@chase.com,alerts@chase.com,alerts@chase.com,"Transaction alert: $3,200 charge on your Sapphire card",Pass,Pass,Pass,18.204.201.15 (US),You booked airfare with Delta this morning using your Chase Sapphire card ending in 4821.,"A charge was made on your Chase Sapphire Preferred card.
 
 Amount: $3,200.00

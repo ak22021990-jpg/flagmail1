@@ -221,7 +221,7 @@ function doPost(e) {
             name: String(row[1] || ''),
             email: String(row[2] || ''),
             status: String(row[3] || ''),
-            totalScore: Number(row[12]) || 0,
+            totalScore: (row[11] !== undefined && row[11] !== null && row[11] !== "") ? (Number(row[12]) || 0) : (Number(row[5]) || 0),
             displayScore: Number(row[5]) || 0,
             gradeBand: String(row[6] || ''),
             submissionDate: String(row[0] || ''),

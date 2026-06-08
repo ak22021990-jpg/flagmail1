@@ -44,38 +44,38 @@ You can review billing details or update your payment method at netflix.com/acco
   {
     id: "E001",
     zone: 1,
-    fromName: "Apple Support",
-    from: "security-alert@apple-id-support.net",
-    sender: "security-alert@apple-id-support.net",
-    replyTo: "unlock@apple-id-support.net",
-    subject: "Your Apple ID has been LOCKED - verify in 24 HOURS",
+    fromName: "Orange Support",
+    from: "security-alert@orange-id-support.net",
+    sender: "security-alert@orange-id-support.net",
+    replyTo: "unlock@orange-id-support.net",
+    subject: "Your Orange ID has been LOCKED - verify in 24 HOURS",
     auth: { spf: "Fail", dkim: "Fail", dmarc: "Fail" },
     originIp: "185.220.101.42 (RU)",
     userContext: null,
-    body: `Dear Apple User,
+    body: `Dear Orange User,
 
-We found unusual sign in attempts on your Apple ID and have LOCKED your account for safety.
+We found unusual sign in attempts on your Orange ID and have LOCKED your account for safety.
 
 If you do not confirm your identity in 24 HOURS, your account will be closed and all photos, purchases, and backups may be removed forever.
 
 Click below now to unlock:
-[ UNLOCK MY APPLE ID ]
-apple-id-support.net/unlock
+[ UNLOCK MY ORANGE ID ]
+orange-id-support.net/unlock
 
-Apple Security Department`,
+Orange Security Department`,
     clues: [
-      "apple-id-support.net is not Apple's real apple.com domain",
+      "orange-id-support.net is not Orange's real orange.com domain",
       "The email uses all-caps urgency like LOCKED and HOURS",
       "It threatens permanent loss of photos and purchases to create panic",
-      "Apple does not ask users to unlock accounts through a third-party domain",
+      "Orange does not ask users to unlock accounts through a third-party domain",
     ],
     giveawayPhrase: "your account will be closed and all photos, purchases, and backups may be removed forever",
     level1: "Phishing & Spoofing",
     level2: "Email Phishing",
-    explanation: "This is a straightforward Apple phishing email. The fake domain, panic language, and threat of irreversible data loss are classic credential-harvesting signs.",
+    explanation: "This is a straightforward Orange phishing email. The fake domain, panic language, and threat of irreversible data loss are classic credential-harvesting signs.",
     reasoningQuestion: "What is the single clearest phishing signal here?",
     reasoningOptions: [
-      "The sender domain is apple-id-support.net instead of apple.com",
+      "The sender domain is orange-id-support.net instead of orange.com",
       "The email mentions unusual sign-in attempts",
       "The message says the account is locked",
       "The email asks you to click a button",
@@ -89,7 +89,7 @@ Apple Security Department`,
     from: "promo@bestbuy-superclearance.com",
     sender: "promo@bestbuy-superclearance.com",
     replyTo: "deals@bestbuy-superclearance.com",
-    subject: "Flash sale: 90% off TVs, iPhones, and MacBooks today",
+    subject: "Flash sale: 90% off TVs, Android phones, and Windows PCs today",
     auth: { spf: "Fail", dkim: "Fail", dmarc: "Fail" },
     originIp: "91.109.4.28 (NL)",
     userContext: null,
@@ -97,8 +97,8 @@ Apple Security Department`,
 
 For the next 6 hours only, every top brand product is 90% OFF.
 
-iPhone 15 Pro - now $119
-MacBook Pro 16 - now $249
+Android phone Pro - now $119
+Windows PC Pro 16 - now $249
 Samsung 65 inch TV - now $89
 
 Shop now before stock is gone forever:
@@ -111,7 +111,7 @@ Unsubscribe: bestbuy-superclearance.com/unsubscribe`,
       "The 6-hour countdown is meant to stop careful thinking",
       "Even the unsubscribe path stays on the fake domain",
     ],
-    giveawayPhrase: "iPhone 15 Pro - now $119",
+    giveawayPhrase: "Android phone Pro - now $119",
     level1: "Spam & Junk",
     level2: "Bulk Marketing Spam",
     explanation: "This is mass retail spam using impossible discounts and a fake branded domain. It is unsolicited junk, not a legitimate sales campaign from Best Buy.",
@@ -207,14 +207,14 @@ Prize Desk`,
   {
     id: "E031",
     zone: 2,
-    fromName: "Apple",
-    from: "noreply@apple.com",
-    sender: "noreply@apple.com",
-    replyTo: "noreply@apple.com",
-    subject: "Your receipt from the App Store",
+    fromName: "Orange",
+    from: "noreply@orange.com",
+    sender: "noreply@orange.com",
+    replyTo: "noreply@orange.com",
+    subject: "Your receipt from the Orange Store",
     auth: { spf: "Pass", dkim: "Pass", dmarc: "Pass" },
     originIp: "17.58.36.14 (US)",
-    userContext: "You recently bought a VPN app from the App Store.",
+    userContext: "You recently bought a VPN app from the Orange Store.",
     body: `Dear Customer,
 
 Thank you for your purchase.
@@ -225,22 +225,22 @@ Amount: $4.99
 Order ID: MG4B2K9R7X
 Date: March 14, 2026
 
-If you did not authorize this purchase, you can report a problem at reportaproblem.apple.com.
+If you did not authorize this purchase, you can report a problem at reportaproblem.orange.com.
 
-Apple`,
+Orange`,
     clues: [
-      "The sender and support path both use official apple.com domains",
+      "The sender and support path both use official orange.com domains",
       "The email includes a plausible order ID and normal store receipt details",
       "It does not ask for passwords, card numbers, or verification uploads",
-      "reportaproblem.apple.com is Apple's real purchase-support flow",
+      "reportaproblem.orange.com is Orange's real purchase-support flow",
     ],
-    giveawayPhrase: "report a problem at reportaproblem.apple.com",
+    giveawayPhrase: "report a problem at reportaproblem.orange.com",
     level1: "Legitimate",
     level2: "Subscription Billing",
-    explanation: "This is a normal App Store receipt. The message contains realistic transaction details and directs the user to Apple's official purchase-support domain.",
+    explanation: "This is a normal Orange Store receipt. The message contains realistic transaction details and directs the user to Orange's official purchase-support domain.",
     reasoningQuestion: "What makes this a legitimate billing email?",
     reasoningOptions: [
-      "The purchase details and support path both stay on apple.com",
+      "The purchase details and support path both stay on orange.com",
       "The total charge is small",
       "The email says thank you for your purchase",
       "It includes an order ID",
@@ -409,38 +409,38 @@ Thanks`,
   {
     id: "E046",
     zone: 3,
-    fromName: "Apple",
-    from: "security@apple.com",
-    sender: "security@apple.com",
-    replyTo: "security@apple.com",
-    subject: "Your Apple ID was used to sign in to iCloud on a new browser",
+    fromName: "Orange",
+    from: "security@orange.com",
+    sender: "security@orange.com",
+    replyTo: "security@orange.com",
+    subject: "Your Orange ID was used to sign in to Orange Cloud on a new browser",
     auth: { spf: "Pass", dkim: "Pass", dmarc: "Pass" },
     originIp: "17.253.144.10 (US)",
-    userContext: "You signed in to iCloud from a Windows laptop while traveling earlier today.",
-    body: `Your Apple ID was used to sign in to iCloud.com.
+    userContext: "You signed in to Orange Cloud from a Windows laptop while traveling earlier today.",
+    body: `Your Orange ID was used to sign in to orangecloud.com.
 
 Browser: Chrome
 Operating system: Windows 11
 Location: Austin, TX, USA
 Date and time: March 14, 2026 at 9:02 AM CST
 
-If you do not recognize this sign-in, reset your password at iforgot.apple.com.
+If you do not recognize this sign-in, reset your password at iforgot.orange.com.
 If this sign-in looks familiar, you can disregard this message.
 
-Apple`,
+Orange`,
     clues: [
-      "The sender is the expected apple.com security mailbox",
+      "The sender is the expected orange.com security mailbox",
       "The notification includes specific device, OS, location, and time details",
-      "iforgot.apple.com is an official Apple recovery domain",
+      "iforgot.orange.com is an official Orange recovery domain",
       "The user context supports the sign-in as expected activity",
     ],
     giveawayPhrase: "If this sign-in looks familiar, you can disregard this message.",
     level1: "Legitimate",
     level2: "Security Notification",
-    explanation: "This is a clean Apple sign-in notification. The message is specific, uses official Apple infrastructure, and matches the user's recent activity.",
+    explanation: "This is a clean Orange sign-in notification. The message is specific, uses official Orange infrastructure, and matches the user's recent activity.",
     reasoningQuestion: "What is the strongest reason this is legitimate?",
     reasoningOptions: [
-      "The Apple domain, recovery link, and contextual sign-in details all align",
+      "The Orange domain, recovery link, and contextual sign-in details all align",
       "The browser listed is Chrome",
       "The message is brief",
       "It mentions Windows 11",
