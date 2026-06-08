@@ -1,255 +1,256 @@
-<!-- refreshed: 2026-05-25 -->
+<!-- refreshed: 2026-06-08 -->
 # Architecture
 
-**Analysis Date:** 2026-05-25
+**Analysis Date:** 2026-06-08
 
 ## System Overview
 
 ```text
-┌──────────────────────────────────────────────────────────────────┐
-│                     Presentation Layer (JSX)                     │
-│    src/components/*.jsx  —  32 screen/UI components              │
-├──────────────────┬──────────────────┬───────────────────────────┤
-│  Screen-Comps    │  UI-Components   │  Layout-Comps             │
-│  LandingScreen   │  EmailCard       │  ErrorBoundary            │
-│  GameRound       │  Classifier      │  TimerBar                 │
-│  ResultsScreen   │  ClueSystem      │  RoundHeader              │
-│  SocRound        │  BadgeToast      │  ScoreDisplay             │
-│  ReviewerScreen  │  ...             │  ...                      │
-└────────┬─────────┴────────┬─────────┴────────┬──────────────────┘
-         │                  │                   │
-         ▼                  ▼                   ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                   State-Management Layer (Hooks)                  │
-│    src/hooks/*.js  —  7 custom hooks                             │
-│                                                                    │
-│  useGameState()      — screen machine, player, email pool, zone   │
-│  useScoring()        — per-email/zone/total scores                │
-│  useSocState(gs)     — SOC classification quiz state              │
-│  useBadges()         — badge unlock logic                         │
-│  useTimer()          — round countdown timer                      │
-│  useLeaderboard()    — leaderboard fetch/submit                   │
-│  useProctoring()     — tab-switch violation tracking              │
-└───────────────────────┬───────────────────────────────────────────┘
-                        │
-                        ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                    Utility & Data Layer                           │
-│                                                                    │
-│  src/data/        — static email pool + SOC questions             │
-│  src/utils/       — scoring, shuffle, SPL validation, confetti    │
-│  src/config/      — game timers (120s, etc.)                     │
-│  src/config.js    — Google Apps Script URL                        │
-│  src/styles/      — CSS tokens, glass style, animation keyframes │
-└──────────────────────────────────────────────────────────────────┘
-                        │
-                        ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                    External Layer                                 │
-│                                                                    │
-│  Google Apps Script Web App  —  leaderboard sheet (register/     │
-│                                  submit/checkEmail)               │
-│  google-apps-script.js      —  server-side Apps Script code      │
-│  .github/workflows/deploy.yml — CI/CD → GitHub Pages             │
-└──────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Browser SPA                                  │
+│  index.html → src/main.jsx → ErrorBoundary → App.jsx               │
+├───────────────┬──────────────┬──────────────┬───────────────────────┤
+│  Screen Layer │  Hook Layer  │  Data Layer  │    Utils Layer        │
+│  src/         │  src/hooks/  │  src/data/   │    src/utils/         │
+│  components/  │             │  src/config/ │                        │
+└───────┬───────┴──────┬───────┴──────┬───────┴───────────────────────┘
+        │              │              │
+        ▼              ▼              ▼
+   Renders UI    Owns state &    Static JS modules
+   full-screen   all mutations   (no runtime deps)
+   one at a time via useState
+        │              │
+        └──── props ───┘
+              (no context, no store)
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  External: Google Apps Script Web App (LEADERBOARD_URL)             │
+│  HTTP POST — no-cors / fire-and-forget with 3-retry wrapper         │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Component Responsibilities
 
 | Component | Responsibility | File |
 |-----------|----------------|------|
-| `App` | Screen router — renders 1 of 11 screens based on `gs.screen` | `src/App.jsx` |
-| `useGameState` | Screen state machine, player data, email pool, zone/round progression | `src/hooks/useGameState.js` |
-| `useScoring` | Score calculation per email/zone/total + category tracking | `src/hooks/useScoring.js` |
-| `useSocState` | SOC quiz state (answers, SPL validation, scoring, final submission) | `src/hooks/useSocState.js` |
-| `useBadges` | Badge unlock conditions (10 badge types) | `src/hooks/useBadges.js` |
-| `useTimer` | Countdown timer with green/amber/red phase | `src/hooks/useTimer.js` |
-| `useProctoring` | Tab-switch detection via visibilitychange + blur/focus | `src/hooks/useProctoring.js` |
-| `useLeaderboard` | GET/POST to Google Apps Script leaderboard | `src/hooks/useLeaderboard.js` |
+| `App` | Screen router — renders 1 of 13 screens based on `gs.screen`; wires all hook callbacks | `src/App.jsx` |
+| `useGameState` | Screen state machine, player registration, email pool shuffling, zone/round progression | `src/hooks/useGameState.js` |
+| `useScoring` | Per-email score calculation, zone totals, category-accuracy tracking | `src/hooks/useScoring.js` |
+| `useSocState` | SOC quiz state — answers array, SPL validation, per-question scoring, final submission | `src/hooks/useSocState.js` |
+| `useBadges` | Badge unlock logic (10 badge types) triggered after round/zone/game events | `src/hooks/useBadges.js` |
+| `useTimer` | Countdown with green/amber/red phase and `onTimeout` callback | `src/hooks/useTimer.js` |
+| `useProctoring` | Tab-switch detection via `visibilitychange` + `blur`/`focus`; one violation per departure | `src/hooks/useProctoring.js` |
+| `useLeaderboard` | GET/POST to Google Apps Script leaderboard (used by `ReviewerScreen` legacy) | `src/hooks/useLeaderboard.js` |
+| `useAdmin` | Admin panel data fetch — passcode-protected GET via Google Apps Script | `src/hooks/useAdmin.js` |
 | `ErrorBoundary` | Class component — catches render errors, shows reload UI | `src/components/ErrorBoundary.jsx` |
+| `AdminPanel` | Lazy-loaded reviewer panel — passcode login, candidate list, answer sheets | `src/components/AdminPanel.jsx` |
+| `ReviewerScreen` | Deprecated — replaced by `AdminPanel`. Kept for reference only | `src/components/ReviewerScreen.jsx` |
 
 ## Pattern Overview
 
-**Overall:** Screen-based state machine with custom hook state management.
+**Overall:** Single-page App with a manual screen state machine (no router library).
 
 **Key Characteristics:**
-- Single-page app — no router library. Screen transitions via `SCREENS` enum and `setScreen()`
-- State colocated in custom hooks (not global store) — `useGameState`, `useScoring`, `useSocState`, `useBadges`
-- `App.jsx` is orchestrator — instantiates hooks, wires callbacks, renders active screen
-- Components receive state + callbacks as props — no prop drilling beyond 1 level deep
-- Two independent scoring tracks converge at end: zones (1-3) + SOC (zone 4)
-- Data layer is entirely static (JS modules) until final result submission to Google Sheets
+- `SCREENS` enum (13 values) in `src/hooks/useGameState.js` drives all navigation via `gs.setScreen()`
+- All mutable state lives inside `useState` in custom hooks — no Redux, no Zustand, no Context API
+- `App.jsx` is the sole orchestrator — instantiates 4 hooks at top level (`useGameState`, `useScoring`, `useSocState`, `useBadges`), wires callbacks, conditionally renders one screen at a time
+- Props flow downward at most 1 level deep (App to screen component to sub-components)
+- Two independent scoring tracks converge at end-game: zones 1-3 (raw points, max 60) + SOC zone 4 (raw max 92, scaled to 40)
+- Data layer is entirely static JS modules until final submission fires HTTP POST
 
 ## Layers
 
-**Presentation Layer:**
-- Purpose: Render UI screens and components
+**Screen / Component Layer:**
+- Purpose: Render full-viewport UI screens and reusable sub-components
 - Location: `src/components/*.jsx`
-- Contains: 32 React components (screens, cards, UI elements)
-- Depends on: Props from `App.jsx`, shared style tokens from `src/styles/tokens.js`
-- Used by: `App.jsx` (renders one screen at a time)
+- Contains: 34 React components (full-screen screens, email cards, timer, badges, admin panel)
+- Depends on: Props from `App.jsx`, design tokens from `src/styles/tokens.js`, CSS from `src/styles/animations.css`
+- Used by: `App.jsx` (renders one screen at a time via conditional render)
 
-**State-Management Layer:**
-- Purpose: Encapsulate all mutable game state and actions
+**Hook / State Layer:**
+- Purpose: Encapsulate all mutable game state and side-effect-heavy actions
 - Location: `src/hooks/*.js`
-- Contains: 7 custom hooks — `useGameState`, `useScoring`, `useSocState`, `useBadges`, `useTimer`, `useLeaderboard`, `useProctoring`
-- Depends on: `src/data/` for static datasets, `src/config/` for constants, `src/utils/` for scoring/validation
-- Used by: `App.jsx`
+- Contains: 8 custom hooks — `useGameState`, `useScoring`, `useSocState`, `useBadges`, `useTimer`, `useLeaderboard`, `useProctoring`, `useAdmin`
+- Depends on: `src/data/` for datasets, `src/config/` for constants, `src/utils/` for pure scoring/validation functions
+- Used by: `App.jsx` (top-level instantiation); `GameRound.jsx` and `SocRound.jsx` also instantiate `useTimer` and `useProctoring` locally
 
-**Data Layer:**
-- Purpose: Static datasets and game configuration
+**Data / Config Layer:**
+- Purpose: Static datasets and game configuration constants
 - Location: `src/data/`, `src/config/`, `src/config.js`
-- Contains: `emails.js` (15 emails), `socQuestions.js` (6 SOC questions), game timers, Google Script URL
+- Contains: `emails.js` (EMAIL_POOL — 15 emails with clues), `socQuestions.js` (SOC_QUESTIONS — 6 questions), `game.js` (timing constants), `config.js` (LEADERBOARD_URL)
 - Depends on: Nothing
-- Used by: hooks layer
+- Used by: Hooks layer
 
-**Utility Layer:**
-- Purpose: Pure functions for scoring, validation, shuffling, confetti rendering
+**Utils Layer:**
+- Purpose: Pure functions — no React, no side effects
 - Location: `src/utils/*.js`
-- Contains: `scoreSoc.js`, `validateSpl.js`, `shuffle.js`, `competency.js`, `confetti.js`
+- Contains: `scoreSoc.js` (SOC scoring + scaling), `validateSpl.js` (keyword-based SPL validation), `shuffle.js` (Fisher-Yates email pool shuffler), `competency.js` (competency paragraph generator), `confetti.js` (canvas particle effect), `exportCsv.js` (CSV download helper)
 - Depends on: Nothing (pure functions)
-- Used by: hooks layer
+- Used by: Hooks layer and component layer
 
-**External Layer:**
-- Purpose: Server-side data persistence and deployment
+**Style / Token Layer:**
+- Purpose: Shared design constants referenced by components
+- Location: `src/styles/tokens.js`, `src/styles/animations.css`, `src/index.css`
+- Contains: `glass` surface style object, `MAX_SCORE`/zone score constants, `ZONE_META_LIST` (zone metadata)
+- Depends on: Nothing
+- Used by: Almost every component for the glass card visual style
+
+**External / Backend Layer:**
+- Purpose: Server-side persistence and CI/CD
 - Location: `google-apps-script.js`, `.github/workflows/deploy.yml`
-- Contains: Google Apps Script web app (writes to Google Sheets), GitHub Pages deployment
+- Contains: Google Apps Script web app (`doPost`/`doGet`) writing to Google Sheets; GitHub Pages deploy pipeline
 - Depends on: `src/config.js` (LEADERBOARD_URL)
 
 ## Data Flow
 
-### Primary Request Path (Email Classification)
+### Primary Request Path — Email Classification (Zones 1-3)
 
-1. **Landing** — Player enters name + email, `gs.startGame()` shuffles 15 emails into `emailPool`, sets screen to TUTORIAL or ZONE_INTRO
-   - `src/App.jsx:138-142`
-2. **Zone Intro** — Shows zone details, `gs.startZone()` sets screen to ROUND
-   - `src/App.jsx:165-170`
-3. **Game Round** — Timer starts (`useTimer`), proctoring activates (`useProctoring`), player classifies email (L1 category + L2 subcategory + optional clues)
-   - `src/components/GameRound.jsx` timer fires → `handleSubmit(timeLeft, timedOut)`
-4. **Submit** — `handleSubmit` in App calls `sc.scoreRound()` which compares against `email.level1`/`email.level2`, records score per email, updates zone/total scores
-   - `src/App.jsx:89-96`, `src/hooks/useScoring.js:17-77`
-5. **Explanation** — Shows correctness, reasoning, and score for completed round
-   - `src/App.jsx:188-195`
-6. **Zone Complete** — Shows zone summary, `handleAdvanceZone` submits to Google Sheet if zone 3
-   - `src/App.jsx:107-124`
-7. **Zone 4 (SOC)** — After zone 3, 6 SOC classification questions with SPL query writing. Separate scoring via `useSocState`
-   - `src/App.jsx:209-246`
-8. **Results** — Combined zone + SOC scores, competency summary, badge display
-   - `src/App.jsx:248-258`
+1. Player registers on `LandingScreen` — `gs.startGame(name, email)` shuffles email pool via `shuffleEmails()` (`src/utils/shuffle.js`) and fires `submitToSheet({ action: 'register' })`
+2. `App.jsx` renders `GameRound` with `gs.currentEmail`, `gs.round`, and callbacks
+3. `GameRound` instantiates `useTimer` (120s countdown) and `useProctoring` (tab-switch detection) locally
+4. Player reveals clues (`gs.revealClue`), selects L1/L2 (`gs.selectL1`, `gs.selectL2`), then submits
+5. `handleSubmit` in `App.jsx` calls `sc.scoreRound(...)` — produces a `record` object, updates `sc.totalScore`, `sc.zoneScores`, `sc.categoryCorrect`, `sc.perEmail`
+6. `gs.submitRound(record)` stores `record` in `gs.round.lastRecord` and transitions to `SCREENS.EXPLANATION`
+7. After last email in zone: `gs.nextEmail()` detects `nextIndex >= zoneEnd`, transitions to `SCREENS.ZONE_COMPLETE`
+8. `handleAdvanceZone` in `App.jsx` fires `submitToSheet` if zone === 3, then calls `gs.advanceZone()`
+
+### SOC Investigation Path (Zone 4)
+
+1. After zone 3 completes, `gs.advanceZone()` transitions to `SCREENS.SOC_INTRO`
+2. `SocRound` receives `soc.currentQuestion` and `soc.currentAnswer` as props
+3. Player sets primary/secondary classification and writes SPL text
+4. `handleSocSubmit` calls `soc.submitSocRound()` — runs `validateSpl()` against `q.splRules.tasks`, then `scoreSocRound()`, stores result in `answers[idx].result`
+5. `SocExplanationCard` displays scoring breakdown and hints
+6. `handleSocNext` advances to next question or, when all 6 done, calls `scaleSocScore(soc.socTotal, sc.totalScore)` to produce `socScaled` and `finalScore`
+7. Full `consolidatedPayload` (zones + SOC + proctoring) is POSTed via `soc.submitFinal()` with 3-retry logic; `sessionStorage` failover saves payload before fetch
+8. Transitions to `SCREENS.SOC_RESULTS`
 
 ### Proctoring Data Flow
 
-1. `useProctoring` hook (inside `GameRound` and `SocRound`) listens for `visibilitychange`, `blur`, `focus`
-2. Violation count incremented per tab switch — guarded by `lastHiddenRef` to prevent double-count
-3. Violation count passed up via `onViolationChange` setter in App
-4. Final violation count appended to submission payload
+1. `GameRound` and `SocRound` each instantiate `useProctoring({ active: !answer.submitted })`
+2. `visibilitychange` and `blur` events increment `violations` counter (deduplicated by `lastHiddenRef`)
+3. Violation count is bubbled up via `onViolationChange` prop callback (`setGameViolations` / `setSocViolations` in `App.jsx`)
+4. `gameViolations + socViolations` is included in the final submission payload as `proctoring_violations`
 
-### Leaderboard/Sheet Submission Flow
+### Reviewer / Admin Flow
 
-1. `gs.submitToSheet()` sends player data via `fetch(LEADERBOARD_URL)` in POST `mode: 'no-cors'`
-2. Google Apps Script web app (`google-apps-script.js`) processes: doPost() routes to register/submit, doGet() handles checkEmail
-3. Data written to Google Sheets (Summary + RawData tabs)
+1. `LandingScreen` shows "Reviewer" link — `gs.setScreen(SCREENS.ADMIN)`
+2. `AdminPanel` is lazy-loaded (`React.lazy` + `Suspense` in `src/App.jsx:21`) — loaded on first navigation to `SCREENS.ADMIN`
+3. `useAdmin` POSTs `{ action: 'getAdminData', passcode }` to Google Apps Script
+4. On success: renders `CandidateList` — on candidate select — renders `AnswerSheet`
+5. CSV export uses `downloadCsv()` from `src/utils/exportCsv.js`
 
 **State Management:**
-- All state lives in `useState` inside custom hooks — no global store, no context
-- `App.jsx` instantiates hooks at top level, passes state + callbacks as props
-- No reducers — direct `setState` calls in hooks
+- No global store. All state in `useState` within custom hooks.
+- `App.jsx` is the only component that instantiates `useGameState`, `useScoring`, `useSocState`, `useBadges` — state is passed as props to screens.
+- `useTimer` and `useProctoring` are instantiated locally inside `GameRound` and `SocRound` respectively.
+- State resets on page refresh (no persistence beyond `sessionStorage` SOC failover and `localStorage` one-attempt guard).
 
 ## Key Abstractions
 
 **SCREENS enum:**
-- Purpose: Screen identifiers used as state machine transitions
-- Location: `src/hooks/useGameState.js:5-18`
-- Values: `LANDING`, `TUTORIAL`, `ZONE_INTRO`, `ROUND`, `EXPLANATION`, `ZONE_COMPLETE`, `RESULTS`, `SOC_INTRO`, `SOC_ROUND`, `SOC_EXPLANATION`, `SOC_RESULTS`, `REVIEWER`
+- Purpose: All valid screen identifiers — drives the entire navigation state machine
+- Location: `src/hooks/useGameState.js:5-19`
+- Values: `LANDING`, `TUTORIAL`, `ZONE_INTRO`, `ROUND`, `EXPLANATION`, `ZONE_COMPLETE`, `RESULTS`, `SOC_INTRO`, `SOC_ROUND`, `SOC_EXPLANATION`, `SOC_RESULTS`, `REVIEWER` (unused), `ADMIN`
+- Pattern: `gs.setScreen(SCREENS.XXX)` is the only navigation mechanism
 
-**Round state object:**
-- Purpose: Tracks player answers within a single email classification round
-- Shape: `{ cluesRevealed, selectedL1, selectedL2, submitted, timedOut, lastRecord }`
-- Location: `src/hooks/useGameState.js:22-31`
+**Round State object:**
+- Purpose: Tracks player actions within one email classification round
+- Shape: `{ cluesRevealed: [], selectedL1: null, selectedL2: null, submitted: false, timedOut: false, lastRecord: null }`
+- Location: `src/hooks/useGameState.js:23-32`
+- Reset: `initialRoundState()` called on `startZone()`, `nextEmail()`, `advanceZone()`
 
-**Score record object:**
-- Purpose: Per-email scoring result stored in `sc.perEmail[]`
+**Scoring Record object:**
+- Purpose: Immutable per-email result stored in `sc.perEmail[]`
 - Shape: `{ emailId, zone, selectedL1, selectedL2, correctL1, correctL2, l1Correct, l2Correct, cluesUsed, timedOut, points, l1Points, l2Points, clueDeduction }`
 - Location: `src/hooks/useScoring.js:42-57`
+- Used by: `ExplanationCard`, `ZoneComplete`, `ResultsScreen`, badge checks, final submission payload
 
-**Badge check cycle:**
-- Purpose: After each round, zone, and game completion — checks earned badges
-- Pattern: `checkAfterRound()` → `checkAfterZone()` → `checkAfterGame()`
-- Location: `src/hooks/useBadges.js`
+**SOC Answer object:**
+- Purpose: Per-question state for the SOC zone
+- Shape: `{ primary: null, secondary: null, splText: "", submitted: false, result: null }`
+- Location: `src/hooks/useSocState.js:16-24`
 
-**Glass surface style:**
-- Purpose: Shared visual style used across all screen components
-- Pattern: Import `glass` from `src/styles/tokens.js`, clone with per-component overrides
+**glass token:**
+- Purpose: Canonical CSS-in-JS object for the frosted-glass card surface used across all screens
 - Location: `src/styles/tokens.js:4-10`
+- Pattern: `import { glass } from '../styles/tokens.js'` then `const surface = { ...glass, ...overrides }`
+
+**SOC Score constants:**
+- `SOC_RAW_MAX = 92` (max raw points across 6 questions), `SOC_SCALED_MAX = 40` (scaled contribution to final score), `ZONES_RAW_MAX = 60` (max from zones 1-3)
+- Location: `src/utils/scoreSoc.js:1-3`
 
 ## Entry Points
 
-**Application Entry:**
+**Browser Entry:**
 - Location: `src/main.jsx`
-- Triggers: Browser loads `index.html` with `#root` div
-- Responsibilities: Mounts React StrictMode → ErrorBoundary → App
+- Triggers: Browser loads `index.html`, Vite injects `<script type="module" src="/src/main.jsx">`
+- Responsibilities: `createRoot` — `StrictMode` — `ErrorBoundary` — `App`
 
 **Build Entry:**
 - Location: `vite.config.js`
-- Base path: `/flagmail1/` (for GitHub Pages)
+- Base path: `/flagmail1/` for GitHub Pages subpath deployment
 
-**Deployment Entry:**
+**Deployment:**
 - Location: `.github/workflows/deploy.yml`
 - Triggers: Push to `main` branch
-- Pipeline: `npm ci` → `npm run build` → upload `dist/` → deploy to Pages
+- Pipeline: `npm ci` — `npm run build` — upload `dist/` — GitHub Pages
 
-**Google Apps Script Entry:**
+**Google Apps Script:**
 - Location: `google-apps-script.js`
-- Triggers: HTTP POST (doPost) or GET (doGet) to deployed web app URL
+- Triggers: HTTP POST (`doPost`) or GET (`doGet`) from browser fetch calls
+- Actions handled: `register`, `submit`, `submitFinal`, `getAdminData`
 
 ## Architectural Constraints
 
-- **State architecture:** No global state store (no Redux/Zustand/Context). All state in `useState` inside custom hooks. State reset on refresh.
-- **Navigation:** No React Router. Screen transitions via `setScreen()` on SCREENS enum. Single `App.jsx` conditional render.
-- **Data persistence:** Browser memory only until final submission. `sessionStorage` used for SOC submission failover only. No localStorage for game progress.
-- **UI rendering:** Full-screen SPA — each screen component is a full viewport view. No nested route layout.
-- **External dependency:** Google Apps Script web app has `no-cors` fetch mode — responses are opaque. Error handling is fire-and-forget with `console.warn` on failure.
-- **Animation approach:** Hybrid — CSS keyframes (`src/styles/animations.css`), Framer Motion (`motion`/`AnimatePresence`), Lottie (JSON animation files), GSAP (imperative timeline), plus canvas confetti (`src/utils/confetti.js`).
+- **State architecture:** No global state store. All state in `useState` inside custom hooks. State is lost on page refresh (intentional — one-attempt assessment tool).
+- **Navigation:** No React Router. Screen transitions via `gs.setScreen(SCREENS.XXX)`. Single conditional-render block in `App.jsx`.
+- **Prop passing:** App to screen component to sub-component. Max one level of prop drilling. No Context used.
+- **Data persistence:** Browser memory only during session. `sessionStorage` used solely as SOC submission failover. `localStorage` used only for one-attempt guard key `'flagmail_attempted'`.
+- **External dependency:** Google Apps Script uses `no-cors` fetch mode in `useLeaderboard` — responses are opaque. `useGameState.submitToSheet` uses regular fetch (CORS-enabled Apps Script) with JSON response. Both use `console.warn` on failure — fire-and-forget with 3-retry wrapper.
+- **Animation approach:** Hybrid — CSS keyframes (`src/styles/animations.css`), Framer Motion (`motion.div`, `AnimatePresence`) in ~20 components, Lottie JSON animations for badges (`src/assets/animation/*.json`), GSAP imperative timeline in `GameRound.jsx`, canvas confetti in `src/utils/confetti.js`.
+- **Lazy loading:** Only `AdminPanel` is lazy-loaded (`React.lazy` + `Suspense` in `src/App.jsx:21`) to keep initial bundle lean.
+- **Threading:** Single-threaded browser event loop. No Web Workers. `useTimer` uses `setInterval` with 1-second tick.
 
 ## Anti-Patterns
 
-### Hook-Call Orchestration in App.jsx
+### Local re-declaration of ZONE_META
 
-**What happens:** `App.jsx` calls 4 hooks (`useGameState`, `useScoring`, `useSocState`, `useBadges`) and wires them together manually with `useCallback`. Logic for score consolidation, badge checks, and screen transitions mixed in render function.
+**What happens:** `ZONE_META` (zone to name/accent/tone) is declared as a module-level constant independently in `GameRound.jsx`, `ZoneComplete.jsx`, `ResultsScreen.jsx`, and `LandingScreen.jsx` with slightly differing shapes.
+**Why it's wrong:** Zone metadata changes require edits in 4+ places. `ZONE_META_LIST` already exists in `src/styles/tokens.js` but is not consumed by these components.
+**Do this instead:** Import `ZONE_META_LIST` from `src/styles/tokens.js` and derive the keyed lookup from it.
 
-**Why it's wrong:** App.jsx is 266 lines with interleaved hook state + screen rendering. Adding new features requires modifying both the hook layer and the render layer in the same file. Hook dependencies are implicit (e.g., `useSocState(gs)` couples SOC state to game state).
+### Deprecated component still in file system
 
-**Do this instead:** Extract screen routing to a dedicated component or use a lightweight router pattern. Consider `useReducer` or `zustand` for cross-hook state that needs coordination (like the consolidated submission payload).
+**What happens:** `src/components/ReviewerScreen.jsx` is marked `@deprecated` but remains present.
+**Why it's wrong:** Creates confusion about which component is authoritative for reviewer access.
+**Do this instead:** Delete `ReviewerScreen.jsx` once `AdminPanel` is confirmed stable.
 
-### No Separation Between Screen and Shared Components
+### Scoring logic inline in App.jsx handleSocNext
 
-**What happens:** 32 components in one flat `src/components/` directory — screen-level components (`LandingScreen`, `ResultsScreen`) mixed with UI primitives (`TimerBar`, `ScoreDisplay`, `BadgeToast`).
-
-**Why it's wrong:** No clear boundary between "what is a screen" and "what is reusable UI". New developers must read every component to understand the hierarchy.
-
-**Do this instead:** Split into `src/components/screens/` and `src/components/ui/` subdirectories.
+**What happens:** Tier calculation (`finalScore >= 80 ? 'Advanced' : ...`) and SOC answer payload aggregation are inline inside `handleSocNext` in `src/App.jsx:43-98`.
+**Why it's wrong:** Business logic leaks into the orchestrator; harder to test and reuse.
+**Do this instead:** Extract to a utility function in `src/utils/scoreSoc.js` alongside `scaleSocScore`, or move into `useSocState`.
 
 ## Error Handling
 
-**Strategy:** Error boundaries + try/catch on external calls.
+**Strategy:** Defensive — catch and warn, never crash the user.
 
 **Patterns:**
-- `ErrorBoundary` (class component) wraps entire app — catches render errors, shows reload page
-- `fetch` calls to Google Apps Script wrapped in try/catch with `console.warn` only — silent failure
-- SOC submission uses `sessionStorage` as fallback if fetch fails
-- PropTypes validation on all components (no TypeScript)
+- `ErrorBoundary` (class component) wraps entire app in `src/main.jsx` and again inside `App.jsx` — catches render errors, shows reload UI
+- All `fetch` calls to Google Apps Script wrapped in `try/catch` with `console.warn` only — silent failure for player
+- SOC submission stores payload to `sessionStorage` before fetching — recovery safety net
+- `useGameState.submitToSheet` retries up to 3 times with 1-second delay between attempts (`src/hooks/useGameState.js:141-158`)
+- PropTypes validation on all components (runtime type checking; no TypeScript)
 
 ## Cross-Cutting Concerns
 
-**Logging:** `console.warn` — used only in ErrorBoundary catch and leaderboard fetch failures. No structured logging.
-
-**Validation:** 
-- `validateSpl.js` — keyword-based SPL query validation (required, optional, blocked terms)
-- `validateSpl.test.js` and `scoreSoc.test.js` — unit tests for validation and scoring
-- No client-side input validation framework — manual checks in `LandingScreen` (name/email/re-attempt)
-
-**Authentication:** None. Player enters name + email on landing. Single-attempt check via `localStorage` flag.
+**Logging:** `console.warn` for all async failures. No structured logging. No log levels.
+**Validation:** SPL query validated via keyword-matching in `src/utils/validateSpl.js`. Player name/email validated inline in `src/components/LandingScreen.jsx` (regex + trim checks). No shared validation framework.
+**Authentication:** Reviewer access via shared passcode only — checked server-side by Google Apps Script `getAdminData` action. No identity provider, no JWT, no session token.
+**One-attempt enforcement:** `localStorage.getItem('flagmail_attempted')` checked in `src/components/LandingScreen.jsx` before allowing game start.
 
 ---
 
-*Architecture analysis: 2026-05-25*
+*Architecture analysis: 2026-06-08*

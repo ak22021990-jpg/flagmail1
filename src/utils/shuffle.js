@@ -6,10 +6,16 @@ const ZONE_CLUE_LIMITS = {
   3: 4,
 };
 
+function cryptoRandInt(max) {
+  const arr = new Uint32Array(1);
+  crypto.getRandomValues(arr);
+  return arr[0] % max;
+}
+
 function fisherYatesShuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = cryptoRandInt(i + 1);
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;

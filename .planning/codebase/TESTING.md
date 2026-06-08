@@ -1,6 +1,6 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-05-25
+**Analysis Date:** 2026-06-08
 
 ## Test Framework
 
@@ -43,7 +43,7 @@ src/utils/validateSpl.js      → src/utils/validateSpl.test.js
 
 **Naming:** `<sourceFileName>.test.js` — mirrors source file name exactly.
 
-**Total:** 2 test files, 18 test cases total.
+**Total:** 2 test files, 16 test cases total.
 
 ## What Is Tested
 
@@ -51,15 +51,18 @@ src/utils/validateSpl.js      → src/utils/validateSpl.test.js
 
 | File | Module | Cases | Coverage |
 |------|--------|-------|----------|
-| `src/utils/scoreSoc.test.js` | `scoreSocRound` | 8 | edge cases: perfect score, grade thresholds, floor at 0, partial credit, caps |
-| `src/utils/validateSpl.test.js` | `validateSpl`, `validateExplanation` | 10 | required hits, misses, blocked terms, whitespace normalization, case insensitivity, `anyOf` terms, empty string, missing arrays |
+| `src/utils/scoreSoc.test.js` | `scoreSocRound` | 8 | edge cases: perfect score (18), grade thresholds, floor at 0, partial credit, caps |
+| `src/utils/validateSpl.test.js` | `validateSpl` | 8 | required hits, misses, blocked terms, whitespace normalization, case insensitivity, `anyOf` terms, empty string, missing arrays |
+
+**Score breakdown:** `primary:5 + secondary:3 + spl:10 = 18` max (not 23 — old doc was incorrect).
 
 **Not tested:**
 - `src/App.jsx` — root component
 - All 25+ component files in `src/components/`
 - All 7 custom hooks in `src/hooks/`
-- Utility files: `shuffle.js`, `competency.js`, `confetti.js`
+- Utility files: `shuffle.js`, `competency.js`, `confetti.js`, `exportCsv.js`, `scaleSocScore`
 - Config files, data files
+- `useAdmin` hook
 - Async logic (leaderboard fetch, Google Sheets submission)
 
 ## Test Structure
@@ -70,10 +73,10 @@ import { describe, it, expect } from "vitest";
 import { scoreSocRound } from "./scoreSoc.js";
 
 describe("scoreSocRound", () => {
-  it("perfect score is 23", () => {
+  it("perfect score is 18", () => {
     const result = scoreSocRound({...});
     expect(result.breakdown.primary).toBe(5);
-    expect(result.total).toBe(23);
+    expect(result.total).toBe(18);
     expect(result.grade).toBe("Strong");
   });
   // ... more cases
@@ -99,10 +102,6 @@ function makeSpl(requiredHits, requiredTotal, optionalHits, optionalTotal, block
     optional: { hits: Array(optionalHits).fill("x"), misses: Array(optionalTotal - optionalHits).fill("x") },
     blocked: { hits: Array(blockedHits).fill("x") },
   };
-}
-
-function makeExp(requiredHits, requiredTotal, optionalHits, optionalTotal) {
-  return { ...similar... };
 }
 ```
 
@@ -143,7 +142,7 @@ Tests must be run manually. No test gate in CI.
 
 **Unit Tests:** 2 files (utilities only).
 **Integration Tests:** 0.
-**E2E Tests:** 0 (Playwright is a devDependency — `"playwright": "^1.59.1"` — but no test files found).
+**E2E Tests:** 0 — Playwright (`"playwright": "^1.59.1"`) is installed but `scripts/playwright-audit.mjs` is a manual visual audit script, not a test suite. No spec files exist.
 
 ## Common Patterns
 
@@ -162,9 +161,6 @@ expect(result.required.misses).toContain("subject");
 // Comparison
 expect(result.total).toBeGreaterThanOrEqual(10);
 expect(result.total).toBeLessThan(15);
-
-// Specific element access
-expect(result.blocked.hits[0]).toBe("delete");
 ```
 
 **No use of:** `toMatchSnapshot`, `toThrowError`, `toMatchObject`, `rejects`, `resolves` in existing tests.
@@ -174,13 +170,15 @@ expect(result.blocked.hits[0]).toBe("delete");
 | Gap | Impact | Fix |
 |-----|--------|-----|
 | No component testing | UI regressions undetected | Add `@testing-library/react` + `jsdom` environment |
-| No hook testing | State logic (scoring, badges, badges) untested | Add `renderHook` from `@testing-library/react` |
+| No hook testing | State logic (scoring, badges) untested | Add `renderHook` from `@testing-library/react` |
 | No async testing | Submission/fetch errors undetected | Add tests with `vi.mock('fetch')` |
 | No CI test gate | Broken code can deploy | Add `npm test` to deploy workflow |
 | No coverage target | Untested code invisible | Add `coverage` config with 70%+ threshold |
 | No E2E tests | Full flows (game playthrough) untested | Use Playwright (already installed) |
-| Only `src/utils/` tested | 28 source files total, 2 tested | Expand coverage to hooks and components |
+| `exportCsv.js` untested | New utility with no tests | Add unit tests |
+| `scaleSocScore` untested | Score scaling logic invisible | Add unit tests |
+| Only `src/utils/` tested | 28+ source files, 2 tested | Expand coverage to hooks and components |
 
 ---
 
-*Testing analysis: 2026-05-25*
+*Testing analysis: 2026-06-08*

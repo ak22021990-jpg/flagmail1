@@ -83,4 +83,5 @@ await fs.writeFile(
   'utf8'
 );
 
-console.log(JSON.stringify(report, null, 2));
+const { url, timestamp, ...summary } = report;
+console.log(JSON.stringify({ url, timestamp, checks: Object.keys(summary) }, null, 2));

@@ -17,7 +17,7 @@ export function useLeaderboard() {
       });
       setSubmitted(true);
     } catch (err) {
-      console.warn('Leaderboard submit failed:', err);
+      console.warn('Leaderboard submit failed:', err.message);
     }
   }, []);
 

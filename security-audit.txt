@@ -1,0 +1,57 @@
+                   
+                   
+┌─────────────────┐
+│ 6 Code Findings │
+└─────────────────┘
+                                              
+  [36m[22m[24m  .planning\graphs\graph.html[0m
+    ❯❱ [1mhtml.security.audit.missing-integrity.missing-integrity[0m
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          This tag is missing an 'integrity' subresource integrity attribute. The 'integrity' attribute allows
+          for the browser to verify that externally hosted files (for example from a CDN) are delivered       
+          without unexpected manipulation. Without this attribute, if an attacker can modify the externally   
+          hosted resource, this could lead to XSS and other types of attacks. To prevent this, include the    
+          base64-encoded cryptographic hash of the resource (file) you’re telling the browser to fetch in the 
+          'integrity' attribute for all externally hosted files.                                              
+          Details: https://sg.run/krXA                                                                        
+                                                                                                              
+            6┆ <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+                                          
+  [36m[22m[24m  graphify-out\graph.html[0m
+    ❯❱ [1mhtml.security.audit.missing-integrity.missing-integrity[0m
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          This tag is missing an 'integrity' subresource integrity attribute. The 'integrity' attribute allows
+          for the browser to verify that externally hosted files (for example from a CDN) are delivered       
+          without unexpected manipulation. Without this attribute, if an attacker can modify the externally   
+          hosted resource, this could lead to XSS and other types of attacks. To prevent this, include the    
+          base64-encoded cryptographic hash of the resource (file) you’re telling the browser to fetch in the 
+          'integrity' attribute for all externally hosted files.                                              
+          Details: https://sg.run/krXA                                                                        
+                                                                                                              
+            6┆ <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+                                            
+  [36m[22m[24m  src\hooks\useGameState.js[0m
+     ❱ [1mjavascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring[0m
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          Detected string concatenation with a non-literal variable in a util.format / console.log function.
+          If an attacker injects a format specifier in the string, it will forge the log message. Try to use
+          constant values for the format string.                                                            
+          Details: https://sg.run/7Y5R                                                                      
+                                                                                                            
+          151┆ console.warn(`Score submit attempt ${attempt + 1}: server returned status`, data.status ??
+               'unknown');                                                                               
+            ⋮┆----------------------------------------
+          153┆ console.warn(`Score submit attempt ${attempt + 1} failed:`, err.message);
+                                           
+  [36m[22m[24m  src\hooks\useSocState.js[0m
+     ❱ [1mjavascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring[0m
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          Detected string concatenation with a non-literal variable in a util.format / console.log function.
+          If an attacker injects a format specifier in the string, it will forge the log message. Try to use
+          constant values for the format string.                                                            
+          Details: https://sg.run/7Y5R                                                                      
+                                                                                                            
+          179┆ console.warn(`SOC submit attempt ${attempt + 1}: server returned status`, data.status ??
+               'unknown');                                                                             
+            ⋮┆----------------------------------------
+          181┆ console.warn(`SOC submit attempt ${attempt + 1} failed:`, err.message);

@@ -176,9 +176,9 @@ export function useSocState(gs) {
         });
         const data = await res.json();
         if (data.ok) return true;
-        console.warn(`SOC submit attempt ${attempt + 1}: server returned`, data);
+        console.warn('SOC submit attempt', attempt + 1, ': server returned status', data.status ?? 'unknown');
       } catch (err) {
-        console.warn(`SOC submit attempt ${attempt + 1} failed:`, err);
+        console.warn('SOC submit attempt', attempt + 1, 'failed:', err.message);
       }
       if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
     }

@@ -24,7 +24,8 @@ export function runConfetti(canvas, opts = {}) {
   canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  const rand = (min, max) => Math.random() * (max - min) + min;
+  const cryptoRand = () => crypto.getRandomValues(new Uint32Array(1))[0] / 0xFFFFFFFF;
+  const rand = (min, max) => cryptoRand() * (max - min) + min;
 
   const [yMin, yMax] = yStart || [-20, -200];
   const [wMin, wMax] = pieceW;
@@ -32,15 +33,15 @@ export function runConfetti(canvas, opts = {}) {
   const [vyMin, vyMax] = speedVy;
 
   const pieces = Array.from({ length: pieceCount }, () => ({
-    x: xRange ? rand(W * xRange[0], W * xRange[1]) : Math.random() * W,
+    x: xRange ? rand(W * xRange[0], W * xRange[1]) : cryptoRand() * W,
     y: rand(yMin, yMax),
-    vx: (Math.random() - 0.5) * speedVx * 2,
+    vx: (cryptoRand() - 0.5) * speedVx * 2,
     vy: rand(vyMin, vyMax),
-    color: colors[Math.floor(Math.random() * colors.length)],
+    color: colors[Math.floor(cryptoRand() * colors.length)],
     w: rand(wMin, wMax),
     h: rand(hMin, hMax),
-    rotation: Math.random() * 360,
-    rotVel: (Math.random() - 0.5) * rotVel * 2,
+    rotation: cryptoRand() * 360,
+    rotVel: (cryptoRand() - 0.5) * rotVel * 2,
   }));
 
   let raf;

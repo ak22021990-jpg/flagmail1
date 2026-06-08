@@ -8,7 +8,8 @@
     "build": "vite build",
     "test": "vitest run",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "audit:check": "npm audit --audit-level=high"
   },
   "dependencies": {
     "animejs": "^3.2.2",
@@ -31,7 +32,13 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "playwright": "^1.59.1",
-    "vite": "^7.3.1",
+    "vite": "^7.3.2",
     "vitest": "^4.1.7"
+  },
+  "overrides": {
+    "flatted": ">=3.4.2",
+    "picomatch": ">=4.0.4",
+    "brace-expansion": ">=1.1.13",
+    "postcss": ">=8.5.10"
   }
 }

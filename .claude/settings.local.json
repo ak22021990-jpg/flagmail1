@@ -25,7 +25,13 @@
       "mcp__gitnexus__detect_changes",
       "Bash(npx gsd-sdk *)",
       "PowerShell(npx vite build --logLevel error 2>&1 | Select-Object -Last 10)",
-      "PowerShell(npx vite build --logLevel error 2>&1 | Select-Object -Last 5)"
+      "PowerShell(npx vite build --logLevel error 2>&1 | Select-Object -Last 5)",
+      "Skill(gitnexus-cli)",
+      "Bash(npm install *)",
+      "Bash(npm audit *)",
+      "Bash(npm run *)",
+      "Skill(gsd-help)",
+      "Skill(gitnexus-impact-analysis)"
     ]
   }
 }
