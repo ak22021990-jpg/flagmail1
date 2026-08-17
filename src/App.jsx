@@ -1,6 +1,7 @@
-import { useCallback, useState, useEffect, lazy, Suspense } from 'react';
+import { useCallback, useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { scaleSocScore } from './utils/scoreSoc.js';
 import { SOC_QUESTIONS } from './data/socQuestions.js';
+import { silentLog } from './utils/silentLog.js';
 import './styles/animations.css';
 
 import { useGameState, SCREENS } from './hooks/useGameState.js';
@@ -28,8 +29,8 @@ export default function App() {
   const soc = useSocState(gs);
   const badges = useBadges();
 
-  const [gameViolations, setGameViolations] = useState(0);
-  const [socViolations, setSocViolations] = useState(0);
+  const totalViolationsRef = useRef(0);
+  const [totalViolations, setTotalViolations] = useState(0);
   const [socScaledResult, setSocScaledResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -39,6 +40,12 @@ export default function App() {
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, [submitting]);
+
+  const handleViolation = useCallback((logType, details) => {
+    totalViolationsRef.current += 1;
+    setTotalViolations(totalViolationsRef.current);
+    silentLog(gs.player.email, logType, details);
+  }, [gs.player.email]);
 
   const handleSocSubmit = useCallback(() => {
     soc.submitSocRound();
@@ -86,7 +93,7 @@ export default function App() {
         socScaled,
         finalScore,
         tier,
-        proctoring_violations: gameViolations + socViolations,
+        proctoring_violations: totalViolationsRef.current,
         socAnswers,
       };
 
@@ -95,7 +102,7 @@ export default function App() {
       setSubmitting(false);
       gs.setScreen(SCREENS.SOC_RESULTS);
     }
-  }, [soc, gs, sc, socViolations, gameViolations]);
+  }, [soc, gs, sc]);
 
   // ── Submit a round ───────────────────────────────────────────────────────
   // timedOut=true is passed by GameRound when the timer fires (auto-submit)
@@ -131,12 +138,12 @@ export default function App() {
         zone2Score: sc.zoneScores[2],
         zone3Score: sc.zoneScores[3],
         perEmail: sc.perEmail,
-        proctoring_violations: gameViolations,
+        proctoring_violations: totalViolationsRef.current,
       });
       setSubmitting(false);
     }
     gs.advanceZone();
-  }, [gs, sc, gameViolations]);
+  }, [gs, sc]);
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
@@ -144,7 +151,7 @@ export default function App() {
     <div style={{
       minHeight: '100vh',
       background: BG,
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+      fontFamily: 'system-ui, sans-serif',
       color: '#1C1C1E',
       position: 'relative',
     }}>
@@ -183,7 +190,7 @@ export default function App() {
           onSelectL1={gs.selectL1}
           onSelectL2={gs.selectL2}
           onSubmit={handleSubmit}
-          onViolationChange={setGameViolations}
+          onViolation={handleViolation}
         />
       )}
 
@@ -221,7 +228,7 @@ export default function App() {
           onSetSecondary={soc.setSecondary}
           onSetSplText={soc.setSplText}
           onSubmit={handleSocSubmit}
-          onViolationChange={setSocViolations}
+          onViolation={handleViolation}
         />
       )}
 
@@ -261,7 +268,7 @@ export default function App() {
       )}
 
       {gs.screen === SCREENS.ADMIN && (
-        <Suspense fallback={<div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif', fontSize: 15, color: 'rgba(17,24,39,0.54)' }}>Loading reviewer panel...</div>}>
+        <Suspense fallback={<div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, sans-serif', fontSize: 15, color: 'rgba(17,24,39,0.54)' }}>Loading reviewer panel...</div>}>
           <AdminPanel onBack={() => gs.setScreen(SCREENS.LANDING)} />
         </Suspense>
       )}

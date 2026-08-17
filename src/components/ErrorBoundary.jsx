@@ -24,7 +24,7 @@ export default class ErrorBoundary extends Component {
             display: 'grid',
             placeItems: 'center',
             padding: 24,
-            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+            fontFamily: 'system-ui, sans-serif',
             background: 'linear-gradient(180deg, #f5f7fb 0%, #edf3fb 42%, #f7f4ef 100%)',
             color: '#1C1C1E',
             textAlign: 'center',

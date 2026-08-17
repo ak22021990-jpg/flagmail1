@@ -23,7 +23,7 @@ const card = {
 };
 
 export default function AdminPanel({ onBack }) {
-  const { data, loading, error, authenticated, fetchAdminData, refresh, reset } = useAdmin();
+  const { data, loading, error, authenticated, fetchAdminData, refresh, reset, integrityLogs } = useAdmin();
   const [passcode, setPasscode] = useState("");
   const [selectedCandidate, setSelectedCandidate] = useState(null);
 
@@ -36,7 +36,7 @@ export default function AdminPanel({ onBack }) {
     return (
       <div style={{
         minHeight: "100dvh", padding: "clamp(18px, 3vw, 30px)",
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+        fontFamily: 'system-ui, sans-serif',
         display: "flex", alignItems: "center", justifyContent: "center",
       }}>
         <div style={{ ...card, padding: 28, display: "grid", gap: 16, maxWidth: 400, width: "100%" }}>
@@ -97,7 +97,7 @@ export default function AdminPanel({ onBack }) {
     return (
       <div style={{
         minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+        fontFamily: 'system-ui, sans-serif',
         fontSize: 15, color: "rgba(17,24,39,0.54)",
       }}>
         Loading submissions...
@@ -108,6 +108,12 @@ export default function AdminPanel({ onBack }) {
   const candidates = data?.candidates || [];
   const rawData = data?.rawData || [];
   const socData = data?.socData || [];
+
+  const violationsByEmail = {};
+  integrityLogs.forEach(log => {
+    if (!violationsByEmail[log.email]) violationsByEmail[log.email] = [];
+    violationsByEmail[log.email].push(log);
+  });
 
   const advancedCount = candidates.filter(c => Number(c.totalScore ?? c[6] ?? 0) >= 80).length;
   const proficientCount = candidates.filter(c => {
@@ -148,7 +154,7 @@ export default function AdminPanel({ onBack }) {
   return (
     <div style={{
       minHeight: "100dvh", padding: "clamp(18px, 3vw, 30px)",
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+      fontFamily: 'system-ui, sans-serif',
     }}>
       <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gap: 16 }}>
         {/* Header */}
@@ -233,6 +239,7 @@ export default function AdminPanel({ onBack }) {
           candidates={candidates}
           onSelectCandidate={setSelectedCandidate}
           verdictBand={verdictBand}
+          violationsByEmail={violationsByEmail}
         />
       </div>
     </div>

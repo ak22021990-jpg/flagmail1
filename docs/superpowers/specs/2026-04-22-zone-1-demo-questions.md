@@ -7,8 +7,8 @@ Zone 1 is now fixed for demo use. These five emails will appear in the same orde
 | # | Email ID | From | Subject | Expected L1 | Expected L2 | Reasoning question |
 |---|---|---|---|---|---|---|
 | 1 | `E003` | Netflix | `Your Netflix membership renewal for March 2026` | Legitimate | Subscription Billing | `What is the strongest reason this should be tagged Legitimate?` |
-| 2 | `E001` | Apple Support | `Your Apple ID has been LOCKED - verify in 24 HOURS` | Phishing & Spoofing | Email Phishing | `What is the single clearest phishing signal here?` |
-| 3 | `E004` | Best Buy Deals | `Flash sale: 90% off TVs, iPhones, and MacBooks today` | Spam & Junk | Bulk Marketing Spam | `Why does this belong in Spam & Junk rather than Legitimate promotions?` |
+| 2 | `E001` | Customer Support | `Your account has been LOCKED - verify in 24 HOURS` | Phishing & Spoofing | Email Phishing | `What is the single clearest phishing signal here?` |
+| 3 | `E004` | Best Buy Deals | `Flash sale: 90% off TVs, smartphones, and laptops today` | Spam & Junk | Bulk Marketing Spam | `Why does this belong in Spam & Junk rather than Legitimate promotions?` |
 | 4 | `E017` | Chase Rewards | `Chase Sapphire bonus: claim your $500 reward now` | Phishing & Spoofing | Email Phishing | `Which detail most strongly confirms this is phishing?` |
 | 5 | `E015` | Global Prize Awards | `You won $5,000 - send your release fee to claim today` | High-Risk Fraud | Advance Fee Fraud | `Why is this tagged High-Risk Fraud instead of simple spam?` |
 

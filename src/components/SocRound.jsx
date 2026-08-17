@@ -1,5 +1,4 @@
 import PropTypes from "prop-types";
-import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useProctoring } from "../hooks/useProctoring.js";
 
@@ -21,14 +20,9 @@ export default function SocRound({
   onSetPrimary, onSetSecondary,
   onSetSplText,
   onSubmit,
-  onViolationChange,
+  onViolation,
 }) {
-  const { violations, switchedAway } = useProctoring({ active: !answer.submitted });
-
-  // Notify parent of updated violation count (accumulates across all SOC questions).
-  useEffect(() => {
-    onViolationChange(violations);
-  }, [violations, onViolationChange]);
+  const { violations, switchedAway } = useProctoring({ active: !answer.submitted, onViolation });
 
   const canSubmit = !!answer.splText?.trim() && !answer.submitted;
   const hasClassification = !!question.classification;
@@ -40,7 +34,7 @@ export default function SocRound({
     <div style={{
       minHeight: "100dvh",
       padding: "18px clamp(12px, 2.5vw, 24px)",
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+      fontFamily: 'system-ui, sans-serif',
       position: "relative", overflow: "hidden",
     }}>
       <div style={{
@@ -426,9 +420,9 @@ SocRound.propTypes = {
   onSetSecondary: PropTypes.func.isRequired,
   onSetSplText: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
-  onViolationChange: PropTypes.func,
+  onViolation: PropTypes.func,
 };
 
 SocRound.defaultProps = {
-  onViolationChange: () => {},
+  onViolation: null,
 };

@@ -25,7 +25,7 @@ export function useAdmin() {
         setError(json.error || 'Invalid passcode');
         setAuthenticated(false);
       } else {
-        setData({ candidates: json.candidates || [], rawData: json.rawData || [], socData: json.socData || [] });
+        setData({ candidates: json.candidates || [], rawData: json.rawData || [], socData: json.socData || [], integrityLogs: json.integrityLogs || [] });
         setAuthenticated(true);
         passcodeRef.current = passcode;
       }
@@ -50,7 +50,7 @@ export function useAdmin() {
         setError(json.error || 'Session expired');
         setAuthenticated(false);
       } else {
-        setData({ candidates: json.candidates || [], rawData: json.rawData || [], socData: json.socData || [] });
+        setData({ candidates: json.candidates || [], rawData: json.rawData || [], socData: json.socData || [], integrityLogs: json.integrityLogs || [] });
       }
     } catch (err) {
       setError('Network error — check connection');
@@ -66,5 +66,6 @@ export function useAdmin() {
     passcodeRef.current = null;
   }, []);
 
-  return { data, loading, error, authenticated, fetchAdminData, refresh, reset };
+  const integrityLogs = data?.integrityLogs || [];
+  return { data, loading, error, authenticated, fetchAdminData, refresh, reset, integrityLogs };
 }

@@ -34,7 +34,7 @@ export default function TutorialScreen({ onSkip }) {
       style={{
         minHeight: '100dvh',
         padding: 'clamp(16px, 2.5vw, 28px)',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif',
+        fontFamily: 'system-ui, sans-serif',
         position: 'relative',
         display: 'grid',
         placeItems: 'center',

@@ -11,7 +11,7 @@ Flagmail is a mail-moderation hiring assessment game. Management has flagged it 
 - Tests core mail moderation instincts (not expert subcategory recall)
 - Uses a new, clearer dataset with more accessible signals
 - Renames zones to thematic names aligned with email moderation workflows
-- Elevates the visual design within the existing Apple ecosystem aesthetic
+- Elevates the visual design within the existing glassmorphism aesthetic
 
 ---
 
@@ -74,7 +74,7 @@ export const MAX_POINTS_PER_ZONE = MAX_POINTS_PER_EMAIL * 10; // 20
 ### Classifier.jsx
 - **L2 row removed entirely** — no subcategory selection
 - **`onSelectL2` prop removed** — prop threading cleaned up in `GameRound.jsx` and `App.jsx`
-- **3 L1 buttons only** styled as native iOS selection chips
+- **3 L1 buttons only** styled as native selection chips
 - Section label changes from "L1 — THREAT CATEGORY" → "CLASSIFY THIS EMAIL"
 - Tooltips simplified to cover only 3 categories (desc + signals)
 - Selected state: spring-animated scale pop + category color fill
@@ -82,7 +82,7 @@ export const MAX_POINTS_PER_ZONE = MAX_POINTS_PER_EMAIL * 10; // 20
 ### Clue System
 - **`ClueSystem.jsx` deleted** — replaced by inline hint UI in `GameRound.jsx`
 - **1 hint per email** sourced from `email.clue` (single string, not an array)
-- Rendered as a native iOS "More Info" tap pattern inside the email card:
+- Rendered as a native "More Info" tap pattern inside the email card:
   - `ⓘ` icon button labelled "Reveal Hint" positioned below the email body
   - On click: spring-animated amber inset card appears **below the email body, inside the email card**
   - Button disappears after reveal (one-time use per email)
@@ -226,40 +226,40 @@ All internal references to `r.cluesUsed` and `totalCluesUsed` replaced with `r.h
 
 ---
 
-## Section 5: Apple Design Enhancements
+## Section 5: Design Enhancements
 
-All enhancements stay strictly within the Apple ecosystem aesthetic (glassmorphism, spring physics, SF Pro fonts, Apple semantic colours). No aesthetic direction change — elevation only.
+All enhancements stay strictly within the glassmorphism aesthetic (glassmorphism, spring physics, system fonts, semantic colours). No aesthetic direction change — elevation only.
 
-### 5.1 Email Card → Mail.app Fidelity
-Make `EmailCard.jsx` look like a native macOS Mail.app message:
+### 5.1 Email Card → Mail Client Fidelity
+Make `EmailCard.jsx` look like a native desktop mail client message:
 - **Sender avatar**: circular badge with initials, coloured by first-letter hash
-- **Timestamp**: formatted as "Today at 3:42 PM" (relative, Apple-style)
+- **Timestamp**: formatted as "Today at 3:42 PM" (relative)
 - **Header/body separator**: 0.5px hairline divider (`rgba(0,0,0,0.1)`)
-- **Body typography**: `SF Pro Text` at 15px, `#3A3A3C`, line-height 1.65
-- **Subject**: `SF Pro Display` semibold, `#1C1C1E`
+- **Body typography**: system font at 15px, `#3A3A3C`, line-height 1.65
+- **Subject**: system font semibold, `#1C1C1E`
 - **From field**: sender name in `#1C1C1E`, email address in `rgba(60,60,67,0.55)` inline
 
-### 5.2 Classifier → iOS Chip Selection
-- Buttons restyled as compact iOS tag/chip components
+### 5.2 Classifier → Chip Selection
+- Buttons restyled as compact tag/chip components
 - **Unselected**: white/5% opacity, 1px `rgba(0,0,0,0.08)` border, `#1C1C1E` text
 - **Selected**: category color at 12% opacity fill, 1.5px solid category color border, spring scale pop to 1.04 on select
 - Chips laid out in a single horizontal row (3 categories fit cleanly)
 
-### 5.3 Zone Intro → Apple Arcade Hero Screen
-- Zone name rendered in **SF Pro Rounded** (rounder, used in Apple gaming contexts)
+### 5.3 Zone Intro → Arcade Hero Screen
+- Zone name rendered in a rounded display font
 - Zone name as oversized display hero (font-size 38px, weight 800)
 - Zone icon enlarged to 52px; sits in a 72×72 pill with category-coloured glow shadow
 - Background: subtle animated gradient mesh behind the glass card (slow drift, 8s loop)
 
-### 5.4 Hint Reveal → iOS Disclosure Pattern
-- Hint trigger: `ⓘ` icon + "Reveal Hint" label, styled as a tappable iOS info row
+### 5.4 Hint Reveal → Disclosure Pattern
+- Hint trigger: `ⓘ` icon + "Reveal Hint" label, styled as a tappable info row
 - **Placement**: inset card appears **below the email body, inside the email card** (not above)
 - Reveal animation: spring-in slide-down from the trigger point
 - Hint card: `rgba(255,193,7,0.08)` background, amber left-border accent, italic hint text
 - Once revealed, trigger button replaced with a subtle "Hint shown" ghost label
 
-### 5.5 Results → Apple Health Summary Aesthetic
-- Per-category accuracy shown as three **circular progress rings** (Activity ring style)
+### 5.5 Results → Health Dashboard Aesthetic
+- Per-category accuracy shown as three **circular progress rings** (activity ring style)
   - Ring color matches category color (green/orange/red)
   - Animated draw-on using `stroke-dasharray` / `stroke-dashoffset`
   - Accuracy % displayed in center of each ring
@@ -276,12 +276,12 @@ Make `EmailCard.jsx` look like a native macOS Mail.app message:
 | File | Change |
 |------|--------|
 | `src/data/emails.js` | Replace EMAIL_POOL (30 new emails), trim L1_CATEGORIES to 3, remove L2_BY_L1 & TAXONOMY, add ZONE_CONFIG & score constants |
-| `src/components/Classifier.jsx` | Remove L2 row & onSelectL2 prop, update tooltips, restyle as iOS chips |
+| `src/components/Classifier.jsx` | Remove L2 row & onSelectL2 prop, update tooltips, restyle as chips |
 | `src/components/GameRound.jsx` | Remove ClueSystem usage, add inline hint UI, remove onSelectL2 prop, update zone label |
-| `src/components/ZoneIntroCard.jsx` | Replace local ZONES array with ZONE_CONFIG, SF Pro Rounded title, hero layout |
+| `src/components/ZoneIntroCard.jsx` | Replace local ZONES array with ZONE_CONFIG, rounded display font title, hero layout |
 | `src/components/ZoneComplete.jsx` | Replace ZONE_META with ZONE_CONFIG, update zone name display |
 | `src/components/ExplanationCard.jsx` | Remove L2 row, add subCategory pill, simplify scoring breakdown |
-| `src/components/EmailCard.jsx` | Mail.app fidelity redesign (avatar, timestamp, typography) |
+| `src/components/EmailCard.jsx` | Mail client fidelity redesign (avatar, timestamp, typography) |
 | `src/components/ResultsScreen.jsx` | Ring charts, zone name labels, 60pt max, tier thresholds |
 | `src/components/CompetencySummary.jsx` | 3 categories only, ring chart visualization |
 | `src/components/TutorialScreen.jsx` | Update content to reflect 3 categories and single-hint system |
@@ -306,4 +306,4 @@ Make `EmailCard.jsx` look like a native macOS Mail.app message:
 - Background gradient
 - Spring animation physics (Framer Motion)
 - Badge animations and toast display
-- AppleHelloIntro screen
+- HelloIntro screen

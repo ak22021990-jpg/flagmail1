@@ -89,7 +89,7 @@ flagmail1/
 │       │   ├── ZONE_CLEAR.json
 │       │   └── Celebration Update Color.json
 │       ├── images/              # Static images (4 pages)
-│       ├── HomemadeApple.ttf    # Display font
+│               ├── DisplayFont.ttf      # Display font
 │       └── Loverine.otf         # Display font
 ├── google-apps-script.js        # Google Apps Script backend (deploy to Apps Script)
 ├── index.html                   # HTML entry point — #root mount target

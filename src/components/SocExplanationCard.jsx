@@ -65,7 +65,7 @@ export default function SocExplanationCard({ result, question, hasMore, onNext, 
   return (
     <div style={{
       minHeight: "100dvh", padding: "20px 16px 28px",
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+      fontFamily: 'system-ui, sans-serif',
       position: "relative",
     }}>
       <div style={{

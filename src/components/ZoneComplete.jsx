@@ -152,7 +152,7 @@ export default function ZoneComplete({
       style={{
         minHeight: '100dvh',
         padding: 'clamp(18px, 3vw, 28px)',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+        fontFamily: 'system-ui, sans-serif',
         position: 'relative',
         overflow: 'hidden',
       }}

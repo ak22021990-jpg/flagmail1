@@ -34,7 +34,14 @@ function verdictKey(score) {
   return "foundation";
 }
 
-export default function CandidateList({ candidates, onSelectCandidate, verdictBand }) {
+function buildViolationSummary(logs) {
+  if (!logs || logs.length === 0) return null;
+  const counts = {};
+  logs.forEach(l => { counts[l.logType] = (counts[l.logType] || 0) + 1; });
+  return Object.entries(counts).map(([t, n]) => `${t}×${n}`).join(', ');
+}
+
+export default function CandidateList({ candidates, onSelectCandidate, verdictBand, violationsByEmail }) {
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState("all");
   const [proctorFilter, setProctorFilter] = useState("all");
@@ -163,6 +170,10 @@ export default function CandidateList({ candidates, onSelectCandidate, verdictBa
             const score = safeScore(c);
             const v = verdictBand(score);
             const sw = safeTabSwitches(c);
+            const email = safeEmail(c);
+            const integrityLogs = (violationsByEmail && violationsByEmail[email]) || [];
+            const integrityCount = integrityLogs.length;
+            const integritySummary = buildViolationSummary(integrityLogs);
             return (
               <motion.div
                 key={i}
@@ -209,6 +220,20 @@ export default function CandidateList({ candidates, onSelectCandidate, verdictBa
                   {sw > 0 ? `⚠ ${sw}` : "0"}
                 </div>
 
+                {/* Integrity violations */}
+                {integrityCount > 0 && (
+                  <div
+                    title={integritySummary}
+                    style={{
+                      fontSize: 11, fontWeight: 600, flexShrink: 0, textAlign: "center",
+                      padding: "3px 8px", borderRadius: 10,
+                      color: "#791F1F", background: "#FCEBEB",
+                    }}
+                  >
+                    🚩 {integrityCount}
+                  </div>
+                )}
+
                 {/* Score */}
                 <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", flexShrink: 0, minWidth: 40, textAlign: "right" }}>
                   {score ?? "—"}
@@ -235,4 +260,5 @@ CandidateList.propTypes = {
   candidates: PropTypes.array.isRequired,
   onSelectCandidate: PropTypes.func,
   verdictBand: PropTypes.func.isRequired,
+  violationsByEmail: PropTypes.object,
 };

@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { LEADERBOARD_URL } from '../config.js';
+import { LEADERBOARD_URL, FULLSCREEN_ENABLED } from '../config.js';
 import { glass } from '../styles/tokens.js';
 import FeatureHighlight from './FeatureHighlight.jsx';
 import AuthForm from './AuthForm.jsx';
@@ -30,16 +30,13 @@ export default function LandingScreen({ onStart, onReviewer }) {
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [blocked, setBlocked] = useState(() => {
     try { return localStorage.getItem(ATTEMPT_KEY) === 'true'; } catch { return false; }
   });
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (blocked) {
-      setError('You have already completed this assessment on this device. Only one attempt is allowed.');
-      return;
-    }
     if (!name.trim() || !email.trim()) {
       setError('Both fields are required to begin.');
       return;
@@ -53,8 +50,8 @@ export default function LandingScreen({ onStart, onReviewer }) {
     try {
       const res = await fetch(`${LEADERBOARD_URL}?checkEmail=${encodeURIComponent(email.trim())}`);
       const data = await res.json();
-      if (data.exists) {
-        setError('This email has already been used for an assessment. Each email is limited to one attempt.');
+      if (data.status === 'completed') {
+        setError('This email has already completed the assessment. Each email is limited to one attempt.');
         setChecking(false);
         return;
       }
@@ -64,6 +61,20 @@ export default function LandingScreen({ onStart, onReviewer }) {
     setChecking(false);
     try { localStorage.setItem(ATTEMPT_KEY, 'true'); } catch {}
     setBlocked(true);
+
+    if (FULLSCREEN_ENABLED) {
+      try {
+        await document.documentElement.requestFullscreen();
+      } catch (err) {
+        setError('Please allow fullscreen to start the assessment.');
+        return;
+      }
+      if (!document.fullscreenElement) {
+        setError('Please allow fullscreen to start the assessment.');
+        return;
+      }
+    }
+
     onStart(name.trim(), email.trim());
   }
 
@@ -94,7 +105,7 @@ export default function LandingScreen({ onStart, onReviewer }) {
       style={{
         minHeight: '100dvh',
         padding: 'clamp(16px, 2.8vw, 32px)',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif',
+        fontFamily: 'system-ui, sans-serif',
         position: 'relative',
         overflowY: 'auto',
       }}

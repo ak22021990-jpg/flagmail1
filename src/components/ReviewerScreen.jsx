@@ -43,7 +43,7 @@ export default function ReviewerScreen({ onBack }) {
   return (
     <div style={{
       minHeight: "100dvh", padding: "clamp(18px, 3vw, 30px)",
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+      fontFamily: 'system-ui, sans-serif',
     }}>
       <div style={{ maxWidth: 1000, margin: "0 auto", display: "grid", gap: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, justifyContent: "space-between" }}>

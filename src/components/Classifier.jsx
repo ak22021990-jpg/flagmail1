@@ -87,7 +87,7 @@ function HelpTooltip({ tooltip, color }) {
       borderRadius: 18,
       boxShadow: '0 22px 44px rgba(18, 28, 45, 0.14)',
       padding: '15px 16px 14px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+      fontFamily: 'system-ui, sans-serif',
       animation: 'fadeSlideUp 0.18s ease',
       pointerEvents: 'none',
     }}>

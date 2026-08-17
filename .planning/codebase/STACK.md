@@ -64,7 +64,7 @@
 
 **Static Assets:**
 - `src/assets/animation/` — 10 Lottie JSON files (badge + celebration animations)
-- `src/assets/HomemadeApple.ttf`, `src/assets/Loverine.otf` — Custom fonts
+- `src/assets/DisplayFont.ttf`, `src/assets/Loverine.otf` — Custom fonts
 - `src/assets/images/` — 4 background images (`images_page-000*.jpg`)
 
 ## Configuration

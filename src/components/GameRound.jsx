@@ -55,29 +55,18 @@ export default function GameRound({
   onSelectL1,
   onSelectL2,
   onSubmit,
-  onViolationChange,
+  onViolation,
 }) {
   const roundRef = useRef(round);
   const scoreDisplayRef = useRef(null);
   const prevScoreRef = useRef(totalScore);
   const meta = ZONE_META[zone] || ZONE_META[1];
 
-  const { violations, switchedAway, reset } = useProctoring({ active: !round.submitted });
+  const { violations, switchedAway } = useProctoring({ active: !round.submitted, onViolation });
 
   useEffect(() => {
     roundRef.current = round;
   }, [round]);
-
-  // Reset proctoring count each time a new email loads.
-  useEffect(() => {
-    reset();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [email?.id]);
-
-  // Notify parent of updated violation count.
-  useEffect(() => {
-    onViolationChange(violations);
-  }, [violations, onViolationChange]);
 
   useEffect(() => {
     if (!scoreDisplayRef.current) return;
@@ -145,7 +134,7 @@ export default function GameRound({
       style={{
         minHeight: '100dvh',
         padding: '18px clamp(12px, 2.5vw, 24px)',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+        fontFamily: 'system-ui, sans-serif',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -444,9 +433,9 @@ GameRound.propTypes = {
   onSelectL1: PropTypes.func.isRequired,
   onSelectL2: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
-  onViolationChange: PropTypes.func,
+  onViolation: PropTypes.func,
 };
 
 GameRound.defaultProps = {
-  onViolationChange: () => {},
+  onViolation: null,
 };

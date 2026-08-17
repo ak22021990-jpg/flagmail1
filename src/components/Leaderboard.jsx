@@ -26,7 +26,7 @@ export default function Leaderboard({ playerName, playerScore, entries, loading,
       style={{
         minHeight: '100dvh',
         padding: 'clamp(18px, 2.8vw, 28px)',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+        fontFamily: 'system-ui, sans-serif',
         position: 'relative',
       }}
     >

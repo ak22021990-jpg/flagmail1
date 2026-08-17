@@ -20,7 +20,7 @@ The Codex redesign introduced a strong visual foundation but broke the assessmen
 - Background gradient: `linear-gradient(180deg, #f5f7fb 0%, #edf3fb 42%, #f7f4ef 100%)`
 - Zone accent colors: Zone 1 `#0A84FF`, Zone 2 `#30B0C7`, Zone 3 `#FF7A1A`
 - Display typography: bold, tight letter-spacing (`-0.04em` to `-0.06em`)
-- Font: `-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif`
+- Font: `system-ui, sans-serif`
 
 ### Label discipline — change
 No screen should have a section label paired with a redundant section title. Each panel gets at most one orientation label, used only when the layout alone is insufficient.

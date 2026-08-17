@@ -51,7 +51,7 @@ function RareBadgeScreen({ badge, onDismiss }) {
         alignItems: 'center',
         justifyContent: 'center',
         background: 'radial-gradient(ellipse at 50% 40%, rgba(30,20,0,0.97) 0%, #0a0a0a 100%)',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+        fontFamily: 'system-ui, sans-serif',
         cursor: 'pointer',
         overflow: 'hidden',
       }}
@@ -215,7 +215,7 @@ function CommonBadgeScreen({ badge, onDismiss }) {
         alignItems: 'center',
         justifyContent: 'center',
         background: 'radial-gradient(ellipse at 50% 38%, rgba(0,20,45,0.96) 0%, #060c18 100%)',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+        fontFamily: 'system-ui, sans-serif',
         cursor: 'pointer',
         overflow: 'hidden',
       }}

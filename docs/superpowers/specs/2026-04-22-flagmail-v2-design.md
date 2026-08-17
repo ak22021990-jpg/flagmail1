@@ -18,17 +18,17 @@ A collapsed header row sits above the email body in `EmailCard`. Default state: 
 ### Fields
 | Label | Content | Notes |
 |-------|---------|-------|
-| From | "Apple Support" | **Display name only** — the human-readable sender name |
-| Sender | security-alert@apple-id-support.net | Raw mailer address (often the giveaway) |
+| From | "Customer Support" | **Display name only** — the human-readable sender name |
+| Sender | security-alert@techco-id-support.net | Raw mailer address (often the giveaway) |
 | Reply-To | reply@clickfarm.ru | Where replies actually go |
-| Subject | Your Apple ID has been LOCKED | Mirrors the subject line |
+| Subject | Your account has been LOCKED | Mirrors the subject line |
 | Auth | SPF: Pass · DKIM: Fail · DMARC: Pass | Color-coded: Pass=green, Fail=red |
 | Origin IP | 185.220.101.42 (RU) | Country code appended where useful |
 
 ### Data fields added to each email
 ```js
-fromName:  "Apple Support",              // replaces the display role of email.from
-sender:    "security@apple-id.net",      // raw mailer address
+fromName:  "Customer Support",           // replaces the display role of email.from
+sender:    "security@techco-id.net",     // raw mailer address
 replyTo:   "reply@clickfarm.ru",         // reply-to address
 auth:      { spf: "Pass", dkim: "Fail", dmarc: "Pass" },
 originIp:  "185.220.101.42 (RU)",

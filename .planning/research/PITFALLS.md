@@ -189,24 +189,24 @@ Apply `csvEscape` to every cell, not just text fields. Test with a submission wh
 
 ---
 
-### Pitfall 8: PDF Download Silently Fails on iOS Safari (Blob URL Handling)
+### Pitfall 8: PDF Download Silently Fails on Mobile Safari (Blob URL Handling)
 
 **What goes wrong:**
-The PDF download works on Chrome and Firefox on desktop. On iPhone/iPad Safari, clicking "Download PDF" either opens a blank page, opens the PDF in the browser tab instead of downloading it, or does nothing. The reviewer uses an iPad at their desk — the feature appears broken for their primary device.
+The PDF download works on Chrome and Firefox on desktop. On mobile browser (tablet/smartphone) Safari, clicking "Download PDF" either opens a blank page, opens the PDF in the browser tab instead of downloading it, or does nothing. The reviewer uses a tablet at their desk — the feature appears broken for their primary device.
 
 **Why it happens:**
-Safari on iOS does not support `<a href="blob:..." download="filename.pdf">` in the same way desktop browsers do. `URL.createObjectURL` returns a blob URL, but iOS Safari ignores the `download` attribute on anchor elements pointing to blob URLs. Instead it navigates to the blob URL, which shows a blank page (iOS Safari cannot render PDF blobs inline in the same way desktop Chrome does).
+Mobile Safari does not support `<a href="blob:..." download="filename.pdf">` in the same way desktop browsers do. `URL.createObjectURL` returns a blob URL, but mobile Safari ignores the `download` attribute on anchor elements pointing to blob URLs. Instead it navigates to the blob URL, which shows a blank page (mobile Safari cannot render PDF blobs inline in the same way desktop Chrome does).
 
 **Warning signs:**
-- "Download PDF" works on MacOS Chrome/Safari but shows a blank new tab on an iPhone.
+- "Download PDF" works on desktop Chrome/Safari but shows a blank new tab on a mobile device.
 - Developer Tools network panel shows the blob URL being navigated to rather than triggering a file download.
 
 **Prevention:**
-1. Use `window.open(blobUrl)` on iOS Safari, which opens the PDF inline in a new tab where the user can use the share sheet to save it. Detection: `const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)`.
-2. Alternatively, generate the PDF and offer a `<a href={dataUrl} download="report.pdf">` where `dataUrl` is a `data:application/pdf;base64,...` string — data URLs work more consistently across iOS Safari for PDF content than blob URLs.
+1. Use `window.open(blobUrl)` on mobile Safari, which opens the PDF inline in a new tab where the user can use the share sheet to save it. Detection: `const isMobileSafari = /iPad|iPhone|iPod/.test(navigator.userAgent)` (user-agent sniffing for mobile device).
+2. Alternatively, generate the PDF and offer a `<a href={dataUrl} download="report.pdf">` where `dataUrl` is a `data:application/pdf;base64,...` string — data URLs work more consistently across mobile Safari for PDF content than blob URLs.
 3. Test PDF download on at least one mobile browser before considering the feature done. The reviewer access point is a fixed-location admin task — if the reviewer uses a desktop, mobile support is lower priority. Document this explicitly.
 
-**Phase to address:** PDF report phase. iOS Safari compatibility must be tested before the feature is marked complete.
+**Phase to address:** PDF report phase. Mobile Safari compatibility must be tested before the feature is marked complete.
 
 ---
 
@@ -324,7 +324,7 @@ Vite bundles all static imports into the main chunk by default. `AdminPanel` is 
 | CSV export | Commas in SPL queries corrupt CSV rows (Pitfall 7) | Use RFC 4180-compliant `csvEscape` on every cell |
 | PDF generation | jsPDF Vite CommonJS build failure (Pitfall 2) | Dynamic import; `optimizeDeps.include` in `vite.config.js` |
 | PDF generation | Non-ASCII characters dropped silently (Pitfall 3) | Embed a Unicode font or sanitise before writing |
-| PDF generation | iOS Safari blob URL does not trigger download (Pitfall 8) | Test on Safari mobile; use `data:` URL or `window.open` for iOS |
+| PDF generation | Mobile Safari blob URL does not trigger download (Pitfall 8) | Test on mobile browser; use `data:` URL or `window.open` for mobile Safari |
 | Admin panel wiring into App.jsx | Stale data on navigate-away-and-return (Pitfall 5) | Cache fetched data in `sessionStorage`; no admin state in `useGameState` |
 | ReviewerScreen replacement | Build breakage if delete-before-wire (Pitfall 12) | Create → wire → verify → delete sequence; never delete before wiring |
 
@@ -352,7 +352,7 @@ Shortcuts that seem reasonable but create problems specific to the v1.2 admin pa
 - [ ] **Recharts in main bundle:** Run `npm run build` and verify `recharts` does NOT appear in the main `index-[hash].js` chunk (use `npx vite-bundle-visualizer` or check build output sizes).
 - [ ] **jsPDF production build:** Run `npm run build` — zero build warnings about CommonJS modules. Download a PDF from `npm run preview` — not just `npm run dev`.
 - [ ] **PDF Unicode:** Generate a PDF for a candidate with an accented name (e.g., "José García") — the PDF must display the name correctly, not as "Jos_ Garc_a".
-- [ ] **PDF iOS Safari:** Open the admin panel on an iPhone/iPad browser — the PDF download must not open a blank page.
+- [ ] **PDF mobile Safari:** Open the admin panel on a mobile browser (tablet or smartphone) — the PDF download must not open a blank page.
 - [ ] **CSV integrity:** Download the CSV export and open in Google Sheets — all rows must have the correct column count; SPL queries containing commas must be in a single cell, not spread across adjacent cells.
 - [ ] **GAS passcode gate on all new actions:** Fetch any new admin GAS action URL directly in the browser without a passcode parameter — it must return `{"ok":false,"error":"Unauthorized"}`, not candidate data.
 - [ ] **Admin panel data isolation:** Complete Zone 1 of the game as a candidate, then navigate to the admin panel, then navigate back to the landing page and start a new game — the new game must start cleanly with no admin data visible.
@@ -374,7 +374,7 @@ Shortcuts that seem reasonable but create problems specific to the v1.2 admin pa
 | CSV corruption discovered post-launch | LOW | Fix `csvEscape` function; no GAS changes; redeploy static build; advise reviewers to re-download |
 | Unprotected GAS admin action discovered | HIGH | Immediately add `checkPasscode` to the GAS action; deploy new GAS version; assess whether the URL was accessed without passcode by checking GAS execution logs |
 | Admin state polluting game state | MEDIUM | Extract admin state to isolated component or dedicated hook; clear admin data on `SCREENS.REVIEWER` exit; no GAS changes |
-| iOS PDF download blank page | LOW | Switch to `data:` URL approach for PDF download; Chrome/Firefox unaffected; redeploy |
+| Mobile PDF download blank page | LOW | Switch to `data:` URL approach for PDF download; Chrome/Firefox unaffected; redeploy |
 | ReviewerScreen deleted before AdminPanel wired | LOW | `git revert` the deletion commit; re-add `ReviewerScreen.jsx` temporarily; wire AdminPanel first |
 
 ---
@@ -394,7 +394,7 @@ Shortcuts that seem reasonable but create problems specific to the v1.2 admin pa
 - Google Apps Script Best Practices (developers.google.com): batch `getValues()` vs per-cell reads (HIGH confidence, official docs)
 - Recharts bundle size: ~350KB minified (~115KB gzipped) from npm-compare.com and community benchmarks (MEDIUM confidence — not measured against this specific project; use `vite-bundle-visualizer` to confirm)
 - RFC 4180 CSV format: comma, double-quote, and newline characters in cells must be quoted and escaped (HIGH confidence, IETF standard)
-- iOS Safari blob URL download limitation: `download` attribute on anchor with `blob:` URL is ignored; workaround is `window.open` or `data:` URI (MEDIUM confidence, well-documented browser compatibility issue; MDN Web Docs compatibility table)
+- Mobile Safari blob URL download limitation: `download` attribute on anchor with `blob:` URL is ignored; workaround is `window.open` or `data:` URI (MEDIUM confidence, well-documented browser compatibility issue; MDN Web Docs compatibility table)
 
 ---
 

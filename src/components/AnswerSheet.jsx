@@ -146,7 +146,7 @@ export default function AnswerSheet({ candidate, rawData, socData, onBack }) {
       style={{
         minHeight: "100dvh",
         padding: "clamp(18px, 3vw, 30px)",
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+        fontFamily: 'system-ui, sans-serif',
       }}
     >
       <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gap: 16 }}>

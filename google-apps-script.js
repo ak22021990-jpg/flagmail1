@@ -85,6 +85,16 @@ function doPost(e) {
 
     if (action === 'register') {
       var sheets = ensureSheets(ss);
+      var existingRow = findRowByEmail(sheets.summary, payload.email || '');
+      if (existingRow > 0) {
+        var existingStatus = String(sheets.summary.getRange(existingRow, 4).getValue()).trim();
+        if (existingStatus === 'Completed') {
+          return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Already completed' })).setMimeType(ContentService.MimeType.JSON);
+        }
+        // In Progress — update timestamp only, no duplicate row
+        sheets.summary.getRange(existingRow, 1).setValue(ts);
+        return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+      }
       sheets.summary.appendRow([
         ts, payload.name || '', payload.email || '',
         'In Progress', '', '', '', '', '', ''
@@ -155,6 +165,8 @@ function doPost(e) {
       var tierVal = payload.tier || '';
 
       if (row > 0) {
+        // Set Status = 'Completed' (col 4)
+        sheets.summary.getRange(row, 4).setValue('Completed');
         // Update Tier (col 7) with combined-score tier
         sheets.summary.getRange(row, 7, 1, 1).setValue(tierVal);
         // Update Score (col 5) and Display Score (col 6)
@@ -280,12 +292,49 @@ function doPost(e) {
         });
       }
 
+      var integritySheet = ss.getSheetByName('IntegrityLogs');
+      var integrityLogs = [];
+      if (integritySheet && integritySheet.getLastRow() > 1) {
+        var integrityData = integritySheet.getRange(2, 1, integritySheet.getLastRow() - 1, 6).getValues();
+        integrityLogs = integrityData.map(function(row) {
+          return { timestamp: row[0], name: row[1], email: row[2], logType: row[3], details: row[4], phase: row[5] };
+        });
+      }
+
       return ContentService.createTextOutput(JSON.stringify({
         ok: true,
         candidates: candidates,
         rawData: rawData,
         socData: socData,
+        integrityLogs: integrityLogs,
       })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'logIntegrity') {
+      var integritySheet = ss.getSheetByName('IntegrityLogs');
+      if (!integritySheet) {
+        integritySheet = ss.insertSheet('IntegrityLogs');
+        integritySheet.appendRow(['Timestamp', 'Name', 'Email', 'LogType', 'Details', 'Phase']);
+      }
+      var iEmail = payload.email || '';
+      var iLogType = payload.logType || '';
+      var iDetails = payload.details || {};
+      // Find name from Summary
+      var sheets = ensureSheets(ss);
+      var iRow = findRowByEmail(sheets.summary, iEmail);
+      var iName = iEmail;
+      if (iRow > 0) {
+        iName = String(sheets.summary.getRange(iRow, 2).getValue()) || iEmail;
+      }
+      // Determine phase
+      var detailsStr = JSON.stringify(iDetails);
+      var iPhase = 'assessment';
+      if (/zone/i.test(detailsStr)) {
+        var zoneMatch = detailsStr.match(/zone\s*(\d+)/i);
+        if (zoneMatch) iPhase = 'zone' + zoneMatch[1];
+      }
+      integritySheet.appendRow([new Date().toISOString(), iName, iEmail, iLogType, detailsStr, iPhase]);
+      return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
     }
 
     return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Unknown action' })).setMimeType(ContentService.MimeType.JSON);
@@ -303,10 +352,22 @@ function doGet(e) {
   if (checkEmail) {
     var ss = getSpreadsheet();
     var sheets = ensureSheets(ss);
-    var exists = findRowByEmail(sheets.summary, checkEmail) > 0;
+    var checkRow = findRowByEmail(sheets.summary, checkEmail);
 
+    if (checkRow < 0) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ exists: false }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    var statusVal = String(sheets.summary.getRange(checkRow, 4).getValue()).trim();
+    if (statusVal === 'Completed') {
+      return ContentService
+        .createTextOutput(JSON.stringify({ exists: true, status: 'completed' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    // In Progress (or any other status) — not blocked, let them re-enter
     return ContentService
-      .createTextOutput(JSON.stringify({ exists: exists }))
+      .createTextOutput(JSON.stringify({ exists: false, status: 'in_progress' }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 

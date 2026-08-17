@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Simplify Flagmail from a 6-category / L2-scored / 50-email game to a 3-category / L1-only / 30-email game with Apple design elevation.
+**Goal:** Simplify Flagmail from a 6-category / L2-scored / 50-email game to a 3-category / L1-only / 30-email game with elevated visual design.
 
 **Architecture:** Surgical changes only — new dataset replaces EMAIL_POOL, L2/clue logic stripped from hooks and components, ZONE_CONFIG becomes the single source of truth for zone names, inline hint UI replaces ClueSystem.jsx.
 
@@ -22,12 +22,12 @@
 | `src/hooks/useScoring.js` | Modify | Remove L2/clue fields, hintUsed boolean, 3 categories only |
 | `src/hooks/useBadges.js` | Modify | Update 6 badge conditions per spec |
 | `src/App.jsx` | Modify | Remove L2/clue wiring, fix tier thresholds, fix maxZoneScore |
-| `src/components/Classifier.jsx` | Modify | Remove L2 row + onSelectL2, 3-cat tooltips, iOS chip style, label change |
+| `src/components/Classifier.jsx` | Modify | Remove L2 row + onSelectL2, 3-cat tooltips, chip style, label change |
 | `src/components/GameRound.jsx` | Modify | Remove ClueSystem, add inline hint UI, remove onSelectL2, zone label via ZONE_CONFIG |
 | `src/components/ZoneIntroCard.jsx` | Modify | Replace local ZONES array with ZONE_CONFIG import |
 | `src/components/ZoneComplete.jsx` | Modify | Replace ZONE_META with ZONE_CONFIG import |
 | `src/components/ExplanationCard.jsx` | Modify | Remove L2 row, add subCategory pill |
-| `src/components/EmailCard.jsx` | Modify | Mail.app typography tweaks (subject bold, body 15px, timestamp format) |
+| `src/components/EmailCard.jsx` | Modify | Mail client typography tweaks (subject bold, body 15px, timestamp format) |
 | `src/components/ResultsScreen.jsx` | Modify | 60pt max, tier thresholds ≥50/≥30, zone names via ZONE_CONFIG |
 | `src/components/CompetencySummary.jsx` | Modify | 3 categories only |
 | `src/components/TutorialScreen.jsx` | Modify | Update for 3 categories and single-hint system |
@@ -92,24 +92,24 @@ I have chosen your email address from a global database of honest citizens. I am
   {
     id: "E002",
     zone: 1,
-    from: "billing-office@apple.com",
+    from: "billing-office@techco-billing.com",
     subject: "REFUND: You have an unclaimed credit of $149.99",
     body: `Dear Customer,
 
-Our billing department has identified a double-payment error on your recent subscription for "iCloud+ and Music Bundle." As a result, your account has been overcharged by $149.99.
+Our billing department has identified a double-payment error on your recent subscription for "Cloud Storage and Music Bundle." As a result, your account has been overcharged by $149.99.
 
 We have tried to process the refund automatically, but your current payment method on file has expired. To receive your refund, you must manually enter your bank or credit card details into our secure refund portal. If you do not claim this credit within 48 hours, the funds will be forfeited and returned to the state treasury.
 
 Please click the link below to verify your details and receive your $149.99 refund immediately:
 
-[Link: apple-refund-portal-secure.net/claim-funds]
+[Link: techco-refund-portal-secure.net/claim-funds]
 
 Thank you,`,
-    clue: "If a company owes you a refund, they send it back to your card automatically. They will never ask you to click a link and 'enter your bank details' to get a refund. Also, look at the link — it says apple-refund-portal-secure.net. Apple only uses apple.com.",
+    clue: "If a company owes you a refund, they send it back to your card automatically. They will never ask you to click a link and 'enter your bank details' to get a refund. Also, look at the link — it says techco-refund-portal-secure.net, not the company's real domain.",
     level1: "Phishing & Spoofing",
     subCategory: "Impersonation",
-    explanation: "Apple impersonation phishing using a fake refund pretext. Legitimate refunds are processed automatically to the original payment method — Apple never asks you to submit card details via email. The link domain (apple-refund-portal-secure.net) is a fake; Apple only emails from apple.com.",
-    giveawayPhrase: "apple-refund-portal-secure.net/claim-funds",
+    explanation: "Brand impersonation phishing using a fake refund pretext. Legitimate refunds are processed automatically to the original payment method — no real company asks you to submit card details via email. The link domain (techco-refund-portal-secure.net) is a fake domain designed to look official.",
+    giveawayPhrase: "techco-refund-portal-secure.net/claim-funds",
   },
   {
     id: "E003",
@@ -258,18 +258,18 @@ If you break the chain and delete this email, your computer will crash and you w
   {
     id: "E011",
     zone: 2,
-    from: "shipping@apple.com",
-    subject: "Your iPhone is on its way!",
+    from: "shipping@techco-store.com",
+    subject: "Your order is on its way!",
     body: `Hello, Your order is heading your way! We've handed it off to the carrier and you should see it at your doorstep soon.
 
 Order Number: W9928374
 Delivery Method: Standard Shipping
 
-You can use the tracking link below to see the latest updates on your delivery. Please note that a signature may be required upon arrival. If you won't be home, you can manage your delivery through the carrier's portal. Thank you for choosing Apple.`,
-    clue: "The domain @apple.com is correct, and the language is calm and professional.",
+You can use the tracking link below to see the latest updates on your delivery. Please note that a signature may be required upon arrival. If you won't be home, you can manage your delivery through the carrier's portal. Thank you for your purchase.`,
+    clue: "The domain @techco-store.com is correct, and the language is calm and professional.",
     level1: "Legitimate",
     subCategory: "Shipping Update",
-    explanation: "Genuine Apple shipping notification. The verified shipping@apple.com domain, specific order number, and standard shipping language are consistent with real Apple order emails. No suspicious links or requests for information.",
+    explanation: "Genuine retailer shipping notification. The verified shipping domain, specific order number, and standard shipping language are consistent with real order confirmation emails. No suspicious links or requests for information.",
     giveawayPhrase: "You can use the tracking link below to see the latest updates on your delivery",
   },
   {
@@ -463,12 +463,12 @@ If you have any questions about this charge or need to update your payment info,
     subject: "Quick Request - Are you at your desk?",
     body: `Hi, I'm currently stuck in a back-to-back board meeting and I can't take any calls right now. I need a huge favor.
 
-I was supposed to send gift cards to a client for their anniversary today, but I've just realized my corporate card is being declined. Can you please head to the store and purchase five $100 Apple Gift Cards? Just scratch the back, take a photo of the codes, and email them to me here. I will reimburse you by the end of the day. Please keep this quiet as it's a surprise for the client.`,
+I was supposed to send gift cards to a client for their anniversary today, but I've just realized my corporate card is being declined. Can you please head to the store and purchase five $100 gift cards? Just scratch the back, take a photo of the codes, and email them to me here. I will reimburse you by the end of the day. Please keep this quiet as it's a surprise for the client.`,
     clue: "This is a 'CEO scam.' Bosses do not ask employees to buy gift cards with their own personal money.",
     level1: "Phishing & Spoofing",
     subCategory: "Spear Phishing",
     explanation: "CEO gift card scam (Business Email Compromise). The request to buy gift cards personally and 'keep it quiet' is the defining signal. The sender domain company-internal-hr.com mimics an internal address but is not the company's real domain. This scam costs businesses millions annually.",
-    giveawayPhrase: "purchase five $100 Apple Gift Cards? Just scratch the back, take a photo of the codes, and email them to me",
+    giveawayPhrase: "purchase five $100 gift cards? Just scratch the back, take a photo of the codes, and email them to me",
   },
   {
     id: "E024",
@@ -1101,7 +1101,7 @@ git commit -m "fix: remove L2/clue wiring from App, fix tier thresholds and maxZ
 **Files:**
 - Modify: `src/components/Classifier.jsx`
 
-Changes: Remove L2 row and `onSelectL2`, update L1_HELP to 3 categories, change section label, iOS chip style.
+Changes: Remove L2 row and `onSelectL2`, update L1_HELP to 3 categories, change section label, chip style.
 
 - [ ] **Step 1: Replace Classifier.jsx**
 
@@ -1143,7 +1143,7 @@ function HelpTooltip({ tooltip, color, onDismiss }) {
       borderRadius: 14,
       boxShadow: `0 12px 40px rgba(0,0,0,0.14), 0 0 0 1px rgba(255,255,255,0.6), 0 4px 0 ${color}`,
       padding: '14px 16px 12px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+      fontFamily: 'system-ui, sans-serif',
       animation: 'fadeSlideUp 0.18s ease',
       pointerEvents: 'none',
     }}>
@@ -1362,7 +1362,7 @@ export default function GameRound({
     <div style={{
       height: '100vh', display: 'flex', alignItems: 'stretch', justifyContent: 'center',
       padding: '20px 8vw',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+      fontFamily: 'system-ui, sans-serif',
       boxSizing: 'border-box',
     }}>
       <div style={{ ...glassCard, width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -1572,7 +1572,7 @@ export default function ZoneIntroCard({ zone, onStart, earlyUnlocked }) {
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '24px 16px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+      fontFamily: 'system-ui, sans-serif',
     }}>
       <motion.div
         initial={{ opacity: 0, y: 28, scale: 0.96 }}
@@ -1815,7 +1815,7 @@ git commit -m "feat: remove L2 row from ExplanationCard, add subCategory pill"
 
 ## Task 9: Update `src/components/EmailCard.jsx`
 
-Mail.app fidelity tweaks per spec section 5.1.
+Mail client fidelity tweaks per spec section 5.1.
 
 - [ ] **Step 1: Apply targeted style changes**
 
@@ -1848,7 +1848,7 @@ borderBottom: '0.5px solid rgba(0,0,0,0.1)',
 
 ```bash
 git add src/components/EmailCard.jsx
-git commit -m "feat: Mail.app typography tweaks in EmailCard"
+git commit -m "feat: mail client typography tweaks in EmailCard"
 ```
 
 ---
